@@ -3,6 +3,10 @@
 Battle royale du Sahel en 3D (three.js), jouable dans le navigateur sur PC et téléphone.
 20 joueurs (toi + 19 bots), taxi-brousse volant, harmattan qui se resserre, construction en banco, carte du Niger de 480 m de côté.
 
+## Version Android (APK)
+
+`android/` construit une application Android (WebView plein écran, jeu inclus, fonctionne hors ligne) : `python3 android/build_apk.py`. Détails, installation et clé de signature : `android/README.md`.
+
 ## Lancer le jeu
 
 Le jeu utilise des modules JavaScript : il faut l'ouvrir via un petit serveur web (un double-clic sur `index.html` ne marche pas).
@@ -32,6 +36,7 @@ Options dans l'adresse :
 | `src/core/profile.js` | Profil local : pseudo, statistiques, niveau, cauris, missions, boutique |
 | `assets/` | Modèles 3D des persos et des armes, animations |
 | `lib/three/` | three.js r160 (licence MIT), hébergé avec le jeu |
+| `android/` | Application Android : activité WebView, construction de l'APK sans SDK, signature |
 | `tests/` | Tests automatiques (animations, parties, lobby, collisions, profils) — voir `tests/README.md` |
 | `documentation/` | Audit, journal des modifications, rapport de tests, feuille de route de la v1.0 |
 

@@ -1,0 +1,11 @@
+# outils téléchargés, fichiers de construction, APK produits
+.tools/
+build/
+dist/
+# clé de signature : JAMAIS dans git (dépôt public)
+keystore/
+*.p12
+*.jks
+*.keystore
+keystore.properties
+__pycache__/
