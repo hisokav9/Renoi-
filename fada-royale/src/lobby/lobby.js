@@ -210,19 +210,21 @@ export function createLobby(ctx) {
   /* ---------- portrait (avatar du profil) ---------- */
   let portraitKey = '', portraitURL = '', wantPortrait = false;
   const pc = document.createElement('canvas'); pc.width = pc.height = 160; const pg = pc.getContext('2d');
+  // rendu dans une petite cible 160×160 en sRGB : lecture de 100 Ko seulement, encodage JPEG asynchrone (toBlob)
+  // (v1.0 première version : toDataURL sur le canevas principal = relecture complète de l'image, saccade visible)
+  const prt = new THREE.WebGLRenderTarget(160, 160, { colorSpace: THREE.SRGBColorSpace }); prt.texture.colorSpace = THREE.SRGBColorSpace;
+  const pbuf = new Uint8Array(160 * 160 * 4), pimg = pg.createImageData(160, 160);
   function renderPortrait() {
-    if (!disp) return; const W = canvas.width, H = canvas.height; if (!W || !H) return;
-    const hy = disp.headY + 0.28;
-    pcam.aspect = W / H; pcam.fov = 16; pcam.updateProjectionMatrix();
-    charRoot.updateMatrixWorld(true);
+    if (!disp) return; const hy = disp.headY + 0.28;
+    pcam.aspect = 1; pcam.fov = 16; pcam.updateProjectionMatrix(); charRoot.updateMatrixWorld(true);
     const s = Math.sin(charRoot.rotation.y), c = Math.cos(charRoot.rotation.y);
-    pcam.position.set(s * 1.55 + c * 0.0, hy + 0.04, c * 1.55); pcam.lookAt(0, hy - 0.02, 0);
+    pcam.position.set(s * 1.55, hy + 0.04, c * 1.55); pcam.lookAt(0, hy - 0.02, 0);
     const wasDust = dust.visible; dust.visible = false;
-    renderer.render(stage, pcam);
-    const side = Math.round(H * 0.42); pg.clearRect(0, 0, 160, 160); pg.drawImage(canvas, (W - side) / 2, (H - side) / 2, side, side, 0, 0, 160, 160);
+    const prev = renderer.getRenderTarget(); renderer.setRenderTarget(prt); renderer.render(stage, pcam); renderer.readRenderTargetPixels(prt, 0, 0, 160, 160, pbuf); renderer.setRenderTarget(prev);
     dust.visible = wasDust;
-    try { portraitURL = pc.toDataURL('image/jpeg', 0.85); } catch (e) { portraitURL = ''; }
-    portraitKey = dispKey; refreshAvatar();
+    for (let y = 0; y < 160; y++) pimg.data.set(pbuf.subarray((159 - y) * 640, (160 - y) * 640), y * 640);
+    pg.putImageData(pimg, 0, 0); portraitKey = dispKey;
+    pc.toBlob(b => { if (!b) return; if (portraitURL.startsWith('blob:')) URL.revokeObjectURL(portraitURL); portraitURL = URL.createObjectURL(b); refreshAvatar(); }, 'image/jpeg', 0.88);
   }
 
   /* =================================================================
@@ -420,7 +422,8 @@ export function createLobby(ctx) {
     ctx.beforeLaunch && ctx.beforeLaunch();           // plein écran / verrouillage souris : doit se faire pendant le clic
     $('lbFadeTxt').textContent = mode === 'train' ? 'Préparation de l’entraînement…' : 'Le taxi-brousse se prépare…';
     fade.classList.remove('hidden'); fade.classList.add('on'); ctx.sfx && ctx.sfx('play');
-    requestAnimationFrame(() => requestAnimationFrame(() => { ctx.startMatch(mode); setTimeout(() => { fade.classList.remove('on'); setTimeout(() => fade.classList.add('hidden'), 450); }, 120); }));
+    // la partie est créée et ses shaders compilés pendant que l'écran de transition est affiché
+    requestAnimationFrame(() => requestAnimationFrame(() => { ctx.startMatch(mode); ctx.precompile && ctx.precompile(); requestAnimationFrame(() => { fade.classList.remove('on'); setTimeout(() => fade.classList.add('hidden'), 450); }); }));
   });
 
   $('lbNav').querySelectorAll('button').forEach(b => b.addEventListener('click', () => go(b.dataset.p === panel && panel !== 'home' ? 'home' : b.dataset.p)));
@@ -462,9 +465,13 @@ export function createLobby(ctx) {
     renderer.render(stage, cam);
   }
   function resize() { cam.aspect = innerWidth / innerHeight; cam.updateProjectionMatrix(); }
+  // shaders du lobby + variante « cible de rendu » du portrait (sortie linéaire) : compilés derrière l'écran de chargement
+  function precompile() { renderer.compile(stage, cam); const prev = renderer.getRenderTarget(); renderer.setRenderTarget(prt); renderer.compile(stage, pcam); renderer.setRenderTarget(prev); }
 
+  // premier portrait pris derrière l'écran de chargement (la relecture de pixels bloque le temps que le GPU termine)
+  function warm() { spawnT = 1; if (disp) { disp.g.scale.setScalar(1); disp.g.position.y = 0; } update(0.016); renderPortrait(); }
   function show() { open = true; root.classList.remove('hidden'); preview = null; go('home', true); refreshTop(); showStageFor(); resize(); }
   function hide() { open = false; root.classList.add('hidden'); closeModes(); }
   resize(); refreshTop();
-  return { show, hide, update, render, resize, refresh: refreshTop, get open() { return open; }, get mode() { return mode; }, toast, scene: stage };
+  return { show, hide, update, render, resize, precompile, warm, refresh: refreshTop, get open() { return open; }, get mode() { return mode; }, toast, scene: stage };
 }
