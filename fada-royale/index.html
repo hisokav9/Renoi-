@@ -868,7 +868,7 @@ function decodeAnims(data){ const out={}; for(const k in data) out[k]=decodeAnim
 const STRIDE={walk:1.24,jog:5.49,sprint:5.96,cwalk:1.5};
 const LOCO_STAND=[['idle',0],['walk',1.6],['jog',6.3],['sprint',8.4]], LOCO_CROUCH=[['cidle',0],['cwalk',2.4]];
 const FULL_KEYS=['idle','walk','jog','sprint','cidle','cwalk','jstart','jloop','jland','sstart','sloop','sexit','death','roll'];
-function newAnState(){ return {phase:0,it:0,sp:0,wa:0,ws:0,wasAir:false,airT:0,jt:-1,fallV:0,landT:9,landDur:0.3,slT:0,sxT:-1,legYaw:0,dir:1,pitch:0,sprintW:0,hitT:9,lastHurt:0,useW:0,useT:0,chopT:9,prevSwing:0,deathT:0,stepI:0}; }
+function newAnState(){ return {phase:0,it:0,sp:0,wa:0,ws:0,wasAir:false,airT:0,jt:-1,fallV:0,landT:9,landDur:0.3,slT:0,sxT:-1,legYaw:0,dir:1,pitch:0,sprintW:0,hitT:9,lastHurt:0,useW:0,useT:0,chopT:9,prevSwing:0,deathT:0,stepI:0,ikW:0,ikKey:null,tB:1,tRl:null,tLl:null,tFR:null,tFL:null}; }
 function blend1D(s,pts,out,mul){ if(s<=pts[0][1]){ out[pts[0][0]]+=mul; return; } for(let i=0;i<pts.length-1;i++){ const a=pts[i],b=pts[i+1]; if(s<=b[1]){ const t=(s-a[1])/(b[1]-a[1]); out[a[0]]+=mul*(1-t); out[b[0]]+=mul*t; return; } } out[pts[pts.length-1][0]]+=mul; }
 const RIGB=['Hips','Spine','Spine1','Spine2','Neck','Head','LeftUpLeg','LeftLeg','LeftFoot','RightUpLeg','RightLeg','RightFoot','LeftShoulder','LeftArm','LeftForeArm','LeftHand','RightShoulder','RightArm','RightForeArm','RightHand'];
 const SUIT=[[0.35,0.4,0.75],[0.7,0.25,0.25],[0.85,0.75,0.55],[0.3,0.55,0.35],[1.3,1.3,1.3],[0.95,0.6,0.3],[0.55,0.35,0.7]];
@@ -1609,12 +1609,30 @@ function animChar(c,dt){
 const _ax=V(), _aqq=new THREE.Quaternion(), _apq=new THREE.Quaternion(), _UP=V(0,1,0), _chest=V();
 function addRot(bone,axisW,ang){ if(!bone||Math.abs(ang)<1e-4) return; bone.parent.getWorldQuaternion(_apq); _aqq.setFromAxisAngle(axisW,ang); bone.quaternion.premultiply(_apq.clone().invert().multiply(_aqq).multiply(_apq)); }
 const AW={}; for(const k of FULL_KEYS) AW[k]=0;
+/* ---------- pose animée de référence (correctif v1.0 du buste qui tourne à 360°) ----------
+   three.js (PropertyMixer.apply) ne réécrit un os QUE si le résultat de l'animation a changé depuis l'image précédente.
+   Or l'os Spine est immobile dans les 17 clips (et d'autres os le sont dans certains clips : RightArm en glissade, épaules…).
+   Ces os gardaient donc les retouches de l'image d'avant (contre-rotation du buste, visée, IK des bras) et la nouvelle
+   s'y ajoutait : rotation qui s'accumule sans fin. On mémorise la pose animée juste après mixer.update et on la remet
+   dans les os avant le suivant : chaque image repart de la pose animée, les retouches ne peuvent plus s'additionner. */
+function mixPose(m){
+  const B=m.bones;
+  if(m.animQ){ for(const n in B) B[n].quaternion.copy(m.animQ[n]); }
+  else { m.animQ={}; for(const n in B) m.animQ[n]=new THREE.Quaternion(); }
+  m.mx.update(0);
+  for(const n in B) m.animQ[n].copy(B[n].quaternion);
+}
+// IK d'un bras avec poids : 1 = mains sur la cible, 0 = pose animée. Permet des fondus (arme ↔ daba, construction, soins)
+const _qIK=new THREE.Quaternion();
+function ikArmW(m,side,T,pole,w){ if(w<=0.001) return; ikArm(m,side,T,pole); if(w>=0.999||!m.animQ) return;
+  for(const n of [side+'Arm',side+'ForeArm']){ const b=m.bones[n]; if(!b) continue; _qIK.copy(b.quaternion); b.quaternion.copy(m.animQ[n]).slerp(_qIK,w); } }
+const _lR=V(), _lL=V(), _sa=V(), _sb=V(); const wrapA=a=>Math.atan2(Math.sin(a),Math.cos(a));
 function animRealAnim(c,dt){
   const m=c.model, g=m.g, A=m.act, an=m.an, B=m.bones;
   if(c.phase==='bus'){ g.visible=false; return; }
   const dc=Math.abs(c.pos.x-camera.position.x)+Math.abs(c.pos.z-camera.position.z);
   if(!c.alive){ if(!g.visible) return; an.deathT+=dt; for(const k of FULL_KEYS) A[k].setEffectiveWeight(k==='death'?1:0); for(const k of ['hit_ub','consume_ub','chop_ub']) A[k]&&A[k].setEffectiveWeight(0);
-    A.death.time=Math.min(an.deathT*1.1,A.death.getClip().duration-0.02); m.mx.update(0); for(const k in m.w) m.w[k].visible=false; m.bp.visible=false; m.glider.visible=false;
+    A.death.time=Math.min(an.deathT*1.1,A.death.getClip().duration-0.02); mixPose(m); for(const k in m.w) m.w[k].visible=false; m.bp.visible=false; m.glider.visible=false;
     g.position.copy(c.pos); if(an.deathT>2.6) g.position.y-=(an.deathT-2.6)*1.2; if(an.deathT>3.4) g.visible=false; return; }
   g.visible=c.isPlayer||dc<190; if(!g.visible) return;
   if(c===player&&isScoped()) g.visible=false;
@@ -1662,19 +1680,25 @@ function animRealAnim(c,dt){
   for(const k of FULL_KEYS) A[k].setEffectiveWeight(AW[k]/tot);
   // --- gestes du haut du corps ---
   if(c.hurtT>0.15&&an.lastHurt<=0.15) an.hitT=0; an.lastHurt=c.hurtT; an.hitT+=dt;
-  const hitW=an.hitT<0.33?0.55*(1-an.hitT/0.33):0; A.hit_ub.time=Math.min(an.hitT,0.32);
+  const hitW=an.hitT<0.33?0.55*Math.min(1,an.hitT/0.04)*(1-an.hitT/0.33):0; A.hit_ub.time=Math.min(an.hitT,0.32);
   an.useW=lerp(an.useW,c.useT>0?0.92:0,1-Math.exp(-10*dt)); if(c.useT>0) an.useT+=dt; else an.useT=0; A.consume_ub.time=an.useT%A.consume_ub.getClip().duration;
   if(c.cur==='daba'&&c.swingT>0&&an.prevSwing<=0) an.chopT=0; an.prevSwing=c.swingT; an.chopT+=dt;
-  const chopW=c.cur==='daba'&&an.chopT<0.62?(an.chopT<0.5?1:1-(an.chopT-0.5)/0.12):0; A.chop_ub.time=Math.min(an.chopT*1.7,0.95);
+  const chopW=c.cur==='daba'&&an.chopT<0.62?(an.chopT<0.5?smooth(0,0.07,an.chopT):1-(an.chopT-0.5)/0.12):0; // fondu d'entrée : plus de saut du buste au début du coup A.chop_ub.time=Math.min(an.chopT*1.7,0.95);
   const ubw=a=>a/(1-a+0.02);
   A.hit_ub.setEffectiveWeight(ubw(hitW)); A.consume_ub.setEffectiveWeight(ubw(an.useW)); A.chop_ub.setEffectiveWeight(ubw(chopW*0.97));
-  m.mx.update(0);
+  mixPose(m);
   // --- retouches procédurales ---
   addRot(B.Hips,_UP,an.legYaw); addRot(B.Spine,_UP,-an.legYaw*0.45); addRot(B.Spine1,_UP,-an.legYaw*0.3); addRot(B.Spine2,_UP,-an.legYaw*0.25);
   const pitch=clamp(c.isPlayer?camPitch:(c.aimPitch||0),-1.1,1.1); an.pitch=lerp(an.pitch,pitch,1-Math.exp(-14*dt)); const pS=an.pitch;
   const gun=c.cur!=='daba', bm=c===player&&buildMode&&c.phase==='ground', showW=!sky&&c.useT<=0&&!bm;
   _ax.set(1,0,0).applyQuaternion(g.quaternion);
   const pk=sliding||air?0.5:1; addRot(B.Spine1,_ax,pS*0.1*pk); addRot(B.Spine2,_ax,pS*0.16*pk); addRot(B.Neck,_ax,pS*0.2); addRot(B.Head,_ax,pS*(gun?0.2:0.3));
+  // stabilisation du buste : en courant arme en main, on retire l'essentiel du balancement gauche-droite des épaules
+  // (la course balance le buste de ±36°, l'arme ballottait). Mesuré sur la ligne des épaules, corrigé sur Spine1/Spine2.
+  const stab=(gun&&!sky&&!sliding&&c.useT<=0&&!bm?0.8:0.3)*clamp(s/2.5,0,1);
+  if(B.LeftArm&&B.RightArm){ B.LeftArm.getWorldPosition(_sa); B.RightArm.getWorldPosition(_sb); _sb.sub(_sa);
+    const yc=wrapA(Math.atan2(-_sb.z,_sb.x)-c.yaw); an.cy=an.cy===undefined?yc:an.cy+wrapA(yc-an.cy)*(1-Math.exp(-1.5*dt));
+    if(stab>0.01){ const corr=-wrapA(yc-an.cy)*stab; addRot(B.Spine2,_UP,corr*0.6); addRot(B.Spine1,_UP,corr*0.4); } }
   g.updateMatrixWorld(true);
   // --- arme / plan ---
   const wo=ensureWeapon(m,c.cur); for(const kk in m.w) m.w[kk].visible=showW&&kk===c.cur; m.bp.visible=bm;
@@ -1691,7 +1715,17 @@ function animRealAnim(c,dt){
   else if(c.useT>0){ ik=false; }
   else if(bm){ m.bp.localToWorld(_tR.set(0.16,-0.02,0.05)); m.bp.localToWorld(_tL.set(-0.16,-0.02,0.05)); ik=true; }
   else if(gun&&dc<110){ const W=WEAP[c.cur]; wo.localToWorld(_tR.set(0.0,-0.05,0.07)); wo.localToWorld(_tL.set(-0.01,-0.04,-Math.min(W.fore,0.24))); ik=true; }
-  if(ik){ _pR.set(0.7,-1,0.45).applyQuaternion(g.quaternion); _pL.set(-0.7,-1,0.45).applyQuaternion(g.quaternion); ikArm(m,'Right',_tR,_pR); ikArm(m,'Left',_tL,_pL); }
+  // cibles des mains dans le repère du perso : fondu de 0,18 s quand l'arme change (sinon les bras sautent d'une prise à l'autre)
+  if(ik){ g.worldToLocal(_lR.copy(_tR)); g.worldToLocal(_lL.copy(_tL));
+    const key=c.phase+'|'+(bm?'bp':c.cur);
+    if(an.ikKey!==key){ if(an.ikKey&&an.tRl){ an.tFR=an.tRl.clone(); an.tFL=an.tLl.clone(); an.tB=0; } an.ikKey=key; }
+    if(an.tB<1){ an.tB=Math.min(1,an.tB+dt/0.18); const e=smooth(0,1,an.tB); _lR.lerpVectors(an.tFR,_lR,e); _lL.lerpVectors(an.tFL,_lL,e); }
+    if(!an.tRl){ an.tRl=V(); an.tLl=V(); } an.tRl.copy(_lR); an.tLl.copy(_lL); }
+  else an.ikKey=null;
+  // poids de l'IK en fondu (≈ 0,1 s) : quand on prend la daba, mange ou boit, les bras repartent en douceur vers l'animation
+  an.ikW=lerp(an.ikW||0,ik?1:0,1-Math.exp(-(ik?18:12)*dt));
+  if(an.tRl&&an.ikW>0.001){ g.localToWorld(_tR.copy(an.tRl)); g.localToWorld(_tL.copy(an.tLl));
+    _pR.set(0.7,-1,0.45).applyQuaternion(g.quaternion); _pL.set(-0.7,-1,0.45).applyQuaternion(g.quaternion); ikArmW(m,'Right',_tR,_pR,an.ikW); ikArmW(m,'Left',_tL,_pL,an.ikW); }
   c.recoil=Math.max(0,(c.recoil||0)-dt*10); if(c.switchT>0) c.switchT-=dt;
 }
 function isScoped(){ return !!(player&&ads&&WEAP[player.cur]&&WEAP[player.cur].scope&&player.alive&&player.phase==='ground'&&!buildMode&&!editing); }
