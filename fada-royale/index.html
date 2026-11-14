@@ -3,8 +3,20 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>Fada Royale v0.9</title>
-<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+<title>Fada Royale v0.9.1</title>
+<!-- three.js r160 est hébergé avec le jeu (dossier lib/) : plus besoin d'un CDN pour démarrer -->
+<script type="importmap">{"imports":{"three":"./lib/three/three.module.min.js","three/addons/":"./lib/three/addons/"}}</script>
+<script>
+// si le jeu ne démarre pas (fichier manquant, erreur), on le dit sur l'écran de chargement au lieu de rester bloqué
+(function(){
+  function fail(msg){ var l=document.getElementById('loading'), t=document.getElementById('loadTxt'); if(!l||!t||l.dataset.failed) return; l.dataset.failed='1';
+    t.innerHTML='Le jeu n\'a pas pu démarrer 😕<br>Vérifie ta connexion puis recharge la page.<br><span style="opacity:.6;font-size:11px">'+String(msg||'').replace(/[<>&]/g,'')+'</span>'; }
+  addEventListener('error',function(e){ var t=e.target; if(t&&t.tagName==='LINK') return; // police Google indisponible : pas grave
+    if(t&&t.tagName==='SCRIPT') fail('fichier introuvable : '+(t.src||'script du jeu')); else if(e.message) fail(e.message); },true);
+  addEventListener('unhandledrejection',function(e){ fail(e.reason&&e.reason.message||e.reason); });
+  window.__frFail=fail;
+})();
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Rubik:wght@500;700;900&display=swap" rel="stylesheet">
@@ -101,6 +113,8 @@ button{font-family:inherit;cursor:pointer;border:0;color:inherit}
 #editBar{position:absolute;left:50%;top:calc(50% + 34px);transform:translateX(-50%);font:900 11px Rubik;background:rgba(20,60,110,.7);padding:5px 10px;border-radius:7px;white-space:nowrap;text-shadow:0 1px 2px #000}
 #mats{position:absolute;bottom:10px;right:calc(50% + 250px);display:flex;gap:6px;pointer-events:auto}
 body.touch #mats{right:auto;bottom:auto;left:8px;top:34%;flex-direction:column}
+/* sur tactile, la vie et les armes sont centrées dans la place laissée par les boutons de droite (sinon 🏃 couvre la 6e case) */
+body.touch #bottom{left:calc((100% - 256px) / 2)}
 #touch .tb,#pick{opacity:var(--bop,1)}
 #gear{position:absolute;top:8px;right:8px;width:40px;height:40px;border-radius:12px;background:rgba(25,14,4,.6);border:2px solid rgba(255,255,255,.3);font-size:19px;pointer-events:auto;display:flex;align-items:center;justify-content:center;touch-action:none}
 #fps{position:absolute;top:12px;right:56px;white-space:nowrap;font-variant-numeric:tabular-nums;font-size:11px;padding:5px 9px}
@@ -137,7 +151,9 @@ body.editing-hud #joy{opacity:.7!important}
 #joy i{position:absolute;left:50%;top:50%;width:50px;height:50px;margin:-25px 0 0 -25px;border-radius:50%;background:rgba(255,255,255,.55)}
 
 /* ---------- menu ---------- */
-#menu,#end{position:fixed;inset:0;z-index:10;touch-action:pan-y;display:flex;align-items:center;justify-content:center;overflow:auto;padding:16px;background:linear-gradient(90deg,rgba(27,18,9,.9) 0%,rgba(27,18,9,.6) 55%,rgba(27,18,9,.15) 100%)}
+#menu,#end{position:fixed;inset:0;z-index:10;touch-action:pan-y;display:flex;overflow:auto;padding:16px;background:linear-gradient(90deg,rgba(27,18,9,.9) 0%,rgba(27,18,9,.6) 55%,rgba(27,18,9,.15) 100%)}
+/* margin:auto (et pas align-items:center) : sur un petit écran, le haut du menu reste visible et on peut défiler */
+#menu>.mwrap,#end>.ebox{margin:auto}
 .mwrap{display:flex;gap:34px;align-items:center;max-width:980px;width:100%;flex-wrap:wrap}
 .brand{flex:1 1 260px}
 .flag{display:flex;flex-direction:column;width:66px;height:44px;border-radius:4px;overflow:hidden;box-shadow:0 3px 10px rgba(0,0,0,.4);margin-bottom:14px}
@@ -196,6 +212,9 @@ h1{font-family:Bungee;font-size:clamp(46px,9vw,92px);line-height:.92;background:
   .itm{min-width:44px;height:42px;font-size:10px}.itm span{font-size:15px;line-height:16px}
   #zone{font-size:26px}#zone small{font-size:12px}
   #msg{font-size:20px}
+  #busUI{bottom:auto;top:43%}
+  #busUI p{font-size:13px;margin-bottom:6px}
+  #bJumpBus{font-size:21px;padding:10px 30px}
   #feed div{font-size:10px}
   .mcol{padding:12px;gap:9px}
   .big{font-size:22px;padding:10px}
@@ -277,14 +296,14 @@ h1{font-family:Bungee;font-size:clamp(46px,9vw,92px);line-height:.92;background:
     <div class="brand">
       <div class="flag"><i></i><i></i><i></i></div>
       <h1>FADA<br>ROYALE</h1>
-      <p class="ver"><b>v0.9</b>Le battle royale 100 % Niger</p>
+      <p class="ver"><b>v0.9.1</b>Le battle royale 100 % Niger</p>
     </div>
     <div class="mcol">
       <div class="lbl">Ton skin</div>
       <div id="skins"></div>
       <div class="mrow"><input id="pseudo" maxlength="14" placeholder="Ton pseudo" autocomplete="off"><button id="qual">Qualité : Basse</button><button id="setBtn" class="ghost" style="padding:0 12px">⚙️</button></div>
       <button class="big" id="play">JOUER</button>
-      <div class="news"><b>Nouveau v0.9 :</b> vraies animations fluides (course, sprint, glissade, saut, accroupi, mort…) · bouton SPRINT · <b>v0.8.1 :</b> constructions impossibles sur un joueur ou sous le sable · bots avec un vrai champ de vision · stats techniques (⚙️ › Graphismes) · <b>v0.8 :</b> ⚙️ paramètres complets + HUD personnalisable · <b>v0.7 :</b> persos réalistes animés · 6 vraies armes (revolver, mitraillette, fusil, pompe, mitrailleuse, sniper) · construction façon Fortnite (cadres en rônier, toit, PV) · <button class="linkbtn" id="credBtn">Crédits</button></div>
+      <div class="news"><b>Nouveau v0.9.1 :</b> menu lisible sur petits écrans · boutons tactiles qui ne se chevauchent plus · jeu qui démarre même sans CDN · corrections (butin, soins, son en pause…) · <b>v0.9 :</b> vraies animations fluides (course, sprint, glissade, saut, accroupi, mort…) · bouton SPRINT · <b>v0.8.1 :</b> constructions impossibles sur un joueur ou sous le sable · bots avec un vrai champ de vision · stats techniques (⚙️ › Graphismes) · <b>v0.8 :</b> ⚙️ paramètres complets + HUD personnalisable · <b>v0.7 :</b> persos réalistes animés · 6 vraies armes (revolver, mitraillette, fusil, pompe, mitrailleuse, sniper) · construction façon Fortnite (cadres en rônier, toit, PV) · <button class="linkbtn" id="credBtn">Crédits</button></div>
       <div id="credits" class="hidden"></div>
       <div class="help" id="help"></div>
     </div>
@@ -327,7 +346,12 @@ const rr=(a,b)=>a+(b-a)*R();
 const rnd=(a,b)=>a+(b-a)*Math.random();
 const rint=(a,b)=>Math.floor(rnd(a,b+1));
 const pick=a=>a[Math.floor(Math.random()*a.length)];
-const IS_TOUCH = ('ontouchstart' in window) || navigator.maxTouchPoints>0;
+// tactile = écran tactile ET pas de souris comme pointeur principal (les PC portables à écran tactile gardent les commandes clavier/souris)
+// ?touch=1 ou ?touch=0 dans l'adresse pour forcer
+const IS_TOUCH = (()=>{ try{ const f=/[?&]touch=([01])/.exec(location.search); if(f) return f[1]==='1'; }catch(e){}
+  const can=('ontouchstart' in window)||navigator.maxTouchPoints>0; if(!can) return false;
+  try{ if(matchMedia('(pointer: fine)').matches&&matchMedia('(hover: hover)').matches) return false; }catch(e){}
+  return true; })();
 const V=(x=0,y=0,z=0)=>new THREE.Vector3(x,y,z);
 const SET_DEF={sens:1,adsSens:0.6,scopeSens:0.3,invertY:false,aimAssist:true,vibra:true,joyFixed:false,autoSprint:true,fov:70,res:100,viewDist:340,showFps:false,showStats:false,vol:80,sfx:100,amb:70,btnOp:100,btnScale:100,minimap:true,killfeed:true,dmgNums:true,layout:{}};
 const SET=Object.assign({},SET_DEF,(()=>{ try{ return JSON.parse(localStorage.getItem('fr_set')||'{}')||{}; }catch(e){ return {}; } })());
@@ -1211,6 +1235,9 @@ function initAudio(){ if(actx){ if(actx.state==='suspended') actx.resume(); retu
   }catch(e){ actx=null; } }
 function noiseBurst(vol,freq,dur,type='lowpass',q=0.8){ if(!actx) return; const t=actx.currentTime; const s=actx.createBufferSource(); s.buffer=noiseBuf; const f=actx.createBiquadFilter(); f.type=type; f.frequency.value=freq; f.Q.value=q; const g=actx.createGain(); g.gain.setValueAtTime(vol,t); g.gain.exponentialRampToValueAtTime(0.001,t+dur); s.connect(f).connect(g).connect(sfxBus); s.start(t,Math.random()*0.5); s.stop(t+dur+0.05); }
 function tone(freq,dur,vol=0.2,type='sine',f2=null,delay=0){ if(!actx) return; const t=actx.currentTime+delay; const o=actx.createOscillator(); o.type=type; o.frequency.setValueAtTime(freq,t); if(f2) o.frequency.exponentialRampToValueAtTime(f2,t+dur); const g=actx.createGain(); g.gain.setValueAtTime(vol,t); g.gain.exponentialRampToValueAtTime(0.001,t+dur); o.connect(g).connect(sfxBus); o.start(t); o.stop(t+dur+0.05); }
+// le vent et les sons s'arrêtent pendant la pause et quand l'onglet (ou l'appli sur téléphone) passe en arrière-plan
+function syncAudio(){ if(!actx) return; const off=paused||document.hidden; try{ if(off&&actx.state==='running') actx.suspend(); else if(!off&&actx.state!=='running') actx.resume(); }catch(e){} }
+document.addEventListener('visibilitychange',syncAudio);
 let lastShot=0;
 function sfxShot(kind,d){ if(!actx) return; const v=1/(1+d/18); if(v<0.06) return; const now=performance.now(); if(d>0.5&&now-lastShot<40) return; lastShot=now;
   if(kind==='pompe'){ noiseBurst(0.9*v,900,0.32); tone(90,0.2,0.5*v,'sine',40); }
@@ -1271,9 +1298,9 @@ class Char{
     this.target=null; this.moveTarget=null; this.thinkT=Math.random()*0.3; this.reactT=0; this.burst=0; this.strafe=Math.random()<0.5?1:-1; this.strafeT=0; this.stuck=0; this.lastPos=V(); this.seeT=0; this.blocker=null; this.canSee=false; this.wantJump=false; this.jumpAt=0; this.landTarget=null; this.rank=0; this.calmT=0; this.killer=null; this.inStorm=false; this.stormAcc=0; this.detourT=0;
     this.crouch=false; this.slideT=0; this.slideDir=V(); this.ck=0; this.landT=0; this.sprint=false; this.sprintCD=0; if(this.model.an) this.model.an=newAnState(); this.recoil=0; this.switchT=0; this.aimPitch=0; this.height=1.75; this.model.st={}; }
 }
-function startReload(c){ const w=WEAP[c.cur]; if(w.melee||c.reloadT>0||c.mag[c.cur]>=w.mag||c.ammo<=0) return; c.reloadT=w.reload; c.useT=0; }
+function startReload(c){ const w=WEAP[c.cur]; if(!c.alive||w.melee||c.reloadT>0||c.mag[c.cur]>=w.mag||c.ammo<=0) return; c.reloadT=w.reload; c.useT=0; }
 function finishReload(c){ const w=WEAP[c.cur]; const need=w.mag-c.mag[c.cur]; const take=c.isPlayer?Math.min(need,c.ammo):need; c.mag[c.cur]+=take; if(c.isPlayer) c.ammo-=take; }
-function useItem(c,kind){ if(c.useT>0||c.reloadT>0) return; if(kind==='kilishi'&&(c.kilishi<=0||c.hp>=100)) return; if(kind==='the'&&(c.the<=0||c.shield>=75)) return; c.useKind=kind; c.useT=c.useMax=kind==='kilishi'?2.0:1.6; }
+function useItem(c,kind){ if(!c||!c.alive||c.phase==='bus'||c.useT>0||c.reloadT>0) return; if(kind==='kilishi'&&(c.kilishi<=0||c.hp>=100)) return; if(kind==='the'&&(c.the<=0||c.shield>=75)) return; c.useKind=kind; c.useT=c.useMax=kind==='kilishi'?2.0:1.6; }
 function finishUse(c){ if(c.useKind==='kilishi'){ c.kilishi--; c.hp=Math.min(100,c.hp+25); } else { c.the--; c.shield=Math.min(75,c.shield+25); } if(c.isPlayer) sfxPick(); c.useKind=null; }
 function updateTimers(c,dt){
   c.fireCD-=dt; c.buildCD-=dt; c.hurtT-=dt; c.swingT-=dt; if(c.noiseT>0) c.noiseT-=dt;
@@ -1297,6 +1324,7 @@ function damageChar(t,amount,att,head,wname,point){
 }
 function killChar(t,att,wname){
   t.alive=false; t.hp=0; t.deathT=0; t.rank=aliveCount; t.killer=att; aliveCount--;
+  t.useT=0; t.useKind=null; t.reloadT=0; // un kilishi entamé ne soigne pas un mort
   t.model.glider.visible=false;
   if(att){ att.kills++; const verb=wname==='daba'?'a assommé':'a éliminé';
     feed(`<b>${att===player?'Toi':att.name}</b> ${verb} <b>${t===player?'toi':t.name}</b>`, att===player||t===player);
@@ -1359,20 +1387,19 @@ function playerFire(){
     if(i<3) tracer(mz,pt);
   }
   sfxShot(p.cur,0); flash.position.copy(mz); flash.visible=true; flashT=0.05; p.recoil=1; addShake(w.kick>0.02?0.06:0.012);
-  camPitch+=w.kick*(ads?0.6:1); camYaw+=rnd(-0.004,0.004);
+  camPitch=clamp(camPitch+w.kick*(ads?0.6:1),-1.25,1.15); camYaw+=rnd(-0.004,0.004);
   if(p.mag[p.cur]===0&&p.ammo>0) setTimeout(()=>{ if(p.alive) startReload(p); },220);
 }
 
 /* ---------- butin ---------- */
+const STACK_MAX={ammo:300,banco:500,kilishi:5,the:4};
 function pickup(c,it){
-  const k=it.kind; let ok=true;
-  if(k==='ammo'){ if(c.ammo>=300) ok=false; else c.ammo=Math.min(300,c.ammo+it.amount); }
-  else if(k==='banco'){ if(c.banco>=500) ok=false; else c.banco=Math.min(500,c.banco+it.amount); }
-  else if(k==='kilishi'){ if(c.kilishi>=5) ok=false; else c.kilishi=Math.min(5,c.kilishi+it.amount); }
-  else if(k==='the'){ if(c.the>=4) ok=false; else c.the=Math.min(4,c.the+it.amount); }
-  else if(k.startsWith('w:')){ ok=giveWeapon(c,k.slice(2)); }
-  if(!ok) return false; removeItem(it);
-  if(c===player){ sfxPick(); showMsg('+ '+(k.startsWith('w:')?WEAP[k.slice(2)].name:ITEM_NAME[k])+(it.amount>1&&!k.startsWith('w:')?' ×'+it.amount:''),'',0.9); }
+  const k=it.kind, gun=k.startsWith('w:'); let took=1;
+  if(gun){ if(!giveWeapon(c,k.slice(2))) return false; removeItem(it); }
+  else { took=Math.min(it.amount,STACK_MAX[k]-c[k]); if(took<=0) return false; c[k]+=took;
+    // on ne ramasse que ce qui rentre : le reste de la pile reste par terre
+    if(took<it.amount) it.amount-=took; else removeItem(it); }
+  if(c===player){ sfxPick(); showMsg('+ '+(gun?WEAP[k.slice(2)].name:ITEM_NAME[k])+(took>1?' ×'+took:''),'',0.9); }
   return true;
 }
 function updateItems(dt){
@@ -1383,7 +1410,7 @@ function updateItems(dt){
 }
 let nearItem=null;
 function tryPickups(c){ let near=null; for(const it of items){ if(!it.alive||it.noPick>0) continue; const dx=it.x-c.pos.x, dz=it.z-c.pos.z, dy=it.y-c.pos.y; if(dx*dx+dz*dz<2.6&&Math.abs(dy)<1.8){ if(!pickup(c,it)&&c===player&&it.kind.startsWith('w:')&&!c.slots.includes(it.kind.slice(2))) near=it; } } if(c===player) nearItem=near; }
-function swapTake(){ const p=player, it=nearItem; if(!it||!it.alive) return; if(p.sel===0){ showMsg("CHOISIS UNE CASE D'ARME",'pour échanger',1); return; }
+function swapTake(){ const p=player, it=nearItem; if(!it||!it.alive||!p.alive||p.phase!=='ground') return; if(p.sel===0){ showMsg("CHOISIS UNE CASE D'ARME",'pour échanger',1); return; }
   const type=it.kind.slice(2), old=p.slots[p.sel-1]; removeItem(it); p.slots[p.sel-1]=type; p.mag[type]=WEAP[type].mag; setSel(p,p.sel); p.switchT=0.25; p.reloadT=0;
   const d=spawnItem('w:'+old,p.pos.x,p.pos.y+0.4,p.pos.z,1,true); d.noPick=1.5; nearItem=null; sfxPick(); showMsg('+ '+WEAP[type].name,'',0.9); }
 function openChest(ch,c){ ch.open=true; ch.t=0; const n=[ 'ammo', Math.random()<0.5?'kilishi':'the', 'w:'+randGun(1) ]; if(Math.random()<0.4) n.push('banco');
@@ -1433,7 +1460,7 @@ function updateStorm(dt){
     else if(storm.state==='shrink'){ const k=1-Math.max(0,storm.timer)/ph.shrink; storm.r=lerp(storm.fr,storm.tr,k); storm.cx=lerp(storm.fx,storm.tx,k); storm.cz=lerp(storm.fz,storm.tz,k);
       if(storm.timer<=0){ storm.phase++; if(PHASES[storm.phase]){ storm.state='wait'; storm.timer=PHASES[storm.phase].wait; nextCircle(); } else { storm.state='done'; storm.r=0; } } } }
   for(const c of chars){ if(!c.alive||c.phase==='bus') continue; const d=Math.hypot(c.pos.x-storm.cx,c.pos.z-storm.cz); c.inStorm=d>storm.r;
-    if(c.inStorm){ c.stormAcc=(c.stormAcc||0)+ph.dps*dt; if(c.stormAcc>=1){ const n=Math.floor(c.stormAcc); c.stormAcc-=n; c.hp-=n; if(c===player){ damageNumber(V(c.pos.x,c.pos.y+2,c.pos.z),'-'+n,''); } if(c.hp<=0) killChar(c,null,'storm'); } } }
+    if(c.inStorm&&!won){ c.stormAcc=(c.stormAcc||0)+ph.dps*dt; if(c.stormAcc>=1){ const n=Math.floor(c.stormAcc); c.stormAcc-=n; c.hp-=n; if(c===player){ damageNumber(V(c.pos.x,c.pos.y+2,c.pos.z),'-'+n,''); } if(c.hp<=0) killChar(c,null,'storm'); } } }
   const r=Math.max(storm.r,0.1); stormMesh.scale.set(r,260,r); stormMesh.position.set(storm.cx,90,storm.cz); stormInner.scale.set(r*0.999,260,r*0.999); stormInner.position.copy(stormMesh.position);
   { const dw=Math.abs(Math.hypot(camera.position.x-storm.cx,camera.position.z-storm.cz)-storm.r); stormMesh.material.opacity=0.62*clamp(1-(dw-40)/180,0.05,1); }
   TEX.sand.offset.x+=dt*0.012; TEX.sand.offset.y-=dt*0.03;
@@ -1750,7 +1777,7 @@ addEventListener('keydown',e=>{ if(e.target&&e.target.tagName==='INPUT') return;
 });
 addEventListener('keyup',e=>{ keys[e.code]=false; });
 addEventListener('blur',()=>{ for(const k in keys) keys[k]=false; firing=false; });
-canvas.addEventListener('mousedown',e=>{ if(IS_TOUCH&&e.sourceCapabilities&&e.sourceCapabilities.firesTouchEvents) return; if(state!=='play'&&state!=='bus') return;
+canvas.addEventListener('mousedown',e=>{ if(e.sourceCapabilities&&e.sourceCapabilities.firesTouchEvents) return; if(actx&&actx.state!=='running'&&!paused&&!document.hidden) actx.resume(); if(state!=='play'&&state!=='bus') return;
   if(document.pointerLockElement!==canvas){ try{ const p=canvas.requestPointerLock(); if(p&&p.catch) p.catch(()=>{}); }catch(err){} }
   if(e.button===0){ if(player.phase==='bus') jumpFromBus(player); else firing=true; } if(e.button===2) ads=true; });
 addEventListener('mouseup',e=>{ if(e.button===0) firing=false; if(e.button===2) ads=false; });
@@ -1792,7 +1819,7 @@ for(const [id,k] of [['mKil','kilishi'],['mThe','the']]){ const el=$(id); const 
 $('bJumpBus').addEventListener('click',()=>jumpFromBus(player));
 $('bJumpBus').addEventListener('touchstart',e=>{ e.preventDefault(); e.stopPropagation(); jumpFromBus(player); },{passive:false});
 const joyEl=$('joy');
-addEventListener('touchstart',e=>{ if(uiBlock()) return; if(state!=='play'&&state!=='bus') return; for(const t of e.changedTouches){ if(roles.has(t.identifier)) continue;
+addEventListener('touchstart',e=>{ if(actx&&actx.state!=='running'&&!paused&&!document.hidden) actx.resume(); if(uiBlock()) return; if(state!=='play'&&state!=='bus') return; for(const t of e.changedTouches){ if(roles.has(t.identifier)) continue;
     if(SET.joyFixed&&joy.id===null&&player.phase!=='bus'){ const r=joyEl.getBoundingClientRect(), cx=r.left+r.width/2, cy=r.top+r.height/2; if(Math.hypot(t.clientX-cx,t.clientY-cy)<Math.max(r.width,100)*0.85){ joy.id=t.identifier; joy.ox=cx; joy.oy=cy; joy.x=joy.y=0; roles.set(t.identifier,{role:'joy'}); joyEl.style.opacity=1; continue; } }
     if(!SET.joyFixed&&t.clientX<innerWidth*0.42&&joy.id===null&&player.phase!=='bus'){ joy.id=t.identifier; joy.ox=t.clientX; joy.oy=t.clientY; joy.x=joy.y=0; roles.set(t.identifier,{role:'joy'}); joyEl.style.left=t.clientX+'px'; joyEl.style.top=t.clientY+'px'; joyEl.style.opacity=1; joyEl.firstElementChild.style.transform=''; }
     else roles.set(t.identifier,{role:'look',x:t.clientX,y:t.clientY}); } },{passive:false});
@@ -2014,9 +2041,9 @@ function applySettings(key){
   applyLayout(SET.layout);
 }
 function openSettings(){ settingsOpen=true; const inGame=state==='play'||state==='bus'; paused=inGame; firing=false; for(const k in keys) keys[k]=false; joy.x=joy.y=0; joy.id=null; roles.clear();
-  renderTab(curTab); $('settings').classList.remove('hidden'); $('sResume').textContent=inGame?'REPRENDRE':'FERMER'; $('sQuit').classList.toggle('hidden',!inGame);
+  syncAudio(); renderTab(curTab); $('settings').classList.remove('hidden'); $('sResume').textContent=inGame?'REPRENDRE':'FERMER'; $('sQuit').classList.toggle('hidden',!inGame);
   try{ document.exitPointerLock&&document.exitPointerLock(); }catch(e){} }
-function closeSettings(){ settingsOpen=false; paused=false; $('settings').classList.add('hidden');
+function closeSettings(){ settingsOpen=false; paused=false; syncAudio(); $('settings').classList.add('hidden');
   if(!IS_TOUCH&&(state==='play'||state==='bus')){ try{ const p=canvas.requestPointerLock(); if(p&&p.catch) p.catch(()=>{}); }catch(e){} } }
 document.querySelectorAll('.stabs button').forEach(b=>b.addEventListener('click',()=>renderTab(b.dataset.t)));
 $('sClose').addEventListener('click',()=>closeSettings()); $('sResume').addEventListener('click',()=>closeSettings());
@@ -2064,6 +2091,7 @@ function heHit(x,y){ let best=null,ba=1e9; for(const id of heIds()){ const r=$(i
   $('heSave').addEventListener('click',()=>closeHudEditor(true)); $('heCancel').addEventListener('click',()=>closeHudEditor(false));
   $('heReset').addEventListener('click',()=>{ heLay={}; applyLayout(heLay); requestAnimationFrame(()=>{ heFill(); applyLayout(heLay); selectHe(null); }); });
 }
+addEventListener('beforeunload',e=>{ if((state==='play'||state==='bus')&&player&&player.alive&&!endShown){ e.preventDefault(); e.returnValue=''; } });
 function goMenu(){ state='menu'; $('menu').classList.remove('hidden'); $('end').classList.add('hidden'); $('hud').classList.add('hidden'); $('touch').classList.add('hidden'); try{ document.exitPointerLock&&document.exitPointerLock(); }catch(e){} for(const c of chars) c.model.g.visible=false; bus.g.visible=false; resize(); }
 function clearMatch(){
   for(const p of [...pieceList]){ p.alive=false; scene.remove(p.mesh); p.mat.dispose(); for(const so of p.solids) removeSolid(so); if(p.edited){ scene.remove(p.panel); p.panel.geometry.dispose(); } }
