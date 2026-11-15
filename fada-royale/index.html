@@ -571,7 +571,7 @@ function boxGeo(w,h,d){ const g=new THREE.BoxGeometry(w,h,d); const uv=g.attribu
 
 // v1.2 : textures tirées des images du jeu (assets/textures) : chargées en arrière-plan, elles remplacent l'image des
 // textures dessinées par le code (mêmes objets : tous les matériaux qui les utilisent, lobby compris, sont mis à jour)
-function swapTexImage(tex,url,rep){ new THREE.ImageLoader().load(url,img=>{ tex.image=img; tex.userData.url=url; if(rep) tex.repeat.set(rep,rep); tex.needsUpdate=true; }); }
+function swapTexImage(tex,url,rep){ new THREE.ImageLoader().load(url,img=>{ tex.dispose(); tex.image=img; tex.userData.url=url; if(rep) tex.repeat.set(rep,rep); tex.needsUpdate=true; }); } // dispose : la place GPU du dessin (256 px) ne peut pas recevoir l'image (512 px)
 const MAT={
   banco:new THREE.MeshLambertMaterial({map:TEX.banco,vertexColors:true}),
   decor:new THREE.MeshLambertMaterial({map:TEX.decor,vertexColors:true}),
@@ -1232,40 +1232,42 @@ function applyCostume(m,sk,key){
   const std=(hex,extra)=>new THREE.MeshStandardMaterial(Object.assign({color:hex,roughness:0.9,metalness:0},extra||{}));
   const B=m.bones, head=B.Head, hp=head.getWorldPosition(V()); g.worldToLocal(hp);
   const c=V(hp.x,hp.y+0.1,hp.z-0.01);                    // centre de la tête (au-dessus de l'articulation du cou)
-  const acc=new THREE.Group(); g.add(acc);
-  const add=(geo,mat,x,y,z,rx=0,ry=0,rz=0,sx=1,sy=1,sz=1)=>{ const o=new THREE.Mesh(geo,mat); o.position.set(c.x+x,c.y+y,c.z+z); o.rotation.set(rx,ry,rz); o.scale.set(sx,sy,sz); o.castShadow=true; acc.add(o); return o; };
+  const acc=new THREE.Group(); g.add(acc); const groups=new Map();
+  // chaque pièce est fusionnée avec les autres pièces de même matière : 1 appel de dessin par matière et par perso
+  const add=(geo,mat,x,y,z,rx=0,ry=0,rz=0,sx=1,sy=1,sz=1,col)=>{ let G=groups.get(mat); if(!G){ G=new Merger(); groups.set(mat,G); } G.add(geo,M4(c.x+x,c.y+y,c.z+z,ry,rx,rz,sx,sy,sz),col||WHITE); };
+  const vstd=extra=>std(0xffffff,Object.assign({vertexColors:true},extra||{}));
   if(key==='touareg'){
     hide('Wolf3D_Facewear'); hide('Wolf3D_Hair');
     recolor('Wolf3D_Head',0x8a5a3c,true); recolor('Wolf3D_Body',0x5c3a22);
     recolor('Wolf3D_Outfit_Top',0x86aedb); recolor('Wolf3D_Outfit_Bottom',0x24305c);
-    const ind=std(0x1d2c78,{side:THREE.DoubleSide});
-    for(const [y,r,t] of [[0.06,0.106,0.032],[0.095,0.104,0.034],[0.13,0.094,0.032]]) add(new THREE.TorusGeometry(r,t,8,22),ind,0,y,0.005,Math.PI/2+0.06);
-    add(new THREE.SphereGeometry(0.098,16,10,0,Math.PI*2,0,Math.PI/2),ind,0,0.138,0.01,0,0,0,1,0.75,1);
-    add(new THREE.CylinderGeometry(0.104,0.092,0.11,18,1,true,Math.PI*0.42,Math.PI*1.16),ind,0,-0.082,0.0);   // voile sur le bas du visage (les yeux restent visibles)
-    add(new THREE.TorusGeometry(0.072,0.04,8,18),ind,0,-0.16,0.01,Math.PI/2);                                // tour du cou
-    add(new THREE.BoxGeometry(0.07,0.24,0.02),ind,0.05,-0.27,0.07,0.2,0,-0.15);                              // pan qui tombe sur l'épaule
+    const ind=vstd({side:THREE.DoubleSide}), IC=C(0x1d2c78);
+    for(const [y,r,t] of [[0.06,0.106,0.032],[0.095,0.104,0.034],[0.13,0.094,0.032]]) add(new THREE.TorusGeometry(r,t,8,22),ind,0,y,0.005,Math.PI/2+0.06,0,0,1,1,1,IC);
+    add(new THREE.SphereGeometry(0.098,16,10,0,Math.PI*2,0,Math.PI/2),ind,0,0.138,0.01,0,0,0,1,0.75,1,IC);
+    add(new THREE.CylinderGeometry(0.104,0.092,0.11,18,1,true,Math.PI*0.42,Math.PI*1.16),ind,0,-0.082,0.0,0,0,0,1,1,1,IC);   // voile sur le bas du visage (les yeux restent visibles)
+    add(new THREE.TorusGeometry(0.072,0.04,8,18),ind,0,-0.16,0.01,Math.PI/2,0,0,1,1,1,IC);                                // tour du cou
+    add(new THREE.BoxGeometry(0.07,0.24,0.02),ind,0.05,-0.27,0.07,0.2,0,-0.15,1,1,1,IC);                                   // pan qui tombe sur l'épaule
   } else if(key==='garde'){
     hide('Wolf3D_Facewear'); hide('Wolf3D_Hair');
     recolor('Wolf3D_Head',0x7d5236,true); recolor('Wolf3D_Body',0x5a3a22);
     recolor('Wolf3D_Outfit_Top',0x9c8a5c); recolor('Wolf3D_Outfit_Bottom',0x5d6340);
-    const kh=std(0x8c7a4e), band=std(0x3d3020);
-    add(new THREE.CylinderGeometry(0.2,0.2,0.012,28),kh,0,0.1,0.005,-0.05);                                  // bord du chapeau de brousse
-    add(new THREE.CylinderGeometry(0.098,0.112,0.105,22),kh,0,0.155,0.005,-0.05);
-    add(new THREE.CylinderGeometry(0.114,0.114,0.022,22),band,0,0.118,0.005,-0.05);
+    const hat=vstd(), KH=C(0x8c7a4e), BAND=C(0x3d3020);
+    add(new THREE.CylinderGeometry(0.2,0.2,0.012,28),hat,0,0.1,0.005,-0.05,0,0,1,1,1,KH);                                  // bord du chapeau de brousse
+    add(new THREE.CylinderGeometry(0.098,0.112,0.105,22),hat,0,0.155,0.005,-0.05,0,0,1,1,1,KH);
+    add(new THREE.CylinderGeometry(0.114,0.114,0.022,22),hat,0,0.118,0.005,-0.05,0,0,1,1,1,BAND);
     // jumelles sur la poitrine (accrochées au buste)
     const sp=B.Spine2.getWorldPosition(V()); g.worldToLocal(sp); const bino=new THREE.Group(); g.add(bino); bino.position.set(sp.x,sp.y-0.09,sp.z-0.19);
-    const blk=std(0x1d1d1d,{roughness:0.6});
-    for(const x of [-0.035,0.035]){ const t=new THREE.Mesh(new THREE.CylinderGeometry(0.025,0.028,0.11,12),blk); t.position.x=x; t.castShadow=true; bino.add(t); }
-    const strap=new THREE.Mesh(new THREE.TorusGeometry(0.16,0.006,4,24,Math.PI),std(0x3d3020)); strap.position.set(0,0.04,0.12); strap.rotation.x=-0.5; bino.add(strap);
+    const bm=new Merger(); for(const x of [-0.035,0.035]) bm.add(new THREE.CylinderGeometry(0.025,0.028,0.11,12),M4(x,0,0),C(0x1d1d1d));
+    bm.add(new THREE.TorusGeometry(0.16,0.006,4,24,Math.PI),M4(0,0.04,0.12,0,-0.5),C(0x3d3020)); bino.add(bm.mesh(vstd({roughness:0.6})));
     B.Spine2.attach(bino);
   } else if(key==='commercante'){
     hide('Hair'); hide('Gloves');
     waxCloth('Tops',2); waxCloth('Bottoms',3);
-    const wx=TEX.wax[0].clone(); wx.repeat.set(2,2); wx.needsUpdate=true; const wm=std(0xffffff,{map:wx,side:THREE.DoubleSide});
+    const wx=TEX.wax[0].clone(); wx.repeat.set(2,2); wx.needsUpdate=true; const wm=vstd({map:wx,side:THREE.DoubleSide});
     add(new THREE.SphereGeometry(0.12,18,12),wm,0,0.07,0.025,0,0,0,1.02,0.82,1.1);                           // foulard (gele) qui enveloppe la tête
     add(new THREE.SphereGeometry(0.1,14,10),wm,0,0.16,0.05,-0.5,0,0,1.25,0.55,0.9);                           // le haut noué, relevé vers l'arrière
     for(const s of [-1,1]) add(new THREE.ConeGeometry(0.07,0.16,10),wm,s*0.06,0.2,0.07,-0.9,0,s*0.6,1,1,0.35); // les deux pans du nœud
   }
+  for(const [mat,G] of groups){ const ms=G.mesh(mat); if(ms){ ms.receiveShadow=false; acc.add(ms); } }
   // les accessoires suivent la tête
   head.attach(acc);
   m.detail=m.detail.filter(o=>!o.userData.costumeHidden);

@@ -1,5 +1,32 @@
 # Fada Royale — Rapport de tests
 
+# v1.2
+
+Mêmes conditions que la v1.1 (Chromium sans écran, rendu logiciel SwiftShader, réseau externe coupé, boucle figée pour les tests image par image). Pas de test sur un vrai téléphone.
+
+| Test | Résultat v1.2 |
+|---|---|
+| `animtest.cjs` Boss | 14 situations, aucune dérive ni NaN ; rotation cumulée de la poitrine de −13° à +46° (46° = coups de daba : amplitude du geste, la poitrine reste entre −21° et +46°) ; buste ≤ 20° par image ; bras ≤ 36° |
+| `animtest.cjs` Guerrière | Rotation cumulée de −9° à +36° ; buste ≤ 18° par image ; bras ≤ 39° ; aucun NaN |
+| `sim.cjs` | 3 parties (fin à 287 s pour la dernière) puis 1 partie après les dernières corrections : 0 erreur, fin à 307 s avec 1 survivant |
+| `flows.cjs` ordinateur et téléphone | Tir, rechargement, lunette, construction, édition, kilishi (75 PV), pause, fin de partie, rejouer, retour : tout passe |
+| `lobbytest.cjs` ordinateur et téléphone | Tout passe (persos, pseudo, mode refusé, partie, récompenses +118 XP / +11 cauris, entraînement avec les 5 nouvelles armes, quitter) ; après correction, 0 alerte de texture |
+| `fixes2.cjs` | TOP 1 : 100 PV avant et après |
+| `ddatest.cjs` | 3 000 rayons, 0 différence (2 023 boîtes) |
+| `decals.cjs` | Test corrigé : il visait un mur à 120 m (plus de mur à 6 m à cet endroit depuis l'agrandissement de la carte, résultat dépendant de la dispersion) ; il vise maintenant le mur du fond d'une maison à 6 m : 10 impacts pour 10 balles |
+| `houses.cjs`, `housestats.cjs` | Identiques à la v1.1 (100 maisons, 23 à étage, 12 bots sur 12 entrent par la porte, escalade et rétablissement) |
+| `reloads.cjs` + `hud.cjs` | Nouvelles armes en main, rechargements, vrais chargeurs, caisse de munitions qui tombe, silhouettes des armes dans le HUD |
+| `tests/armes.html` | Calage des 6 armes : poignée, garde-main, chargeur, culasse au bon endroit, canons horizontaux |
+| Persos (captures face, tête, dos, course) | Touareg, Garde, Commerçante animés et armés ; motif wax photo sur la Commerçante |
+| APK 1.2 | Signature v2 vérifiée, même certificat que la 1.0 et la 1.1 (`3DB2BF18…`), version 1.2 (code 12), 4,4 Mo ; jeu extrait de l'APK et servi comme dans l'application, hors ligne : 37 fichiers servis, 0 introuvable, 0 erreur JavaScript |
+
+**Problèmes trouvés et corrigés pendant les tests**
+- **Textures photo pas toujours appliquées** (alerte « Offset overflows texture dimensions ») : quand le dessin de 256 px était déjà envoyé à la carte graphique, l'image de 512 px ne pouvait pas le remplacer. Correction : la texture est libérée côté GPU avant le remplacement. Effet visible : la Commerçante porte maintenant le vrai motif wax.
+- **Appels de dessin des persos** : chaque pièce d'accessoire était un objet séparé (jusqu'à 7 pour le Touareg). Elles sont fusionnées par matière : Touareg 8 objets (Boss 9), Garde 9, Commerçante 7 (Guerrière 8), compte fait d'après le code.
+- **Mesure des profils graphiques** : `profiles.cjs` donne des totaux très variables d'un lancement à l'autre (de 100 à 364 appels en Basse selon l'endroit où atterrit le joueur), même pour la v1.1 : il ne permet pas de comparer deux versions. La comparaison fiable reste celle du décor à vue fixe (v1.1 : mêmes appels qu'en v1.0, +10 % de triangles) ; la v1.2 ne change pas la géométrie du décor, seulement ses textures.
+
+---
+
 # v1.1
 
 Mesuré sur la version finale v1.1, mêmes conditions que la v1.0 (Chromium sans écran, rendu logiciel SwiftShader, réseau externe coupé). Les nouveaux tests figent la boucle du jeu et avancent image par image. Ces tests ne mesurent pas la vitesse sur un vrai téléphone.
