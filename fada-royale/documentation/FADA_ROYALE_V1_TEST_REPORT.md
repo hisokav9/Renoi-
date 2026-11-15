@@ -41,6 +41,7 @@ Mêmes conditions que la v1.2 (Chromium sans écran, rendu logiciel SwiftShader,
 | `hud.cjs` | Ordinateur et téléphone : aucune erreur |
 | `probe.cjs` | Lobby : images de 2 à 5 ms. Lancement : une image longue pendant l'écran de transition (création de la partie et préparation GPU), puis 2 à 138 ms en rendu logiciel |
 | `profiles.cjs` | Basse 61 appels, Moyenne 145, Haute 162 à l'endroit d'atterrissage de ce lancement (mesure variable d'un lancement à l'autre, voir v1.2) |
+| APK 1.3 | Signature v2 vérifiée, même certificat que la 1.0 et la 1.2 (`3DB2BF18…`), version 1.3 (code 13), 4,4 Mo ; jeu extrait de l'APK et servi comme dans l'application, hors ligne : 37 fichiers servis, 0 introuvable, 0 erreur JavaScript, lobby « v1.3 » puis partie lancée |
 
 ---
 
