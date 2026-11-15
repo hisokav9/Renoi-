@@ -12,6 +12,8 @@ python3 -m http.server 8000  # dans un autre terminal
 
 Tous les scripts prennent l'adresse du jeu en premier argument : `http://localhost:8000/index.html`.
 
+Les scripts v1.1 figent la boucle du jeu (`window.__freeze = true`) et avancent image par image avec `FR.update` : sans ça, la boucle temps réel continue pendant les captures (lentes en rendu logiciel) et fausse les images.
+
 ## Les scripts
 
 | Script | Ce qu'il vérifie | Exemple |
@@ -27,6 +29,10 @@ Tous les scripts prennent l'adresse du jeu en premier argument : `http://localho
 | `tris.cjs` | Répartition des triangles par catégorie (persos, décor, terrain, végétation…) | `node tests/tris.cjs URL br` |
 | `profiles.cjs` | Appels de dessin et triangles des profils Basse / Moyenne / Haute, dans la même partie au même endroit | `node tests/profiles.cjs URL` |
 | `probe.cjs` | Durée de chaque image dans le lobby et au lancement (repère les saccades) | `node tests/probe.cjs URL` |
+| `houses.cjs` | **v1.1** : entrer par la porte, escalier intérieur jusqu'à l'étage, escalade d'un mur jusqu'au toit, se hisser sur un muret, bots qui vont chercher du butin dans une maison (départ derrière) ; captures | `node tests/houses.cjs URL /tmp/out` |
+| `housestats.cjs` | **v1.1** : toutes les maisons ouvertes : nombre, étages, hauteur sous plafond, dénivelé devant la porte, hauteur des marches | `node tests/housestats.cjs URL` |
+| `reloads.cjs` | **v1.1** : planches d'images des rechargements de chaque arme, culasse du sniper, kilishi, thé, changement d'arme ; cartouches du pompe une par une et tir qui interrompt | `node tests/reloads.cjs URL /tmp/out boss` puis `python3 tests/planche.py /tmp/out boss` |
+| `hud.cjs` | **v1.1** : captures du HUD en partie sur ordinateur et téléphone (Pixel 7 paysage) | `node tests/hud.cjs URL /tmp/out` |
 
 ## Limites
 

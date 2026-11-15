@@ -1,4 +1,90 @@
-# Fada Royale — Journal des modifications v1.0
+# Fada Royale — Journal des modifications
+
+# v1.1
+
+Base : v1.0 (commit `63be089`, APK 1.0). Demande : HUD et boutons refaits sans emoji, parapente qui s'ouvrait de travers, déplacements bizarres à gauche et à droite, maisons dans lesquelles on entre avec du butin, escalade, prise des armes à une ou deux mains, animation propre pour le rechargement de chaque arme, le changement d'arme, le kilishi et le thé.
+Mesures : scripts de `tests/` (nouveaux : `houses.cjs`, `housestats.cjs`, `reloads.cjs`, `hud.cjs`), détail dans `FADA_ROYALE_V1_TEST_REPORT.md`.
+
+## 1. Parapente
+
+| | |
+|---|---|
+| **Problème** | La voile s'ouvrait sur le côté droit du personnage, à la verticale. |
+| **Cause** | La voile (un morceau de cylindre) était tournée sur deux axes (`rotation.z = π/2` puis `rotation.y = π/2`) : l'arc finissait sur le côté. |
+| **Fichier** | `index.html` : `makeGlider()`, `updateGlider()`, `applyGlider()`, `updateAir()`, `buildChar()`, `buildRealChar()` |
+| **Correction** | Nouvelle voile : arc de 2,35 m de rayon au-dessus de la tête (rotation sur un seul axe), dessous plus sombre, 7 nervures, suspentes partant des épaules. Ouverture animée (la voile se déploie avec un léger rebond), inclinaison dans les virages selon la vitesse latérale, mains sur les commandes. Les tissus wax de la boutique s'appliquent toujours. |
+| **Test** | Captures de face, de dos et de côté pendant la descente. |
+
+## 2. Déplacements à gauche et à droite
+
+| | |
+|---|---|
+| **Problème** | En allant à gauche ou à droite, le personnage marchait en crabe (pas chassés) avec les jambes tordues. |
+| **Cause** | Le corps faisait toujours face à la caméra : aller sur le côté = pas chassés permanents, même hors combat. |
+| **Fichier** | `index.html` : `updatePlayer()`, `animRealAnim()` (orientation des jambes) |
+| **Correction** | Hors combat, le personnage se tourne vers où il va (virage progressif, plus doux en sprint). En combat (tir, visée, construction, édition, et 1,2 s après), il fait face à la visée et se déplace en pas chassés ; au premier tir il se tourne aussitôt vers la cible. Rotation des jambes limitée. |
+
+## 3. Prise des armes (une ou deux mains)
+
+| | |
+|---|---|
+| **Fichier** | `index.html` : tables `GRIP`, `ANCH`, `BODY` ; `animRealAnim()`, `anchorLocal()` |
+| **Correction** | Armes longues (fusil, mitraillette, pompe, sniper, Minimi) : toujours à deux mains, main gauche sur le garde-main. Revolver : à une main, canon vers le bas, hors combat ; à deux mains pour viser et tirer. Chaque main vise un point précis de l'arme (poignée, garde-main, chargeur, culasse, barillet…) défini dans le repère de l'arme, donc juste quel que soit le modèle 3D. |
+
+## 4. Rechargement propre à chaque arme, culasse, pompe, changement d'arme
+
+| | |
+|---|---|
+| **Fichier** | `index.html` : `RELOAD`, `BOLT`, `PUMP`, `sampleChoreo()`, `shellsSample()`, `startReload()`, `updateTimers()`, `beginSwitch()`, `choreoEvent()`, `propMesh()`, `dropDebris()`, `sfxMech()`, `playerFire()`, `botShoot()` |
+| **Correction** | Chorégraphies image par image (pose de l'arme + trajet de chaque main + objets + sons) : **fusil d'assaut** (chargeur qui tombe, main à la ceinture, nouveau chargeur, claque, armement) ; **mitraillette** (chargeur droit, armement du levier en haut) ; **revolver** (barillet basculé, 6 douilles éjectées, chargeur rapide, fermeture) ; **sniper** (chargeur, culasse ouverte puis fermée) ; **Minimi** (capot levé, caisse de munitions qui tombe, bande, capot fermé, armement) ; **fusil à pompe** cartouche par cartouche (0,42 s chacune, depuis la ceinture jusqu'à la fenêtre de chargement), tirer interrompt le rechargement s'il reste au moins une cartouche. Après chaque tir : culasse du sniper (0,9 s, douille éjectée) et coup de pompe (0,5 s). **Changement d'arme** : l'ancienne arme est rangée puis la nouvelle sortie (0,32 s pour le revolver à 0,7 s pour la Minimi), on ne tire pas pendant. Les bots font les mêmes gestes. Chargeurs, caisses et douilles tombent au sol et disparaissent. |
+| **Correction annexe** | Le coup de daba restait figé : un commentaire avalait la ligne qui fait avancer l'animation (`A.chop_ub.time`). Corrigé. |
+| **Test** | `reloads.cjs` : planches de 4 images par geste (Boss et Guerrière), cartouches du pompe comptées une par une. |
+| **Résultat** | Pompe vide : 0, 0, 1, 1, 2 cartouches à 0,23 / 0,47 / 0,70 / 0,93 / 1,17 s ; un tir pendant le rechargement l'interrompt (1 cartouche restante). Main gauche sur sa cible à 1 cm près pendant tout le rechargement du fusil (position de la main mesurée contre la cible de l’IK). |
+
+## 5. Kilishi et thé
+
+| | |
+|---|---|
+| **Fichier** | `index.html` : `USE`, `animRealAnim()` (mouvements de tête), `showProp()` |
+| **Correction** | L'arme est rangée. **Kilishi** : la main droite le sort de la poche, trois bouchées (la tête mord, le morceau raccourcit, son de bouchée), puis le range. **Thé** : petit verre tenu du bout des doigts, porté à la bouche, la tête bascule en arrière pour deux gorgées. La main gauche reste libre (pas de soucoupe, comme au grin). |
+
+## 6. Maisons ouvertes
+
+| | |
+|---|---|
+| **Problème** | Les maisons étaient des blocs pleins : on ne pouvait que monter sur certains toits. |
+| **Fichier** | `index.html` : `addHouse()`, `buildHouseShell()` (nouveau), `houseAt()`, `houseNav()`, `aroundHouse()`, `updateBot()` |
+| **Correction** | Chaque maison est construite pièce par pièce : murs de 0,3 m, porte praticable (1,4 × 2,45 m) avec encadrement et battant ouvert, sol intérieur, toit sur lequel on marche, marches devant la porte quand le sol est plus haut que le terrain. Les maisons hautes ont un **étage** avec escalier intérieur (7 marches) et garde-corps. Intérieur : natte en wax, lit tara, canari. **Butin** à l'intérieur (rez-de-chaussée et étage), coffres parfois dans la maison ou à l'étage. Sur une pente, la hauteur sous plafond ne dépend plus du terrain et la porte donne vers le haut. **Bots** : pour entrer ou sortir, ils passent par la porte, en contournant la maison par les coins si besoin. |
+| **Test** | `houses.cjs`, `housestats.cjs` |
+| **Résultat** | 100 maisons ouvertes, dont 23 à étage ; hauteur sous plafond minimale 3,65 m ; plus grande marche devant une porte 0,51 m (on monte jusqu'à 0,6 m) ; entrée par la porte, escalier jusqu'à l'étage (+3,40 m) ; 12 bots sur 12 entrent chercher du butin en partant de derrière la maison (3,7 à 6,0 s). |
+| **Reste** | Les fenêtres sont décoratives (pas de vraies ouvertures) ; les bots ne montent pas à l'étage. |
+
+## 7. Escalade
+
+| | |
+|---|---|
+| **Fichier** | `index.html` : `wallAhead()`, `canMantle()`, `startMantle()`, `tryClimb()`, `updateClimb()`, `updateMantle()`, `climbHands()`, `updatePlayer()` ; murs marqués `climb` (maisons, murets, forts, hangars, salle de prière) |
+| **Correction** | Saut face à un rebord de 0,6 à 2,35 m : le personnage s'y **hisse** (mains posées sur le rebord, corps qui monte puis passe par-dessus). Saut face à un mur plus haut : il **grimpe** (2,4 m/s, mains qui alternent), se déplace sur le côté avec le stick, lâche en tirant en arrière ou avec accroupi, se repousse du mur avec saut, et se rétablit en haut sur le toit. Une invite s'affiche quand c'est possible (« SAUT se hisser / escalader »). Le joueur seulement ; les bots ne grimpent pas. |
+| **Résultat** | Mur de 4,5 m escaladé et rétablissement sur le toit (1,8 s) ; muret de 1,1 m franchi. |
+
+## 8. HUD et boutons sans emoji
+
+| | |
+|---|---|
+| **Problème** | Emojis partout (compteurs, matériaux, boutons tactiles, messages, paramètres) : rendu différent selon le téléphone et aspect « fait à la va-vite ». |
+| **Fichier** | `index.html` (CSS du HUD, symboles SVG, `updateHUD()`, `makeWeaponIcons()`, `updateCompass()`, `updateClimbHint()`), `src/fonts/` |
+| **Correction** | 28 icônes dessinées pour le jeu (SVG, trait régulier, couleur par le thème) : plus aucun emoji dans le jeu. **Silhouettes des armes** rendues au démarrage à partir des vrais modèles 3D (emplacements, fil des éliminations). **Boussole** en haut. Barres de bouclier et de vie avec icône et valeur, vie en rouge sous 30. Emplacements d'armes : touche, silhouette, munitions (rouge quand le chargeur est presque vide), couleur de rareté, nom de l'arme en main. Banco / kilishi / thé avec icône et touche. Boutons tactiles : icône + légende (TIRER, SAUT, RECH., BÂTIR, ACCR., SPRINT, VISER, ÉDITER) ; le bouton de tir devient POSER en construction et CASE en édition. Invites « Prendre » et « Escalader » avec touches. Panneaux sombres et bordures fines cohérents. **Polices Bungee et Rubik incluses** (licence SIL OFL) : même rendu sans Internet, dans l'APK aussi. |
+| **Test** | `hud.cjs` (ordinateur 1280×720 et Pixel 7 paysage), recherche automatique d'emojis dans tous les fichiers du jeu. |
+| **Résultat** | 0 emoji dans `index.html`, `src/lobby/`, `src/core/`. |
+
+## 9. Outils de test
+
+`window.__freeze = true` met la boucle temps réel en pause : les tests avancent image par image avec `FR.update`. Sans ça, la boucle continuait pendant les captures (lentes en rendu logiciel) et faussait les images (rechargements terminés trop tôt).
+
+---
+
+# v1.0
+
 
 Base : v0.9.1 (commit `23c9f46`). Étapes livrées dans l'ordre demandé, chacune dans son propre commit :
 `11f3fea` animations · `047f13a` lobby · `47571fe` carte, décors, profils graphiques, combat, IA.

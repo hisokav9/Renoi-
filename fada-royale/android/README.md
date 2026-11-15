@@ -1,6 +1,6 @@
 # Fada Royale pour Android (APK)
 
-L'application est une WebView plein écran qui affiche le jeu web. Les fichiers du jeu (`index.html`, `src/`, `assets/`, `lib/`) sont **dans l'APK** : le jeu marche sans connexion (seules les polices Google ont besoin d'Internet ; sans réseau, le jeu prend les polices du téléphone).
+L'application est une WebView plein écran qui affiche le jeu web. Les fichiers du jeu (`index.html`, `src/`, `assets/`, `lib/`), polices comprises (depuis la v1.1), sont **dans l'APK** : le jeu marche entièrement sans connexion.
 
 - Android 7.0 minimum (API 24), cible Android 14 (API 34)
 - Paysage, plein écran immersif, écran qui reste allumé
@@ -9,7 +9,7 @@ L'application est une WebView plein écran qui affiche le jeu web. Les fichiers 
 
 ## Installer sur le téléphone
 
-1. Copier `FadaRoyale-1.0.apk` sur le téléphone (ou l'ouvrir depuis le téléchargement).
+1. Copier `FadaRoyale-1.1.apk` sur le téléphone (ou l'ouvrir depuis le téléchargement).
 2. L'ouvrir. Android demande d'autoriser « l'installation d'applis inconnues » pour l'application qui l'ouvre (Fichiers, Chrome…) : accepter.
 3. Play Protect peut afficher un avertissement (application qui ne vient pas du Play Store) : « Installer quand même ».
 
