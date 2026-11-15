@@ -34,6 +34,7 @@ Mêmes conditions que la v1.4 (Chromium sans écran, rendu logiciel SwiftShader,
 | `houses.cjs` | Identique (porte, escalier, pas de grimpe, rebord en sautant, caméra 0°, muret, 12 bots sur 12 entrent) |
 | `lobbytest.cjs`, `fixes2.cjs`, `ddatest.cjs`, `decals.cjs`, `hud.cjs` | Tout passe ; 0 différence sur 3 000 rayons ; 10 impacts pour 10 balles |
 | `cover.cjs` | 10 bots sur 11 se cachent |
+| APK 1.5 | Signature v2 vérifiée, même certificat que la 1.0 à 1.4 (`3DB2BF18…`), version 1.5 (code 15), 4,4 Mo ; jeu extrait de l'APK et servi comme dans l'application, hors ligne : 37 fichiers servis, 0 introuvable, 0 erreur JavaScript, partie lancée |
 
 ---
 
