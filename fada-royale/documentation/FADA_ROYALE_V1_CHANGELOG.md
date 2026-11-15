@@ -65,7 +65,7 @@ Mesures : scripts de `tests/` (nouveaux : `houses.cjs`, `housestats.cjs`, `reloa
 |---|---|
 | **Fichier** | `index.html` : `wallAhead()`, `canMantle()`, `startMantle()`, `tryClimb()`, `updateClimb()`, `updateMantle()`, `climbHands()`, `updatePlayer()` ; murs marqués `climb` (maisons, murets, forts, hangars, salle de prière) |
 | **Correction** | Saut face à un rebord de 0,6 à 2,35 m : le personnage s'y **hisse** (mains posées sur le rebord, corps qui monte puis passe par-dessus). Saut face à un mur plus haut : il **grimpe** (2,4 m/s, mains qui alternent), se déplace sur le côté avec le stick, lâche en tirant en arrière ou avec accroupi, se repousse du mur avec saut, et se rétablit en haut sur le toit. Une invite s'affiche quand c'est possible (« SAUT se hisser / escalader »). Le joueur seulement ; les bots ne grimpent pas. |
-| **Résultat** | Mur de 4,5 m escaladé et rétablissement sur le toit (1,8 s) ; muret de 1,1 m franchi. |
+| **Résultat** | Mur de 5,9 m escaladé puis rétablissement sur le toit (2,4 s) ; muret de 1,1 m franchi. |
 
 ## 8. HUD et boutons sans emoji
 

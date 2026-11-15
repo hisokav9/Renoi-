@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>Fada Royale v1.0</title>
+<title>Fada Royale v1.1</title>
 <!-- three.js r160 est hébergé avec le jeu (dossier lib/) : plus besoin d'un CDN pour démarrer -->
 <script type="importmap">{"imports":{"three":"./lib/three/three.module.min.js","three/addons/":"./lib/three/addons/"}}</script>
 <script>
@@ -1045,7 +1045,7 @@ function buildWeapon(kind){
   return g;
 }
 /* ---------- parapente ----------
-   v1.0 : la voile était tournée sur deux axes (rotation.z puis rotation.y = π/2) : l'arc se retrouvait sur le côté droit,
+   avant la v1.1 : la voile était tournée sur deux axes (rotation.z puis rotation.y = π/2) : l'arc se retrouvait sur le côté droit,
    à la verticale. Ici : un seul quart de tour sur X, l'arc au-dessus de la tête, envergure gauche-droite, profondeur avant-arrière. */
 const GLIDER_LINE=new THREE.MeshLambertMaterial({color:0xeee6d8});
 function rodBetween(a,b,r,mat){ const d=new THREE.Vector3().subVectors(b,a), len=d.length(); const m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,len,4,1),mat);

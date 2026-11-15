@@ -1,4 +1,45 @@
-# Fada Royale v1.0 — Rapport de tests
+# Fada Royale — Rapport de tests
+
+# v1.1
+
+Mesuré sur la version finale v1.1, mêmes conditions que la v1.0 (Chromium sans écran, rendu logiciel SwiftShader, réseau externe coupé). Les nouveaux tests figent la boucle du jeu et avancent image par image. Ces tests ne mesurent pas la vitesse sur un vrai téléphone.
+
+## Non-régression (scripts de la v1.0, tous relancés)
+
+| Test | Résultat v1.1 |
+|---|---|
+| `animtest.cjs` Boss (14 situations) | Aucune dérive : rotation cumulée de la poitrine entre −20° et +26° ; saut du buste ≤ 18° par image ; bras ≤ 36° (course puis saut) ; aucun NaN, quaternions normés |
+| `animtest.cjs` Guerrière | Rotation cumulée entre −10° et +25° ; buste ≤ 17° par image ; bras ≤ 38° (daba en courant) ; aucun NaN |
+| `skiptest.cjs` Boss | Mêmes valeurs ; les os que three.js n'écrit pas (Spine…) ne provoquent plus de dérive |
+| `sim.cjs` (3 parties) | 0 erreur ; fin en 271, 303 et 309 s avec 1 survivant |
+| `flows.cjs` ordinateur et téléphone | Tir, rechargement, lunette, construction (3 pièces), édition, kilishi (75 PV), pause, fin de partie, rejouer, retour au lobby : tout passe |
+| `lobbytest.cjs` ordinateur et téléphone | Perso et pseudo enregistrés, mode indisponible refusé, partie lancée, récompenses (+118 XP, +11 cauris), retour, entraînement (5 armes, 500 banco, 8 mannequins), quitter |
+| `fixes2.cjs` | TOP 1 : le gagnant ne prend plus de dégâts de tempête (100 PV avant et après) |
+| `ddatest.cjs` | 3 000 rayons, 0 différence entre la grille et le test de toutes les boîtes (2 023 boîtes de collision, 24 ms au lieu de 63) |
+| `decals.cjs` | Impacts visibles et lumière du coup de feu active en Moyenne |
+
+## Nouveautés v1.1
+
+| Test | Résultat |
+|---|---|
+| `housestats.cjs` | 100 maisons ouvertes, dont 23 à étage ; hauteur sous plafond minimale 3,65 m ; aucune maison trop basse ; dénivelé maximal devant une porte 1,07 m ; plus grande marche 0,51 m (on monte jusqu'à 0,6 m) |
+| `houses.cjs` : porte | Le joueur entre et se retrouve au niveau du sol intérieur |
+| `houses.cjs` : étage | Escalier intérieur : du rez-de-chaussée (1,26 m) à l'étage (4,66 m) |
+| `houses.cjs` : escalade | Saut face au mur du fond : escalade, puis rétablissement sur le toit (5,9 m de mur, 2,4 s) |
+| `houses.cjs` : muret | Saut face à un muret de 1,1 m : le personnage se hisse dessus |
+| `houses.cjs` : bots | 12 bots sur 12, partis de derrière la maison, entrent par la porte chercher le butin (3,7 à 6,0 s) |
+| `reloads.cjs` | Planches Boss et Guerrière : rechargement de chaque arme, culasse du sniper, changement d'arme, kilishi, thé ; pompe vide : 0, 0, 1, 1, 2 cartouches à 0,23 / 0,47 / 0,70 / 0,93 / 1,17 s ; tirer pendant le rechargement l'interrompt |
+| Main gauche (IK) pendant le rechargement du fusil | À 1 cm près de sa cible (chargeur, ceinture, puits de chargeur) à 10, 30, 50, 70 et 90 % |
+| `hud.cjs` | HUD en partie sur ordinateur (1280×720) et Pixel 7 paysage : aucune erreur |
+| Recherche d'emojis | 0 dans `index.html`, `src/lobby/`, `src/core/` |
+| Coût du décor (même vue au-dessus d'Agadez, Niamey, Zinder, persos cachés) | Basse : 46-47 appels de dessin dans les deux versions, 200 → 221 k triangles ; Moyenne : 61-63 appels (Niamey 111 → 72), 432 → 474 k triangles (+10 %) |
+| APK 1.1 | Signature v2 vérifiée, même certificat que la 1.0 (SHA-256 `3DB2BF18…9D2A`), version 1.1 (code 11) ; jeu extrait de l'APK et servi comme dans l'application, hors ligne : 23 fichiers servis, 0 introuvable, 0 erreur JavaScript, polices du jeu affichées sans Internet |
+
+**Pas testé** : sur un vrai téléphone Android (aucun émulateur dans l'environnement de construction).
+
+---
+
+# v1.0
 
 Toutes les valeurs ci-dessous ont été mesurées sur la version finale (dernière passe complète après le commit `47571fe`), avec les scripts de `tests/` (voir `tests/README.md` pour les relancer).
 

@@ -41,6 +41,12 @@ Créée au premier lancement dans `android/keystore/` avec son mot de passe (`ke
 
 Pour une publication sur le Play Store, il faudra une clé dédiée et un Android App Bundle (AAB) : à voir le moment venu.
 
+## Vérifications faites (v1.1)
+
+- Signature v2 validée ; **même certificat que la 1.0** (SHA-256 commençant par `3DB2BF18C0ABE4BE`) et `versionCode` 11 : la 1.1 s'installe par-dessus la 1.0 en gardant la progression.
+- Jeu extrait de l'APK et servi exactement comme par l'application, hors ligne : 0 fichier manquant, 0 erreur JavaScript, polices du jeu affichées sans Internet.
+- Toujours pas testé sur un vrai téléphone.
+
 ## Vérifications faites (v1.0)
 
 - Signature v2 validée par `ApkVerifier` (apksig).

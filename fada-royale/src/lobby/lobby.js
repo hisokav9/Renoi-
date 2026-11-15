@@ -247,7 +247,7 @@ export function createLobby(ctx) {
     <button data-p="profile">${ico('profile')}<span>Profil</span></button>
   </nav>
   <div class="lb-home" id="lbHome">
-    <div class="lb-logo"><div class="lb-flag"><i></i><i></i><i></i></div><h1>FADA<br>ROYALE</h1><p><b>v1.0</b>Le battle royale du Sahel</p></div>
+    <div class="lb-logo"><div class="lb-flag"><i></i><i></i><i></i></div><h1>FADA<br>ROYALE</h1><p><b>v1.1</b>Le battle royale du Sahel</p></div>
     <div class="lb-who"><small>Ton personnage</small><b id="lbCharName">—</b><span class="lb-hint">${ctx.IS_TOUCH ? 'Glisse pour le tourner · pince pour zoomer' : 'Glisse pour le tourner · molette pour zoomer'}</span></div>
     <div class="lb-playbox"><button class="lb-mode" id="lbModeBtn"><small>Mode</small><b id="lbModeName">Battle Royale · Solo</b>${ico('chev')}</button>
       <button class="lb-play" id="play">JOUER</button></div>
@@ -355,6 +355,12 @@ export function createLobby(ctx) {
   // --- événements
   function htmlEvents() {
     return `<div class="lb-ev"><b>Aucun événement en cours</b><p>Les événements (défis à durée limitée, récompenses spéciales) arriveront dans une prochaine version. Rien n’est simulé ici.</p></div>
+      <h3>Nouveautés de la v1.1</h3><ul class="lb-list">
+      <li><b>Maisons ouvertes :</b> entre par la porte, fouille l’intérieur et l’étage des grandes maisons.</li>
+      <li><b>Escalade :</b> saute face à un mur pour te hisser ou grimper jusqu’au toit.</li>
+      <li><b>Armes :</b> rechargement propre à chaque arme, culasse du sniper, pompe, revolver à une main.</li>
+      <li><b>Kilishi et thé</b> animés, parapente qui s’ouvre au-dessus de la tête, déplacements plus naturels.</li>
+      <li><b>Nouveau HUD :</b> icônes, silhouettes des armes, boussole.</li></ul>
       <h3>Nouveautés de la v1.0</h3><ul class="lb-list">
       <li><b>Animations corrigées :</b> le buste ne tourne plus sur lui-même en courant, bras stables, buste stabilisé arme en main.</li>
       <li><b>Nouveau lobby</b> en 3D : personnage en vedette, modes de jeu, profil, missions, boutique locale.</li>
