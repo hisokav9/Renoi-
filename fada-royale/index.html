@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>Fada Royale v1.1</title>
+<title>Fada Royale v1.2</title>
 <!-- three.js r160 est hébergé avec le jeu (dossier lib/) : plus besoin d'un CDN pour démarrer -->
 <script type="importmap">{"imports":{"three":"./lib/three/three.module.min.js","three/addons/":"./lib/three/addons/"}}</script>
 <script>
@@ -202,8 +202,8 @@ body.editing-hud #joy{opacity:.7!important}
 #eRew{font:700 14px Rubik;color:#ffe6bf;margin:-6px 0 16px;line-height:1.5}#eRew b{color:#ffd88a}#eRew small{display:block;font:600 12px Rubik;color:#7be36a}
 .ebtns{display:flex;gap:10px;justify-content:center}
 .ghost{font:900 15px Rubik;padding:0 20px;border-radius:14px;background:rgba(255,255,255,.1);border:2px solid rgba(255,255,255,.25)}
-#loading{position:fixed;inset:0;z-index:20;display:flex;flex-direction:column;gap:10px;align-items:center;justify-content:center;background:#1b1209;font-family:Bungee;font-size:30px;color:#f28c28}
-#loading small{font:700 14px Rubik;color:#ffe6bf}
+#loading{position:fixed;inset:0;z-index:20;display:flex;flex-direction:column;gap:10px;align-items:center;justify-content:flex-end;padding-bottom:9vh;background:linear-gradient(180deg,rgba(27,18,9,.05) 30%,rgba(27,18,9,.88) 82%),url(assets/images/chargement.jpg) center/cover no-repeat,#1b1209;font-family:Bungee;font-size:34px;color:#ffd27a;text-shadow:0 3px 0 #7a2e0b,0 0 18px rgba(0,0,0,.6)}
+#loading small{font:700 14px Rubik;color:#ffe6bf;text-shadow:0 1px 3px #000}
 .lbar{width:220px;height:8px;border-radius:4px;background:rgba(255,255,255,.12);overflow:hidden}.lbar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#f28c28,#ffd27a);transition:width .2s}
 #pv{position:absolute;left:50%;top:calc(50% - 64px);transform:translateX(-50%);text-align:center;font:900 11px Rubik;text-shadow:0 1px 2px #000}
 #pv>div{width:120px;height:6px;border-radius:3px;background:rgba(0,0,0,.5);overflow:hidden;margin:3px auto 0}#pv i{display:block;height:100%;background:linear-gradient(90deg,#c7743f,#ffb070)}
@@ -366,6 +366,7 @@ import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 import {createLobby} from './src/lobby/lobby.js';
 import * as Profile from './src/core/profile.js';
+import {WEAPONS as WMODELS, fitWeapon, fitPiece} from './src/core/weapons.js';
 
 /* =====================================================================
    FADA ROYALE — battle royale 100 % Niger (voir FADA_ROYALE_AUDIT.md pour la carte du code)
@@ -568,6 +569,9 @@ TEX.sign = canvasTex(512,128,(g,w,h)=>{ g.fillStyle='#f4f1ea'; g.fillRect(0,0,w,
 function boxGeo(w,h,d){ const g=new THREE.BoxGeometry(w,h,d); const uv=g.attributes.uv; const dims=[[d,h],[d,h],[w,d],[w,d],[w,h],[w,h]];
   for(let f=0;f<6;f++) for(let i=0;i<4;i++){ const k=f*4+i; uv.setXY(k, uv.getX(k)*dims[f][0]/4, uv.getY(k)*dims[f][1]/4); } return g; }
 
+// v1.2 : textures tirées des images du jeu (assets/textures) : chargées en arrière-plan, elles remplacent l'image des
+// textures dessinées par le code (mêmes objets : tous les matériaux qui les utilisent, lobby compris, sont mis à jour)
+function swapTexImage(tex,url,rep){ new THREE.ImageLoader().load(url,img=>{ tex.image=img; tex.userData.url=url; if(rep) tex.repeat.set(rep,rep); tex.needsUpdate=true; }); }
 const MAT={
   banco:new THREE.MeshLambertMaterial({map:TEX.banco,vertexColors:true}),
   decor:new THREE.MeshLambertMaterial({map:TEX.decor,vertexColors:true}),
@@ -580,6 +584,8 @@ const MAT={
   ghost:new THREE.MeshBasicMaterial({color:0x8fd3ff,transparent:true,opacity:0.38,depthWrite:false}),
   ghostBad:new THREE.MeshBasicMaterial({color:0xff5544,transparent:true,opacity:0.32,depthWrite:false}),
 };
+swapTexImage(TEX.wax[0],'assets/textures/wax.jpg');
+if(quality!=='low') new THREE.TextureLoader().load('assets/textures/banco_normal.jpg',tx=>{ tx.wrapS=tx.wrapT=THREE.RepeatWrapping; tx.repeat.set(2,2); MAT.banco.normalMap=tx; MAT.banco.normalScale.set(0.7,0.7); MAT.banco.needsUpdate=true; }); swapTexImage(TEX.plaster,'assets/textures/enduit.jpg'); swapTexImage(TEX.banco,'assets/textures/banco.jpg',2);
 const matCache={};
 const lam = hex => matCache[hex] || (matCache[hex]=new THREE.MeshLambertMaterial({color:hex}));
 
@@ -629,7 +635,10 @@ const lootSpots=[], chestSpots=[], housesInfo=[]; const LOD_OBJ={};
   const p=g.attributes.position; const cols=new Float32Array(p.count*3); const c=new THREE.Color();
   for(let i=0;i<p.count;i++){ const x=p.getX(i), z=p.getZ(i); const h=terrainH(x,z); p.setY(i,h); const gc=groundColor(x,z,h); c.setRGB(gc[0],gc[1],gc[2],THREE.SRGBColorSpace); cols[i*3]=c.r; cols[i*3+1]=c.g; cols[i*3+2]=c.b; }
   g.setAttribute('color',new THREE.BufferAttribute(cols,3)); g.computeVertexNormals();
-  const t=new THREE.Mesh(g,new THREE.MeshLambertMaterial({vertexColors:true})); t.receiveShadow=true; t.name='terrain'; scene.add(t);
+  const tm=new THREE.MeshLambertMaterial({vertexColors:true}); const t=new THREE.Mesh(g,tm); t.receiveShadow=true; t.name='terrain'; scene.add(t);
+  // v1.2 : texture de détail du sol (sable, cailloux, herbe sèche), répétée tous les 6 m, multipliée par les couleurs des zones ;
+  // moyenne 0,77 compensée par la couleur du matériau pour garder la même luminosité
+  new THREE.TextureLoader().load('assets/textures/sol_detail.jpg',tx=>{ tx.wrapS=tx.wrapT=THREE.RepeatWrapping; tx.repeat.set(S/6,S/6); tx.anisotropy=quality==='low'?1:4; tm.map=tx; tm.color.setScalar(1/0.77); tm.needsUpdate=true; });
   // fleuve
   const wp=[], wi=[]; let k=0;
   const ZW=MAP+40; for(let z=-ZW;z<=ZW;z+=4){ const x=riverX(z); wp.push(x-RIVER_W-9,WATER_Y,z, x+RIVER_W+9,WATER_Y,z); if(z>-ZW){ wi.push(k-2,k,k-1, k-1,k,k+1); } k+=2; }
@@ -1025,10 +1034,13 @@ const miniBase=document.createElement('canvas'); miniBase.width=miniBase.height=
 const SKINS={
   boss:{label:'Le Boss', real:'boss', css:{s:'#c9a27e',b:'#2b2b30',l:'#2b2b30',ht:'#111',hb:'#111'}},
   guerriere:{label:'La Guerrière', real:'guerriere', css:{s:'#7a4a2e',b:'#2a2a2a',l:'#9b7f62',ht:'#a0522d'}},
-  touareg:{label:'Le Touareg', body:0x23398e, legs:0x1d2f78, arms:0x23398e, skin:0x6b4226, head:'turban', hc:0x14205c, css:{s:'#6b4226',b:'#23398e',l:'#1d2f78',ht:'#14205c',hb:'#14205c'}},
+  // v1.2 : Touareg, Commerçante et Garde construits sur les corps 3D animés (costumes : voir applyCostume) ;
+  // sans modèles 3D chargés, le jeu retombe sur les versions en blocs (champs body/legs/head…)
+  touareg:{label:'Le Touareg', real:'boss', costume:'touareg', body:0x23398e, legs:0x1d2f78, arms:0x23398e, skin:0x6b4226, head:'turban', hc:0x14205c, css:{s:'#6b4226',b:'#23398e',l:'#1d2f78',ht:'#14205c',hb:'#14205c'}},
   lutteur:{label:'Le Lutteur', body:0x5a3a22, legs:0x5a3a22, arms:0x5a3a22, skin:0x5a3a22, head:'band', hc:0xd1342b, waist:0xffffff, css:{s:'#5a3a22',b:'#5a3a22',l:'#d1342b',ht:'#d1342b'}},
+  garde:{label:'Le Garde du W', real:'boss', costume:'garde', body:0x9c8a5c, legs:0x5d6340, arms:0x9c8a5c, skin:0x5a3a22, head:'cap', hc:0x8c7a4e, css:{s:'#5a3a22',b:'#9c8a5c',l:'#5d6340',ht:'#8c7a4e'}},
   kabou:{label:'Kabou-Kabou', body:0xe9862f, legs:0x2f4f7a, arms:0xe9862f, skin:0x6a4428, head:'cap', hc:0x1d7a3e, css:{s:'#6a4428',b:'#e9862f',l:'#2f4f7a',ht:'#1d7a3e'}},
-  commercante:{label:'La Commerçante', body:'wax0', legs:'wax0', arms:0x5e3b23, skin:0x5e3b23, head:'wrap', hc:'wax1', css:{s:'#5e3b23',b:'#f28c28',l:'#1d4fa0',ht:'#0f8f4a'}},
+  commercante:{label:'La Commerçante', real:'guerriere', costume:'commercante', body:'wax0', legs:'wax0', arms:0x5e3b23, skin:0x5e3b23, head:'wrap', hc:'wax1', css:{s:'#5e3b23',b:'#f28c28',l:'#1d4fa0',ht:'#0f8f4a'}},
 };
 const waxMat=[0,1,2,3].map(i=>new THREE.MeshLambertMaterial({map:TEX.wax[i]}));
 const cmat=v=>typeof v==='string'?waxMat[+v.slice(3)]:lam(v);
@@ -1112,9 +1124,16 @@ function gunLow(m,type,show){ if(!m.wl) m.wl={}; for(const k in m.wl) m.wl[k].vi
   const o=new THREE.Mesh(lowGunGeo(type),lowGunMat); o.scale.setScalar(1.2); (m.real?m.hold:m.mount).add(o); m.wl[type]=o; } // une seule pièce : un seul appel de dessin
 function makeGunObj(type){ const A=ASSETS.w[type]; if(A) return A.scene.clone(); return buildWeapon(type); }
 function ensureWeapon(m,type){ if(m.w[type]) return m.w[type]; let o;
-  if(type==='daba'){ o=buildWeapon('daba'); if(m.real&&m.dabaOff){ m.bones.RightHand.add(o); m.dabaOff.decompose(o.position,o.quaternion,o.scale); } else if(m.real){ m.hold.add(o); } else { m.handR.add(o); o.rotation.x=-Math.PI/2; o.position.y=-0.4; } }
+  if(type==='daba'){ o=makeGunObj('daba'); if(m.real&&m.dabaOff){ m.bones.RightHand.add(o); m.dabaOff.decompose(o.position,o.quaternion,o.scale); } else if(m.real){ m.hold.add(o); } else { m.handR.add(o); o.rotation.x=-Math.PI/2; o.position.y=-0.4; } }
   else { o=makeGunObj(type); (m.real?m.hold:m.mount).add(o); }
   o.visible=false; m.w[type]=o; return o; }
+// v1.2 : arme calée (poignée au point de prise, canon horizontal) ; ses points d'appui remplacent ceux de ANCH
+const PROP3D={}, OBJ3D={};
+// textures tirées d'images déjà éclairées : on coupe l'essentiel du reflet d'environnement pour ne pas éclairer deux fois
+function tameBaked(m){ m.envMapIntensity=0.25; m.roughness=Math.max(m.roughness,0.85); m.color.multiplyScalar(0.8); }
+function castNone(o){ o.traverse(m=>{ if(m.isMesh){ m.castShadow=false; m.receiveShadow=false; const ms=Array.isArray(m.material)?m.material:[m.material]; ms.forEach(x=>{ if(x.isMeshStandardMaterial&&x.map) tameBaked(x); }); } }); return o; }
+function prepWeapon(n,f){ f.object.traverse(o=>{ if(o.isMesh){ o.castShadow=true; o.receiveShadow=false; const ms=Array.isArray(o.material)?o.material:[o.material]; ms.forEach(m=>{ if(m.isMeshStandardMaterial) tameBaked(m); }); } });
+  ASSETS.w[n]={scene:f.object,muzzle:f.muzzle,muzzleY:f.muzzleY}; if(n!=='daba') ANCH[n]=Object.assign(ANCH[n]||{},f.anchors); }
 function prepAsset(t,n,sc){
   sc.traverse(o=>{ if(o.isMesh){ o.castShadow=true; o.receiveShadow=false; const ms=Array.isArray(o.material)?o.material:[o.material]; ms.forEach(m=>{ if(m.isMeshStandardMaterial) m.envMapIntensity=t==='w'?0.9:0.5; }); } });
   if(t==='w'){ const b=new THREE.Box3().setFromObject(sc); ASSETS.w[n]={scene:sc,muzzle:b.min.z}; }
@@ -1130,10 +1149,15 @@ function unifySkeleton(sc){ sc.updateMatrixWorld(true); let main=null; sc.traver
     if(changed) o.bind(new THREE.Skeleton(nb,inv),o.bindMatrix); }); }
 async function loadAssets(){
   const ld=new GLTFLoader(); ld.setMeshoptDecoder(MeshoptDecoder);
-  const jobs=[...['fusil','pompe','mitraillette','sniper','mitrailleuse','revolver'].map(n=>['w',n]),['c','boss'],['c','guerriere'],['anim','boss'],['anim','guerriere']]; let done=0;
+  // v1.2 : armes créées pour le jeu (assets/armes/*.glb, calées par src/core/weapons.js) ; le revolver garde l'ancien modèle
+  const jobs=[...Object.keys(WMODELS).map(n=>['wn',n]),['w','revolver'],['o','kilishi'],['o','verre-the'],['o','theiere'],['c','boss'],['c','guerriere'],['anim','boss'],['anim','guerriere']]; let done=0;
   const b64=s2=>{ const bin=atob(s2); const u=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) u[i]=bin.charCodeAt(i); return u.buffer; };
-  await Promise.all(jobs.map(async([t,n])=>{ try{ const mod=await import(`./assets/${t}_${n}.js`);
-      if(t==='anim') ASSETS.anim[n]=decodeAnims(mod.default); else { const g=await ld.parseAsync(b64(mod.default),''); prepAsset(t,n,g.scene); } }
+  await Promise.all(jobs.map(async([t,n])=>{ try{
+      if(t==='wn'){ const cfg=WMODELS[n], g=await ld.loadAsync(`./assets/armes/${cfg.file}.glb`); prepWeapon(n,fitWeapon(THREE,g.scene,n));
+        if(cfg.mag){ const gp=await ld.loadAsync(`./assets/armes/${cfg.mag.file}.glb`); PROP3D[cfg.mag.kind||('mag:'+n)]=castNone(fitPiece(THREE,gp.scene,cfg.mag.len)); } }
+      else if(t==='o'){ const g=await ld.loadAsync(`./assets/objets/${n}.glb`); OBJ3D[n]=castNone(g.scene); }
+      else { const mod=await import(`./assets/${t}_${n}.js`);
+      if(t==='anim') ASSETS.anim[n]=decodeAnims(mod.default); else { const g=await ld.parseAsync(b64(mod.default),''); prepAsset(t,n,g.scene); } } }
     catch(e){ console.warn('fichier non chargé',t,n,e); } done++; $('loadBar').style.width=(done/jobs.length*100)+'%'; }));
 }
 /* ---------- animations cuites (tools/anim-bake) ----------
@@ -1161,10 +1185,10 @@ const OUTFITS=[{name:'Indigo touareg',c:[0.35,0.4,0.75]},{name:'Terre rouge',c:[
 function applyOutfit(sk,idx){ if(idx==null||idx<0||!OUTFITS[idx]) return; const col=OUTFITS[idx].c;
   sk.traverse(o=>{ if(o.isMesh&&/Outfit_Top|Outfit_Bottom|^Tops$|^Bottoms$/.test(o.name)){ o.material=o.material.clone(); o.material.color.setRGB(col[0],col[1],col[2]); } }); }
 function applyGlider(m,idx){ const can=m.glider&&m.glider.userData.wing&&m.glider.userData.wing.children[0]; if(can&&TEX.wax[idx]){ can.material.map=TEX.wax[idx]; can.material.needsUpdate=true; } }
-function buildRealChar(kind,outfit){
+function buildRealChar(kind,outfit,costume){
   const A=ASSETS.c[kind]; const g=new THREE.Group(); const inner=new THREE.Group(); inner.rotation.y=Math.PI; inner.scale.setScalar(A.scale); g.add(inner);
   const sk=SkeletonUtils.clone(A.scene); inner.add(sk);
-  applyOutfit(sk,outfit);
+  if(!costume) applyOutfit(sk,outfit);
   inner.updateMatrixWorld(true);
   // on anime l'os le plus haut de chaque pile (les rigs Mixamo convertis empilent parfois plusieurs os du même nom)
   const bones={}; sk.traverse(o=>{ if(o.isBone){ const n=boneBase(o.name); if(RIGB.includes(n)&&!bones[n]&&!(o.parent&&o.parent.isBone&&boneBase(o.parent.name)===n)) bones[n]=o; } }); const dups=[];
@@ -1192,10 +1216,62 @@ function buildRealChar(kind,outfit){
     m.dabaOff=new THREE.Matrix4().copy(bones.RightHand.matrixWorld).invert().multiply(D);
     act.idle.setEffectiveWeight(0); mx.update(0);
   }
+  if(costume) applyCostume(m,sk,costume);
   return m;
 }
+/* v1.2 : costumes. Vêtements recolorés ou en wax, cheveux / masque cachés, accessoires accrochés aux os (ils suivent
+   toutes les animations). Accessoires construits dans le repère du perso (avant = −z, haut = +y) puis rattachés à l'os
+   avec attach(), qui conserve leur position. */
+function applyCostume(m,sk,key){
+  const g=m.g; g.updateMatrixWorld(true);
+  const mesh=n=>{ let r=null; sk.traverse(o=>{ if(o.isMesh&&o.name===n) r=o; }); return r; };
+  const hide=n=>{ const o=mesh(n); if(o){ o.visible=false; o.userData.costumeHidden=true; } };
+  const own=o=>{ if(o&&!o.userData.ownMat){ o.material=o.material.clone(); o.userData.ownMat=true; } return o; };
+  const recolor=(n,hex,keepMap)=>{ const o=own(mesh(n)); if(!o) return; if(!keepMap) o.material.map=null; o.material.color.set(hex); o.material.needsUpdate=true; };
+  const waxCloth=(n,rep)=>{ const o=own(mesh(n)); if(!o) return; const t=TEX.wax[0].clone(); t.repeat.set(rep,rep); t.needsUpdate=true; o.material.map=t; o.material.color.set(0xffffff); o.material.roughness=0.9; o.material.needsUpdate=true; };
+  const std=(hex,extra)=>new THREE.MeshStandardMaterial(Object.assign({color:hex,roughness:0.9,metalness:0},extra||{}));
+  const B=m.bones, head=B.Head, hp=head.getWorldPosition(V()); g.worldToLocal(hp);
+  const c=V(hp.x,hp.y+0.1,hp.z-0.01);                    // centre de la tête (au-dessus de l'articulation du cou)
+  const acc=new THREE.Group(); g.add(acc);
+  const add=(geo,mat,x,y,z,rx=0,ry=0,rz=0,sx=1,sy=1,sz=1)=>{ const o=new THREE.Mesh(geo,mat); o.position.set(c.x+x,c.y+y,c.z+z); o.rotation.set(rx,ry,rz); o.scale.set(sx,sy,sz); o.castShadow=true; acc.add(o); return o; };
+  if(key==='touareg'){
+    hide('Wolf3D_Facewear'); hide('Wolf3D_Hair');
+    recolor('Wolf3D_Head',0x8a5a3c,true); recolor('Wolf3D_Body',0x5c3a22);
+    recolor('Wolf3D_Outfit_Top',0x86aedb); recolor('Wolf3D_Outfit_Bottom',0x24305c);
+    const ind=std(0x1d2c78,{side:THREE.DoubleSide});
+    for(const [y,r,t] of [[0.06,0.106,0.032],[0.095,0.104,0.034],[0.13,0.094,0.032]]) add(new THREE.TorusGeometry(r,t,8,22),ind,0,y,0.005,Math.PI/2+0.06);
+    add(new THREE.SphereGeometry(0.098,16,10,0,Math.PI*2,0,Math.PI/2),ind,0,0.138,0.01,0,0,0,1,0.75,1);
+    add(new THREE.CylinderGeometry(0.104,0.092,0.11,18,1,true,Math.PI*0.42,Math.PI*1.16),ind,0,-0.082,0.0);   // voile sur le bas du visage (les yeux restent visibles)
+    add(new THREE.TorusGeometry(0.072,0.04,8,18),ind,0,-0.16,0.01,Math.PI/2);                                // tour du cou
+    add(new THREE.BoxGeometry(0.07,0.24,0.02),ind,0.05,-0.27,0.07,0.2,0,-0.15);                              // pan qui tombe sur l'épaule
+  } else if(key==='garde'){
+    hide('Wolf3D_Facewear'); hide('Wolf3D_Hair');
+    recolor('Wolf3D_Head',0x7d5236,true); recolor('Wolf3D_Body',0x5a3a22);
+    recolor('Wolf3D_Outfit_Top',0x9c8a5c); recolor('Wolf3D_Outfit_Bottom',0x5d6340);
+    const kh=std(0x8c7a4e), band=std(0x3d3020);
+    add(new THREE.CylinderGeometry(0.2,0.2,0.012,28),kh,0,0.1,0.005,-0.05);                                  // bord du chapeau de brousse
+    add(new THREE.CylinderGeometry(0.098,0.112,0.105,22),kh,0,0.155,0.005,-0.05);
+    add(new THREE.CylinderGeometry(0.114,0.114,0.022,22),band,0,0.118,0.005,-0.05);
+    // jumelles sur la poitrine (accrochées au buste)
+    const sp=B.Spine2.getWorldPosition(V()); g.worldToLocal(sp); const bino=new THREE.Group(); g.add(bino); bino.position.set(sp.x,sp.y-0.09,sp.z-0.19);
+    const blk=std(0x1d1d1d,{roughness:0.6});
+    for(const x of [-0.035,0.035]){ const t=new THREE.Mesh(new THREE.CylinderGeometry(0.025,0.028,0.11,12),blk); t.position.x=x; t.castShadow=true; bino.add(t); }
+    const strap=new THREE.Mesh(new THREE.TorusGeometry(0.16,0.006,4,24,Math.PI),std(0x3d3020)); strap.position.set(0,0.04,0.12); strap.rotation.x=-0.5; bino.add(strap);
+    B.Spine2.attach(bino);
+  } else if(key==='commercante'){
+    hide('Hair'); hide('Gloves');
+    waxCloth('Tops',2); waxCloth('Bottoms',3);
+    const wx=TEX.wax[0].clone(); wx.repeat.set(2,2); wx.needsUpdate=true; const wm=std(0xffffff,{map:wx,side:THREE.DoubleSide});
+    add(new THREE.SphereGeometry(0.12,18,12),wm,0,0.07,0.025,0,0,0,1.02,0.82,1.1);                           // foulard (gele) qui enveloppe la tête
+    add(new THREE.SphereGeometry(0.1,14,10),wm,0,0.16,0.05,-0.5,0,0,1.25,0.55,0.9);                           // le haut noué, relevé vers l'arrière
+    for(const s of [-1,1]) add(new THREE.ConeGeometry(0.07,0.16,10),wm,s*0.06,0.2,0.07,-0.9,0,s*0.6,1,1,0.35); // les deux pans du nœud
+  }
+  // les accessoires suivent la tête
+  head.attach(acc);
+  m.detail=m.detail.filter(o=>!o.userData.costumeHidden);
+}
 function makeModel(skin,isPlayer){ const S=SKINS[skin]; let m;
-  if(S&&S.real&&ASSETS.c[S.real]) m=buildRealChar(S.real,isPlayer?(PROFILE.outfits[skin]??-1):Math.floor(Math.random()*OUTFITS.length));
+  if(S&&S.real&&ASSETS.c[S.real]) m=buildRealChar(S.real,isPlayer?(PROFILE.outfits[skin]??-1):Math.floor(Math.random()*OUTFITS.length),S.costume);
   else m=buildChar(SKINS[skin]&&!(S&&S.real)?skin:'touareg');
   if(isPlayer) applyGlider(m,PROFILE.glider|0); return m; }
 const modelKey=(s,isPlayer)=>s+(isPlayer?'|'+(PROFILE.outfits[s]??-1)+'|'+(PROFILE.glider|0):'');
@@ -1743,7 +1819,7 @@ let camYaw=0, camPitch=-0.1, camDist=4, ads=false, camPivY=null, shake=0;
 function addShake(a){ shake=Math.min(0.12,shake+a); }
 const camFwd=V(), camRight=V(), _o=V(), _d=V(), _t=V(), _m=V();
 function updateCamVectors(){ const cp=Math.cos(camPitch); camFwd.set(-Math.sin(camYaw)*cp,Math.sin(camPitch),-Math.cos(camYaw)*cp); camRight.set(Math.cos(camYaw),0,-Math.sin(camYaw)); }
-function muzzle(c,out){ const wo=c.model.w&&c.model.w[c.cur]; if(wo&&wo.visible&&c.cur!=='daba'){ const A=ASSETS.w[c.cur]; wo.updateWorldMatrix(true,false); return wo.localToWorld(out.set(0,0.02,A?A.muzzle:-0.6)); } const s=Math.sin(c.yaw), co=Math.cos(c.yaw); return out.set(c.pos.x-s*0.75+co*0.18, c.pos.y+1.28, c.pos.z-co*0.75-s*0.18); }
+function muzzle(c,out){ const wo=c.model.w&&c.model.w[c.cur]; if(wo&&wo.visible&&c.cur!=='daba'){ const A=ASSETS.w[c.cur]; wo.updateWorldMatrix(true,false); return wo.localToWorld(out.set(0,A&&A.muzzleY!==undefined?A.muzzleY:0.02,A?A.muzzle:-0.6)); } const s=Math.sin(c.yaw), co=Math.cos(c.yaw); return out.set(c.pos.x-s*0.75+co*0.18, c.pos.y+1.28, c.pos.z-co*0.75-s*0.18); }
 let bloom=0;
 function playerFire(){
   const p=player, w=WEAP[p.cur];
@@ -2097,9 +2173,20 @@ const PROP_GEO={}; function propMesh(kind){
     else if(kind==='glass'){ mg.add(new THREE.CylinderGeometry(0.024,0.019,0.07,10),M4(0,0.03,0),C(0xc9e6d8)); mg.add(new THREE.CylinderGeometry(0.022,0.018,0.045,10),M4(0,0.022,0),C(0x8a3a10)); mg.add(new THREE.CylinderGeometry(0.0225,0.0225,0.008,10),M4(0,0.047,0),C(0xf2e6c8)); }
     PROP_GEO[kind]=mg.mesh(MAT.plain).geometry; }
   const m=new THREE.Mesh(PROP_GEO[kind],MAT.plain); m.castShadow=false; return m; }
+// v1.2 : accessoire 3D s'il existe (chargeur de l'arme, caisse de la Minimi, kilishi, verre de thé), sinon forme simple
+const PROP_OBJ={ kil:()=>OBJ3D.kilishi&&propFrom(OBJ3D.kilishi,0.16,'kil'), glass:()=>OBJ3D['verre-the']&&propFrom(OBJ3D['verre-the'],0.075,'glass') };
+function propFrom(src,len,kind){ const sc=src.clone(); sc.updateMatrixWorld(true); const b=new THREE.Box3().setFromObject(sc), sz=b.getSize(new THREE.Vector3()), c=b.getCenter(new THREE.Vector3());
+  const inner=new THREE.Group(); inner.add(sc);
+  if(kind==='kil'){ inner.rotation.y=sz.x>sz.z?Math.PI/2:0; const k=len/Math.max(sz.x,sz.z); inner.scale.setScalar(k); sc.position.set(-c.x,-c.y,-c.z); const o=new THREE.Group(); inner.position.z=-len/2+0.02; o.add(inner); return o; } // le bout tenu à l'origine, la plaque vers l'avant
+  const k=len/sz.y; inner.scale.setScalar(k); sc.position.set(-c.x,-b.min.y,-c.z); const o=new THREE.Group(); o.add(inner); return o; }
+function propObj(kind){ const src=PROP3D[kind]; if(src) return src.clone(); const f=PROP_OBJ[kind]; const o=f&&f(); return o||propMesh(kind); }
+// chargeur propre à l'arme en main
+const propKind=(kind,w)=>kind==='mag'&&PROP3D['mag:'+w]?'mag:'+w:kind;
 // chargeurs qui tombent au sol
-const DEBRIS=[]; function dropDebris(kind,pos,vel){ let d=DEBRIS.find(x=>x.t<=0); if(!d){ if(DEBRIS.length>=10) d=DEBRIS[0]; else { d={m:propMesh(kind)}; scene.add(d.m); DEBRIS.push(d); } }
-  d.m.geometry=PROP_GEO[kind]||propMesh(kind).geometry; d.m.position.copy(pos); d.v=vel.clone(); d.t=4; d.m.visible=true; d.spin=rnd(-6,6); }
+// v1.2 : un objet par sorte (chargeur de chaque arme, caisse…), réutilisé ; 10 au plus en même temps
+const DEBRIS=[]; function dropDebris(kind,pos,vel){ let d=DEBRIS.find(x=>x.t<=0&&x.kind===kind);
+  if(!d){ if(DEBRIS.length>=10){ d=DEBRIS.reduce((a,b)=>a.t<b.t?a:b); scene.remove(d.m); } else { d={}; DEBRIS.push(d); } d.kind=kind; d.m=propObj(kind); scene.add(d.m); }
+  d.m.position.copy(pos); d.m.rotation.set(0,rnd(0,6.28),0); d.v=vel.clone(); d.t=4; d.m.visible=true; d.spin=rnd(-6,6); }
 function updateDebris(dt){ for(const d of DEBRIS){ if(d.t<=0) continue; d.t-=dt; if(d.t<=0){ d.m.visible=false; continue; } const g=groundAt(d.m.position.x,d.m.position.z,d.m.position.y+0.2);
   if(d.m.position.y>g+0.03){ d.v.y-=18*dt; d.m.position.addScaledVector(d.v,dt); d.m.rotation.x+=d.spin*dt; if(d.m.position.y<g+0.03){ d.m.position.y=g+0.03; d.v.set(0,0,0); d.spin=0; } } } }
 // sons mécaniques (chargeur, culasse, pompe, barillet…)
@@ -2286,13 +2373,13 @@ function shellsSample(c,out){ const el=c.reloadDur-c.reloadT, n=Math.max(1,c.rel
     if(k<0.42){ out.LA='port'; out.LB='belt'; out.e=smooth(0,0.42,k); } else { out.LA='belt'; out.LB='port'; out.e=smooth(0.42,0.86,k); out.p='shell'; } }
   else { const k=clamp((el-0.25-n*0.42)/0.3,0,1); const back=1-smooth(0,0.5,k); for(let i=0;i<6;i++) out.g[i]=tilt[i]*back;
     if(k<0.4){ out.LA='port'; out.LB='fore'; out.e=smooth(0,0.4,k); } else { out.LA='fore'; out.LB='foreB'; out.e=k<0.7?smooth(0.4,0.7,k):1-smooth(0.7,1,k); } } }
-function showProp(m,g,kind,local,c,useU,headX){ if(!m.props) m.props={}; let o=m.props[kind];
-  if(!o){ o=kind==='shell'?(()=>{ const sm2=new THREE.Mesh(new THREE.CylinderGeometry(0.011,0.011,0.07,6),lam(0xb03020)); sm2.rotation.x=Math.PI/2; const gg=new THREE.Group(); gg.add(sm2); return gg; })():propMesh(kind); o.castShadow=false; g.add(o); m.props[kind]=o; }
+function showProp(m,g,kind,local,c,useU,headX){ if(!m.props) m.props={}; kind=propKind(kind,c.cur); let o=m.props[kind];
+  if(!o){ o=kind==='shell'?(()=>{ const sm2=new THREE.Mesh(new THREE.CylinderGeometry(0.011,0.011,0.07,6),lam(0xb03020)); sm2.rotation.x=Math.PI/2; const gg=new THREE.Group(); gg.add(sm2); return gg; })():propObj(kind); o.castShadow=false; g.add(o); m.props[kind]=o; }
   o.visible=true; o.position.copy(local); o.rotation.set(0,0,0); o.scale.set(1,1,1);
   if(kind==='kil'){ const bites=useU<0.32?0:useU<0.52?1:useU<0.72?2:3; o.scale.z=1-bites*0.26; o.rotation.x=-0.5; }
   else if(kind==='glass'){ o.rotation.x=(headX||0)*2.3; o.position.y-=0.02; } }
 function choreoEvent(c,m,g,wo,type,name){ const d=c.pos.distanceTo(camera.position); if(d>40) return; sfxMech(name.split('+')[0],d);
-  if(name==='magout'){ anchorLocal(m,g,wo,type,'mag',_hw); g.localToWorld(_hw); dropDebris(type==='mitrailleuse'?'box':'mag',_hw,V(rnd(-0.3,0.3),-0.4,rnd(-0.3,0.3))); }
+  if(name==='magout'){ anchorLocal(m,g,wo,type,'mag',_hw); g.localToWorld(_hw); dropDebris(type==='mitrailleuse'?'box':propKind('mag',type),_hw,V(rnd(-0.3,0.3),-0.4,rnd(-0.3,0.3))); }
   else if(name==='eject6'){ anchorLocal(m,g,wo,type,'cyl',_hw); g.localToWorld(_hw); for(let k=0;k<6;k++) spawnParticle(_hw.x,_hw.y,_hw.z,rnd(-0.6,0.6),rnd(-0.5,0.4),rnd(-0.6,0.6),0xd8a840,1.1,0.35,16); }
   else if(name.endsWith('+eject')){ anchorLocal(m,g,wo,type,type==='pompe'?'port':'bolt',_hw); g.localToWorld(_hw); const r=V(Math.cos(c.yaw),0,-Math.sin(c.yaw));
     spawnParticle(_hw.x,_hw.y+0.03,_hw.z,r.x*rnd(1.6,2.4),rnd(1.6,2.6),r.z*rnd(1.6,2.4),type==='pompe'?0xb03020:0xd8a840,1.0,type==='pompe'?0.55:0.45,16); } }
@@ -2484,7 +2571,7 @@ function makeWeaponIcons(){
   sc.overrideMaterial=new THREE.MeshLambertMaterial({color:0xffffff});
   const cv=document.createElement('canvas'); cv.width=W; cv.height=H; const g2=cv.getContext('2d'), img=g2.createImageData(W,H);
   const prevRT=renderer.getRenderTarget(), prevC=renderer.getClearColor(new THREE.Color()), prevA=renderer.getClearAlpha(); renderer.setClearColor(0x000000,0);
-  try{ for(const t of ['daba',...GUNS]){ const o=t==='daba'?buildWeapon('daba'):makeGunObj(t); const root=new THREE.Group(); root.add(o); sc.add(root); root.updateMatrixWorld(true);
+  try{ for(const t of ['daba',...GUNS]){ const o=makeGunObj(t); const root=new THREE.Group(); root.add(o); sc.add(root); root.updateMatrixWorld(true);
       let bb=new THREE.Box3().setFromObject(root), sz=bb.getSize(new THREE.Vector3()); if(sz.y>sz.z){ root.rotation.x=Math.PI/2; root.updateMatrixWorld(true); bb.setFromObject(root); bb.getSize(sz); }
       if(t==='daba'&&sz.x>sz.y){ root.rotation.z=Math.PI/2; root.updateMatrixWorld(true); bb.setFromObject(root); bb.getSize(sz); } // la lame se voit de profil
       const c=bb.getCenter(new THREE.Vector3()), hw=Math.max(sz.z/2,sz.y/2*W/H)*1.06; cam.left=-hw; cam.right=hw; cam.top=hw*H/W; cam.bottom=-hw*H/W; cam.updateProjectionMatrix();
@@ -2640,10 +2727,8 @@ function loop(now){ requestAnimationFrame(loop); const dt=Math.min(0.05,(now-las
 /* =====================================================================
    MENU, DÉBUT ET FIN DE PARTIE
    ===================================================================== */
-const CREDITS_HTML=`<b>Modèles 3D</b><br>« AK103 » par TORI106 — <a href="https://sketchfab.com/3d-models/ak103-2e6960dbcedd4efc89fdc5d0fd575db0">Sketchfab</a>, licence CC BY 4.0<br>
-« MP5 (Free) » par Skabl — <a href="https://sketchfab.com/3d-models/mp5-free-c5e43bab0ee2472294e9151f8ff43d54">Sketchfab</a>, licence CC BY-NC 4.0 (pas d'usage commercial)<br>
-« Shotgun » par Jonathan Steylaerts — <a href="https://sketchfab.com/3d-models/shotgun-bec49e6f99e347cbb60e6390b2c4202c">Sketchfab</a>, licence CC BY-NC 4.0 (pas d'usage commercial)<br>
-Sniper, mitrailleuse Minimi, revolver Colt Python : modèles importés (auteurs à créditer)<br>
+const CREDITS_HTML=`<b>Modèles 3D</b><br>Fusil d'assaut, mitraillette, fusil à pompe, sniper, mitrailleuse, daba, chargeurs, kilishi, verre et théière : créés pour Fada Royale<br>
+Revolver Colt Python : modèle importé (auteur à créditer)<br>
 Persos : avatar Ready Player Me, personnage Adobe Fuse / Mixamo<br>
 Animations : « Universal Animation Library » 1 et 2 par Quaternius — licence CC0 (domaine public)<br>
 Moteur 3D : three.js · Jeu : Fada Royale`;
@@ -2815,7 +2900,7 @@ function uiSfx(k){ initAudio(); if(!actx) return; if(k==='click') tone(620,0.04,
 // perso présenté dans le lobby : même usine que le jeu (buildRealChar / buildChar), sans arme, animation d'attente
 function buildDisplay(skin,outfit){
   const S=SKINS[skin]; const real=!!(S&&S.real&&ASSETS.c[S.real]);
-  const m=real?buildRealChar(S.real,outfit):buildChar(S&&!S.real?skin:'touareg');
+  const m=real?buildRealChar(S.real,outfit,S.costume):buildChar(S&&!S.real?skin:'touareg');
   const holder=new THREE.Group(); holder.add(m.g); m.g.visible=true; m.g.rotation.y=Math.PI; // face à la caméra
   m.g.traverse(o=>{ if(o.isMesh) o.castShadow=true; });
   const A=m.act; let t=Math.random()*3, gT=-1, nextG=4+Math.random()*3;
@@ -2832,10 +2917,10 @@ function buildDisplay(skin,outfit){
 function initLobby(){
   lobby=createLobby({ THREE, renderer, IS_TOUCH, envMap:scene.environment, TEX, glowTex, profile:PROFILE, SKINS,
     OUTFITS:OUTFITS.map(o=>({name:o.name,css:'rgb('+o.c.map(v=>Math.round(Math.min(1,v)*235+20)).join(',')+')'})),
-    WAX:TEX.wax.map((t,i)=>({name:WAX_NAMES[i],url:t.image.toDataURL('image/png')})),
+    WAX:TEX.wax.map((t,i)=>({name:WAX_NAMES[i],url:t.userData.url||(t.image.toDataURL?t.image.toDataURL('image/png'):'')})),
     WEAPONS:GUNS.map(g=>({id:g,name:WEAP[g].name,rarCss:RAR_CSS[WEAP[g].rar],rarName:RAR_NAMES[WEAP[g].rar]})),
     skinAvailable:k=>!!SKINS[k]&&(!SKINS[k].real||!!ASSETS.c[SKINS[k].real]),
-    buildDisplay, weaponModel:t=>makeGunObj(t), quality:()=>quality,
+    buildDisplay, weaponModel:t=>makeGunObj(t), quality:()=>quality, objects:OBJ3D,
     startMatch, openSettings, beforeLaunch, precompile:()=>{ try{ renderer.compile(scene,camera); }catch(e){} }, creditsHTML:CREDITS_HTML, sfx:uiSfx,
     resetProfile:()=>{ try{ localStorage.removeItem('fr_profile'); }catch(e){} location.reload(); } });
 }

@@ -1,11 +1,11 @@
-# Fada Royale — Feuille de route (mise à jour v1.1)
+# Fada Royale — Feuille de route (mise à jour v1.2)
 
 Classée par priorité. Chaque point dit pourquoi il compte et ce qu'il demande. Les points réglés en v1.1 sont indiqués.
 
 ## Priorité 1 — à faire avant une diffusion publique
 
 1. **Mesurer sur de vrais téléphones Android** (entrée de gamme, milieu de gamme). Ouvrir le jeu avec `?stats=1`, noter FPS, temps de rendu, appels de dessin, triangles en Basse / Moyenne / Haute, au lobby, à l'atterrissage et en fin de partie. Les tests actuels utilisent un rendu logiciel : ils valident la logique, pas la vitesse réelle.
-2. **Licences des modèles 3D** : MP5 et fusil à pompe sous CC BY-NC (pas d'usage commercial) ; sniper, Minimi et Colt sans auteur crédité. À remplacer par des modèles CC0 / CC BY ou faits maison avant tout usage commercial ou lien avec Renoi Studio. Les prompts de génération sont prêts dans `PROMPTS_ASSETS.md` (avec pièces séparées pour animer le vrai chargeur).
+2. **Licences des modèles 3D** : réglé en v1.2 pour le fusil, la mitraillette, le pompe, le sniper, la mitrailleuse et la daba (modèles créés pour le jeu). **Reste le revolver** (Colt, auteur non crédité) : il faut une image du revolver barillet fermé (prompt dans `PROMPTS_ASSETS.md`). Anciennement : MP5 et fusil à pompe sous CC BY-NC (pas d'usage commercial) ; sniper, Minimi et Colt sans auteur crédité. À remplacer par des modèles CC0 / CC BY ou faits maison avant tout usage commercial ou lien avec Renoi Studio. Les prompts de génération sont prêts dans `PROMPTS_ASSETS.md` (avec pièces séparées pour animer le vrai chargeur).
 3. **Poids des persos** : la Guerrière fait ≈ 21 000 triangles, le Boss ≈ 12 000 ; 20 persos proches = jusqu'à 290 000 triangles même en Basse. Préparer des versions allégées (LOD de maillage : ≈ 3 000 à 5 000 triangles) avec un outil comme gltf-transform `simplify`, chargées pour les bots lointains.
 
 ## Priorité 2 — qualité de jeu
@@ -22,7 +22,7 @@ Classée par priorité. Chaque point dit pourquoi il compte et ce qu'il demande.
 9. **Mode Entraînement enrichi** : parcours de construction, cibles mobiles, chronomètre.
 10. **Événements** : défis à durée limitée calculés en local (comme les missions) une fois le système éprouvé.
 11. **Apparences d'armes** dans la boutique (couleurs, motifs wax) — l'emplacement existe déjà.
-12. **Nouveaux persos** : la boutique et la sélection les accepteront sans changement de structure (ajout dans `SKINS` + fichiers dans `assets/`).
+12. **Nouveaux persos** : v1.2 : Touareg, Garde du W et Commerçante sont des costumes sur les corps du Boss et de la Guerrière. Pour des silhouettes vraiment différentes, il faut de vrais modèles 3D avec squelette (modèle 3D complet, pas « 2.5D ») ; prévoir l'adaptation de l'animation à leur squelette (correspondance des os, poses de repos).
 
 ## Priorité 4 — architecture
 

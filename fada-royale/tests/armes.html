@@ -1,0 +1,33 @@
+<!doctype html>
+<!-- Calibrage des armes (v1.2) : chaque arme vue de côté, avec ses points d'appui des mains.
+     Nouveau modèle en couleur ; contour orange = ancien modèle (s'il existe encore), pour comparer la position.
+     Points : rouge = poignée (main droite), vert = garde-main (main gauche), bleu = chargeur, jaune = autres.
+     Ouvrir via un serveur (python3 -m http.server dans fada-royale/) : /tests/armes.html -->
+<html><head><meta charset="utf-8"><title>Calibrage des armes</title>
+<style>body{margin:0;background:#2a2016;color:#fff;font:13px system-ui}canvas{display:block}</style></head>
+<body><canvas id="c" width="1500" height="1000"></canvas>
+<script type="importmap">{"imports":{"three":"../lib/three/three.module.min.js","three/addons/":"../lib/three/addons/"}}</script>
+<script type="module">
+import * as THREE from 'three';
+import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
+import {MeshoptDecoder} from 'three/addons/libs/meshopt_decoder.module.js';
+import {WEAPONS, fitWeapon, fitPiece} from '../src/core/weapons.js';
+const R=new THREE.WebGLRenderer({canvas:document.getElementById('c'),antialias:true,preserveDrawingBuffer:true}); R.outputColorSpace=THREE.SRGBColorSpace; R.autoClear=false;
+const ld=new GLTFLoader(); ld.setMeshoptDecoder(MeshoptDecoder);
+const b64=s=>{ const bin=atob(s), u=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) u[i]=bin.charCodeAt(i); return u.buffer; };
+const names=Object.keys(WEAPONS), cols=3, W=500, H=330;
+const COL={grip:0xff3030,fore:0x30ff60,mag:0x3090ff};
+window.result={};
+for(let i=0;i<names.length;i++){ const n=names[i], cfg=WEAPONS[n];
+  const sc=new THREE.Scene(); sc.background=new THREE.Color(i%2?0xb8b0a2:0xc4bcae); sc.add(new THREE.HemisphereLight(0xffffff,0x887766,1.6)); const dl=new THREE.DirectionalLight(0xffffff,1.8); dl.position.set(3,4,2); sc.add(dl);
+  const g=await ld.loadAsync('../assets/armes/'+cfg.file+'.glb'); const f=fitWeapon(THREE,g.scene,n); sc.add(f.object);
+  try{ const mod=await import('../assets/w_'+n+'.js'); const old=(await ld.parseAsync(b64(mod.default),'')).scene; old.traverse(o=>{ if(o.isMesh) o.material=new THREE.MeshBasicMaterial({color:0xff8c1a,wireframe:true,transparent:true,opacity:0.35}); }); sc.add(old); }catch(e){}
+  for(const k in f.anchors){ const p=f.anchors[k]; const m=new THREE.Mesh(new THREE.SphereGeometry(0.012,10,8),new THREE.MeshBasicMaterial({color:COL[k]||0xffe040,depthTest:false})); m.position.set(p[0]+0.2,p[1],p[2]); m.renderOrder=9; sc.add(m); }
+  // repères : origine et axe horizontal
+  sc.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0.2,0,-0.9),new THREE.Vector3(0.2,0,0.5)]),new THREE.LineBasicMaterial({color:0x000000})));
+  const half=0.62, cam=new THREE.OrthographicCamera(-half,half,half*H/W,-half*H/W,0.01,10); cam.position.set(2,0.02,-0.18); cam.lookAt(0,0.02,-0.18);
+  const x=(i%cols)*W, y=1000-(Math.floor(i/cols)+1)*H; R.setViewport(x,y,W,H); R.setScissor(x,y,W,H); R.setScissorTest(true); R.clear(); R.render(sc,cam);
+  window.result[n]={anchors:f.anchors,muzzle:+f.muzzle.toFixed(3),muzzleY:+f.muzzleY.toFixed(3)};
+}
+window.ready=true;
+</script></body></html>

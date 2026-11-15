@@ -150,6 +150,14 @@ export function createLobby(ctx) {
     const cloth = new THREE.Mesh(new THREE.BoxGeometry(3.7, 0.05, 2.7), new THREE.MeshLambertMaterial({ map: T.wax[0], side: THREE.DoubleSide })); cloth.position.y = 2.65; cloth.rotation.x = 0.12; aw.add(cloth);
     const table = new THREE.Mesh(new THREE.BoxGeometry(3, 0.8, 1), lam(0x7a4a24)); table.position.set(0, 0.4, -0.5); aw.add(table);
     const goods = [0xf2a12c, 0xd9442b, 0x7cb342, 0xffd23f]; for (let k = 0; k < 9; k++) { const s = new THREE.Mesh(new THREE.SphereGeometry(0.15, 8, 6), lam(goods[k % 4])); s.position.set(-1.2 + k * 0.3, 0.9, -0.5 + (k % 2) * 0.2); aw.add(s); }
+    // v1.2 : service à thé sur un tabouret au bord de l'estrade (théière et verres créés pour le jeu)
+    if (ctx.objects && ctx.objects.theiere) {
+      const tea = new THREE.Group(); tea.position.set(1.75, 0, 0.75); tea.rotation.y = -0.5; stage.add(tea);
+      const stool = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.22, 0.42, 14), lam(0x5a3416)); stool.position.y = 0.21; stool.castShadow = true; tea.add(stool);
+      const tray = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.24, 0.015, 24), new THREE.MeshStandardMaterial({ color: 0xc9a24a, metalness: 0.8, roughness: 0.35 })); tray.position.y = 0.43; tea.add(tray);
+      const pot = ctx.objects.theiere.clone(); pot.position.set(-0.05, 0.44, 0); pot.rotation.y = 0.6; tea.add(pot);
+      if (ctx.objects['verre-the']) for (const [x, z] of [[0.12, 0.1], [0.14, -0.08]]) { const gl = ctx.objects['verre-the'].clone(); gl.scale.setScalar(0.85); gl.position.set(x, 0.44, z); tea.add(gl); }
+    }
     // palmiers doum
     const palm = (x, z, s, lean) => { const g = new THREE.Group(); g.position.set(x, 0, z); g.scale.setScalar(s); stage.add(g);
       const tr = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.24, 5.5, 7), lam(0x6b4a2b)); tr.position.y = 2.75; tr.rotation.z = lean; g.add(tr);
@@ -247,7 +255,7 @@ export function createLobby(ctx) {
     <button data-p="profile">${ico('profile')}<span>Profil</span></button>
   </nav>
   <div class="lb-home" id="lbHome">
-    <div class="lb-logo"><div class="lb-flag"><i></i><i></i><i></i></div><h1>FADA<br>ROYALE</h1><p><b>v1.1</b>Le battle royale du Sahel</p></div>
+    <div class="lb-logo"><div class="lb-flag"><i></i><i></i><i></i></div><h1>FADA<br>ROYALE</h1><p><b>v1.2</b>Le battle royale du Sahel</p></div>
     <div class="lb-who"><small>Ton personnage</small><b id="lbCharName">—</b><span class="lb-hint">${ctx.IS_TOUCH ? 'Glisse pour le tourner · pince pour zoomer' : 'Glisse pour le tourner · molette pour zoomer'}</span></div>
     <div class="lb-playbox"><button class="lb-mode" id="lbModeBtn"><small>Mode</small><b id="lbModeName">Battle Royale · Solo</b>${ico('chev')}</button>
       <button class="lb-play" id="play">JOUER</button></div>
@@ -315,7 +323,7 @@ export function createLobby(ctx) {
   function shopItems(cat) {
     const skin = (preview && preview.skin) || P.skin;
     if (cat === 'chars') return Object.keys(ctx.SKINS).map(k => ({ id: 'char_' + k, name: ctx.SKINS[k].label, price: 0, free: true, owned: true, sw: figHTML(ctx.SKINS[k]), pv: { skin: k }, equip: () => { P.skin = k; }, isEq: P.skin === k }));
-    if (cat === 'outfits') { if (!ctx.SKINS[skin].real) return null;
+    if (cat === 'outfits') { if (!ctx.SKINS[skin].real || ctx.SKINS[skin].costume) return null;
       return [{ id: 'outfit_' + skin + '_-1', name: 'D’origine', price: 0, free: true, owned: true, sw: '<span class="lb-sw" style="background:linear-gradient(135deg,#444,#999)"></span>', pv: { skin, outfit: -1 }, equip: () => { P.outfits[skin] = -1; }, isEq: (P.outfits[skin] ?? -1) === -1 }]
         .concat(ctx.OUTFITS.map((o, i) => ({ id: 'outfit_' + skin + '_' + i, name: o.name, price: 80, sw: `<span class="lb-sw" style="background:${o.css}"></span>`, pv: { skin, outfit: i }, equip: () => { P.outfits[skin] = i; }, isEq: P.outfits[skin] === i }))); }
     if (cat === 'gliders') return ctx.WAX.map((w, i) => ({ id: 'glider_' + i, name: w.name, price: i === 0 ? 0 : 50, free: i === 0, sw: `<span class="lb-sw" style="background-image:url(${w.url});background-size:cover"></span>`, pv: { glider: i }, equip: () => { P.glider = i; }, isEq: P.glider === i }));
@@ -355,6 +363,10 @@ export function createLobby(ctx) {
   // --- événements
   function htmlEvents() {
     return `<div class="lb-ev"><b>Aucun événement en cours</b><p>Les événements (défis à durée limitée, récompenses spéciales) arriveront dans une prochaine version. Rien n’est simulé ici.</p></div>
+      <h3>Nouveautés de la v1.2</h3><ul class="lb-list">
+      <li><b>Nouvelles armes</b> créées pour le jeu : fusil d’assaut, mitraillette, pompe, sniper, mitrailleuse et daba, avec leurs vrais chargeurs au rechargement.</li>
+      <li><b>Nouveaux persos :</b> le Touareg (chèche indigo), le Garde du W (chapeau de brousse), la Commerçante (foulard et tenue en wax).</li>
+      <li><b>Décors :</b> sol en sable et cailloux, murs en banco et en enduit, motif wax, service à thé dans le lobby, nouvel écran de chargement.</li></ul>
       <h3>Nouveautés de la v1.1</h3><ul class="lb-list">
       <li><b>Maisons ouvertes :</b> entre par la porte, fouille l’intérieur et l’étage des grandes maisons.</li>
       <li><b>Escalade :</b> saute face à un mur pour te hisser ou grimper jusqu’au toit.</li>

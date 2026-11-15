@@ -1,5 +1,7 @@
 # Fada Royale — prompts pour générer des images et des modèles 3D
 
+**État (v1.2)** : armes (sauf revolver), kilishi, verre de thé, théière, textures (sol, banco, enduit, wax) et illustration de chargement sont **dans le jeu**. Il reste : le revolver barillet fermé, la daba en houe (facultatif), et de vrais persos 3D (voir section 3).
+
 Ce qui aiderait vraiment le jeu, par ordre d'importance. Les prompts sont en anglais (les générateurs 3D et d'images les comprennent mieux) ; l'explication est en français.
 
 Quand tu as un résultat, envoie-moi le fichier (GLB pour la 3D, PNG pour les images) : je l'intègre, je le règle (taille, prise en main, chargeur qui tombe…) et je vérifie qu'il ne ralentit pas le jeu.
@@ -63,7 +65,7 @@ Le plus simple : générer d'abord une image de face, puis la transformer en 3D,
 | Commerçante de Niamey | `Full body character concept, front view, T-pose, arms straight out, neutral background, stylized semi-realistic game character, confident young woman from Niamey, colourful wax print pagne and fitted top, matching headwrap, sneakers, crossbody bag, battle royale game style, clean readable shapes` |
 | Chasseur du Parc W | `Full body character concept, front view, T-pose, arms straight out, neutral background, stylized semi-realistic game character, Sahel park ranger, khaki shirt with rolled sleeves, cargo trousers, boots, bush hat, binoculars on the chest, battle royale game style, clean readable shapes` |
 
-**Étape 2, en 3D** : image → modèle 3D (« image to 3D ») avec 8 000 à 15 000 triangles, une texture 2048×2048, pose en T.
+**Étape 2, en 3D** : image → modèle 3D (« image to 3D ») avec 8 000 à 15 000 triangles, une texture 2048×2048, pose en T. **Attention : il faut un vrai modèle 3D complet** (outil « image to 3D » qui reconstruit le dos et le profil), pas une extrusion « 2.5D » de l'image : les persos 2.5D reçus faisaient 22 cm d'épaisseur et avaient un dos en taches de couleur, inutilisables en vue à la troisième personne.
 **Étape 3** : envoyer le GLB/FBX sur Mixamo, placer les repères (menton, poignets, coudes, genoux, bassin), télécharger en FBX « T-pose, without skin animation », et me l'envoyer.
 
 ## 4. Textures (sols, murs, tissus)

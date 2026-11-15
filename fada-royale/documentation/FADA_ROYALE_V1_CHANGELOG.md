@@ -1,5 +1,39 @@
 # Fada Royale — Journal des modifications
 
+# v1.2
+
+Base : v1.1 (APK 1.1). Matière fournie : 7 armes, 6 pièces détachables, kilishi, verre de thé, théière, matériau banco, 3 persos « 2.5D », 5 images (illustration, rue de village, motif wax, sable, enduit). Demande : « les personnages sont pas terribles, est-ce que tu peux arranger ça ».
+
+## 1. Nouvelles armes (fin du problème de licence)
+
+| | |
+|---|---|
+| **Problème** | MP5 et fusil à pompe sous licence CC BY-NC (pas d'usage commercial) ; sniper et Minimi sans auteur crédité. |
+| **Fichiers** | `src/core/weapons.js` (nouveau), `assets/armes/*.glb` (nouveaux), `index.html` : `loadAssets()`, `prepWeapon()`, `ensureWeapon()`, `muzzle()`, `propObj()`, `dropDebris()`, `showProp()`, crédits ; `tests/armes.html` (nouveau) ; anciens `assets/w_fusil.js`, `w_mitraillette.js`, `w_pompe.js`, `w_sniper.js`, `w_mitrailleuse.js` supprimés |
+| **Correction** | Fusil d'assaut, mitraillette, fusil à pompe, sniper, mitrailleuse et daba remplacés par les modèles créés pour le jeu. Ce sont des extrusions arrondies des images : leur boîte englobante correspond au cadre de l'image, donc chaque arme est décrite en % de son image : côté du canon, axe du canon (remis à l’horizontale pour les images de trois quarts : environ 6° pour la mitraillette, 12° pour la mitrailleuse), poignée placée au point de prise commun du jeu, points d'appui des mains (garde-main, chargeur, levier d'armement, culasse, capot, fenêtre de chargement). Les rechargements de la v1.1 utilisent ces points sans changement. Les **vrais chargeurs** (AK, mitraillette, sniper) et la **caisse de munitions** de la mitrailleuse sont tenus en main et tombent au sol. Bouche du canon à la bonne hauteur pour les traçantes. Les silhouettes du HUD se refont seules à partir des nouveaux modèles. |
+| **Réglage** | Les textures viennent d'images déjà éclairées : reflet d'environnement réduit (0,25), rugosité 0,85, couleur ×0,8, sinon les armes paraissaient délavées. |
+| **Test** | `tests/armes.html` (page de calibrage : ancien modèle en fil de fer, points d'appui en couleur), `reloads.cjs` (planches de rechargement), `hud.cjs`. |
+| **Reste** | Revolver : l'image avait le barillet ouvert, le modèle 3D aussi ; on garde l'ancien revolver (auteur à créditer) en attendant une image fermée. Mitrailleuse : bipied déployé (comme sur l'image). Pompe : image en perspective, canon et magasin un peu écartés de profil. |
+
+## 2. Objets, textures, illustration
+
+| | |
+|---|---|
+| **Fichiers** | `assets/objets/` (kilishi, verre de thé, théière), `assets/textures/` (sol_detail, banco, banco_normal, enduit, wax), `assets/images/chargement.jpg`, `index.html` : `swapTexImage()`, terrain, `PROP_OBJ`, écran de chargement ; `src/lobby/lobby.js` (service à thé) |
+| **Correction** | Kilishi et verre de thé 3D dans la main pendant les soins. Sol : texture de détail (sable, cailloux, herbe sèche) répétée tous les 6 m, multipliée par les couleurs de zone, luminosité moyenne compensée. Murs en banco : texture photo + relief (normal map) en Moyenne et Haute. Maisons enduites (Niamey…) : texture d'enduit. Motif wax : remplace le premier motif (parapentes, nattes, auvents, lobby). Lobby : théière et verres sur un tabouret au bord de l'estrade. Écran de chargement : ton illustration (taxi-brousse, parapentes en wax, Agadez). Les textures se chargent en arrière-plan et remplacent l'image des textures dessinées par le code (mêmes objets, donc tous les matériaux suivent). |
+| **Pas utilisé** | L'image de la rue de village (fond possible pour une page de magasin ou un écran de fin plus tard) et le mur de test banco (remplacé par la texture sur les vrais murs). |
+
+## 3. Personnages
+
+| | |
+|---|---|
+| **Constat** | Les 3 persos reçus (garde, Touareg, femme) sont des modèles 2.5D : très beaux de face, mais 22 cm d'épaisseur (une planche vue de profil) et un dos fait de taches de couleur. En vue à la troisième personne on voit surtout le dos de son perso : ils ne sont pas utilisables tels quels. Leur squelette de 17 os n'a pas non plus les os des animations du jeu (épaules, colonne en trois parties). |
+| **Fichier** | `index.html` : `SKINS`, `applyCostume()` (nouveau), `buildRealChar()`, `makeModel()`, `buildDisplay()` ; `src/lobby/lobby.js` (pas de recoloration de tenue sur ces persos) |
+| **Correction** | Les trois persos sont construits sur les corps 3D animés du jeu, avec costume et accessoires accrochés aux os (ils suivent toutes les animations, armes, rechargements, escalade) : **Le Touareg** (corps du Boss : chèche indigo, turban et voile qui laisse les yeux, tunique bleu ciel, pantalon indigo, peau plus foncée), **Le Garde du W** (nouveau : chapeau de brousse, tenue kaki et olive, jumelles), **La Commerçante** (corps de la Guerrière : foulard noué et tenue en wax avec ton motif). Ils remplacent les anciennes versions en blocs (gardées en secours si les modèles 3D ne se chargent pas) et apparaissent aussi chez les bots. |
+| **Reste** | Ce sont des costumes sur deux corps : même silhouette que le Boss ou la Guerrière. Pour des persos exactement comme tes images, il faut de vrais modèles 3D complets avec squelette (voir `PROMPTS_ASSETS.md`) ; le code d'animation devra alors être adapté à leur squelette. |
+
+---
+
 # v1.1
 
 Base : v1.0 (commit `63be089`, APK 1.0). Demande : HUD et boutons refaits sans emoji, parapente qui s'ouvrait de travers, déplacements bizarres à gauche et à droite, maisons dans lesquelles on entre avec du butin, escalade, prise des armes à une ou deux mains, animation propre pour le rechargement de chaque arme, le changement d'arme, le kilishi et le thé.
