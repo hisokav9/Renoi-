@@ -570,10 +570,14 @@ function addHouse(x,z,w,d,h,style){
   const minX=x-w/2,maxX=x+w/2,minZ=z-d/2,maxZ=z+d/2;
   if(!freeArea(minX,minZ,maxX,maxZ,2.2)) return null;
   footprints.push({minX,minZ,maxX,maxZ});
-  const b=baseY(minX,minZ,maxX,maxZ), H=h+0.35, top=b+H;
+  const b=baseY(minX,minZ,maxX,maxZ);
+  // v1.1 : sol intérieur au-dessus du point le plus haut du terrain ; la hauteur sous plafond ne dépend pas de la pente
+  let fl=b+0.35; for(const [px,pz] of [[minX,minZ],[maxX,minZ],[minX,maxZ],[maxX,maxZ],[x,z]]) fl=Math.max(fl,terrainH(px,pz)+0.06);
+  for(const o of [-0.25,0,0.25]) for(const [px,pz] of [[x+o*w,minZ-0.7],[x+o*w,maxZ+0.7],[minX-0.7,z+o*d],[maxX+0.7,z+o*d]]) fl=Math.max(fl,terrainH(px,pz)+0.06); // seuil jamais enterré
+  const top=fl+h-0.25, H=top-b;
   const mg = style==='decor'?MG.decor: style==='plaster'?MG.plaster: MG.banco;
   const v=rr(0.84,1); const tint = style==='plaster' ? C(pick2(['#ffffff','#f6e6cf','#e8f1ea','#f9dcc4','#e6eef6'])) : new THREE.Color().setRGB(v,v*rr(0.94,1),v*rr(0.88,1));
-  mg.add(boxGeo(w,H,d),M4(x,b+H/2,z),tint);
+  // v1.1 : plus de bloc plein, les murs sont construits plus bas autour de la porte
   // parapet
   const pc = style==='plaster'?tint:tint.clone().multiplyScalar(0.92);
   const pm = style==='decor'?MG.decor:mg;
@@ -593,9 +597,11 @@ function addHouse(x,z,w,d,h,style){
   }
   // porte et fenêtres
   const door=C(style==='plaster'?pick2([0x2b6a9e,0x1f7a4a,0x8a3a1a]):0x3a2412), win=C(0x22180f);
-  const side=Math.floor(R()*4), dox=rr(-w/5,w/5);
+  let side=Math.floor(R()*4); const doorT=k=>terrainH(k===1?maxX+0.7:k===3?minX-0.7:x,k===0?minZ-0.7:k===2?maxZ+0.7:z);
+  if(fl-doorT(side)>1.0){ for(let k=0;k<4;k++) if(doorT(k)>doorT(side)) side=k; } // sur une pente, la porte donne vers le haut
+  const L=side%2?d:w, D=side%2?w:d, T=0.3, dox=clamp(rr(-w/5,w/5),-L/2+T+0.95,L/2-T-0.95);
   const fac=(s,ox,oy,ww,hh,col)=>{ const g=boxGeo(s%2?0.08:ww,hh,s%2?ww:0.08); const px=s===1?maxX+0.03:s===3?minX-0.03:x+ox, pz=s===0?minZ-0.03:s===2?maxZ+0.03:z+ox; MG.plain.add(g,M4(px,b+oy,pz),col); };
-  fac(side,dox,1.35,1.2,2.2,door);
+  const H0=buildHouseShell(x,z,minX,maxX,minZ,maxZ,b,fl,top,side,L,D,T,dox,mg,tint,door,style);
   const shut=style==='plaster'?C(pick2([0x2b6a9e,0x1f7a4a,0x3d8bb5,0x8a3a1a])):null;
   for(let s=0;s<4;s++){ const len=s%2?d:w; for(let t=-len/2+1.6;t<len/2-1;t+=2.6){ if(s===side&&Math.abs(t-dox)<1.5) continue; if(R()<0.55){ fac(s,t,H*0.62,0.7,0.7,win); if(shut){ fac(s,t-0.53,H*0.62,0.3,0.8,shut); fac(s,t+0.53,H*0.62,0.3,0.8,shut); } } } }
   // v1.0 : canaris (jarres en terre) près de la porte, auvent en wax, escalier extérieur jusqu'au toit
@@ -607,12 +613,53 @@ function addHouse(x,z,w,d,h,style){
     if(Math.ceil(H/0.5)*0.62<len-0.4){ const st=style==='plaster'?tint:tint.clone().multiplyScalar(0.95);
       if(ss===0) addStairRun(minX+0.2,minZ-0.55,1,0,b,H,1.1,st,mg); else if(ss===2) addStairRun(minX+0.2,maxZ+0.55,1,0,b,H,1.1,st,mg);
       else if(ss===1) addStairRun(maxX+0.55,minZ+0.2,0,1,b,H,1.1,st,mg); else addStairRun(minX-0.55,minZ+0.2,0,1,b,H,1.1,st,mg); } }
-  addSolid(minX,b,minZ,maxX,top,maxZ,{harvest:true});
-  housesInfo.push({minX,minZ,maxX,maxZ,top,style});
-  // loot
-  const n=R()<0.6?1:2; for(let i=0;i<n;i++){ const s=Math.floor(R()*4); const lx = s===1?maxX+1.3:s===3?minX-1.3:x+rr(-w/3,w/3); const lz = s===0?minZ-1.3:s===2?maxZ+1.3:z+rr(-d/3,d/3); lootSpots.push([lx,terrainH(lx,lz),lz]); }
+  housesInfo.push(H0);
+  // butin : d'abord à l'intérieur (rez-de-chaussée, et l'étage s'il y en a un), parfois aussi dehors
+  { const [ix,iz]=H0.rnd(0); lootSpots.push([ix,H0.fl,iz]); }
+  if(H0.f2){ const [ux,uz]=H0.rnd(1); lootSpots.push([ux,H0.f2,uz]); if(R()<0.35){ const [cx,cz]=H0.rnd(1); chestSpots.push([cx,H0.f2,cz,'etage']); } }
+  else if(R()<0.4){ const s=Math.floor(R()*4); const lx = s===1?maxX+1.3:s===3?minX-1.3:x+rr(-w/3,w/3); const lz = s===0?minZ-1.3:s===2?maxZ+1.3:z+rr(-d/3,d/3); lootSpots.push([lx,terrainH(lx,lz),lz]); }
+  if(R()<0.2){ const [cx,cz]=H0.rnd(0); chestSpots.push([cx,H0.fl,cz,'maison']); }
   if(h<7 && R()<0.24) chestSpots.push([x,top,z,'roof']);
   return {top};
+}
+/* v1.1 : coque d'une maison ouverte. Repère local : u le long du mur de la porte, v vers l'intérieur depuis ce mur.
+   Murs de 0,3 m (escaladables), porte de 1,4 x 2,45 m, sol au-dessus du terrain, toit de 0,3 m (on marche dessus),
+   et pour les maisons hautes un étage avec escalier intérieur (7 marches de 0,5 m) et garde-corps le long de la trémie. */
+const HOUSE_WALL={harvest:true,climb:true,lip:0.5};
+function buildHouseShell(x,z,minX,maxX,minZ,maxZ,b,fl,top,side,L,D,T,dox,mg,tint,door,style){
+  const toW=(u,v)=> side===0?[x+u,minZ+v]: side===2?[x+u,maxZ-v]: side===1?[maxX-v,z+u]:[minX+v,z+u];
+  const box=(u0,u1,v0,v1,y0,y1,col,M,extra)=>{ const [ax,az]=toW(u0,v0), [bx,bz]=toW(u1,v1);
+    const x0=Math.min(ax,bx),x1=Math.max(ax,bx),z0=Math.min(az,bz),z1=Math.max(az,bz);
+    (M||mg).add(boxGeo(x1-x0,y1-y0,z1-z0),M4((x0+x1)/2,(y0+y1)/2,(z0+z1)/2),col||tint);
+    return extra===false?null:addSolid(x0,y0,z0,x1,y1,z1,extra||HOUSE_WALL); };
+  const dl=dox-0.7, dr=dox+0.7, dTop=fl+2.45, wood=C(0x6a4422);
+  const floorCol=style==='plaster'?C(0xc8b89e):tint.clone().multiplyScalar(0.74);
+  box(-L/2,dl,0,T,b,top); box(dr,L/2,0,T,b,top); box(dl,dr,0,T,dTop,top);        // mur de la porte (gauche, droite, linteau)
+  box(dl,dr,0,T,b,fl,floorCol,mg,{});                                              // seuil
+  box(-L/2,L/2,D-T,D,b,top); box(-L/2,-L/2+T,T,D-T,b,top); box(L/2-T,L/2,T,D-T,b,top); // fond et côtés
+  box(-L/2+T,L/2-T,T,D-T,b,fl,floorCol,mg,{harvest:false});                      // sol
+  box(-L/2+T,L/2-T,T,D-T,top-0.3,top,tint,mg,{harvest:true});                     // toit
+  box(dr,dr+0.06,T,T+1.25,fl,fl+2.3,door,MG.plain,false);                          // battant ouvert vers l'intérieur
+  box(dl-0.1,dl,-0.05,0,fl,dTop,wood,MG.plain,false); box(dr,dr+0.1,-0.05,0,fl,dTop,wood,MG.plain,false); box(dl-0.1,dr+0.1,-0.05,0,dTop,dTop+0.12,wood,MG.plain,false); // encadrement
+  // marches devant la porte si le sol de la maison est plus haut que le terrain
+  let nSt=0; { const [ox,oz]=toW(dox,-0.7); const rise=fl-terrainH(ox,oz); if(rise>0.42){ nSt=Math.min(4,Math.ceil(rise/0.42)-1); for(let k=1;k<=nSt;k++) box(dl,dr,-0.6*k,-0.6*(k-1),b,fl-k*rise/(nSt+1),floorCol,mg,{}); } }
+  // étage si la maison est assez haute
+  let f2=0, us=L/2-T;
+  if(top-fl>=6.6&&D>=5.8){ f2=fl+3.4; const run=0.62, n=7, v0=D-T-n*run; us=L/2-T-1.1; const st=tint.clone().multiplyScalar(0.9);
+    for(let i=0;i<n;i++) box(us,L/2-T,v0+i*run,v0+(i+1)*run,fl,fl+Math.min((i+1)*0.5,3.4),st,mg,{});
+    box(-L/2+T,us,T,D-T,f2-0.3,f2,tint,mg,{harvest:true});                         // plancher
+    box(us,L/2-T,T,v0,f2-0.3,f2,tint,mg,{harvest:true});                           // bande au-dessus de l'entrée de l'escalier
+    box(us-0.1,us,v0,D-T-1.05,f2,f2+0.95,wood,MG.plain,{});                         // garde-corps
+  }
+  // intérieur : natte, lit tara, canaris
+  { const [mx,mz]=toW(rr(-L/2+T+1.2,us-1.2),rr(T+1.4,D-T-1.4)); const al=R()<0.5; MG.cloth[Math.floor(R()*4)].add(boxGeo(al?1.9:1.3,0.03,al?1.3:1.9),M4(mx,fl+0.015,mz),WHITE); }
+  if(R()<0.6){ const u0=-L/2+T+0.05; box(u0,u0+0.95,D-T-2.05,D-T-0.05,fl,fl+0.45,wood,MG.plain,{}); }
+  if(R()<0.7){ const [jx,jz]=toW(-L/2+T+0.4,T+0.45); MG.plain.add(JAR,M4(jx,fl+0.3,jz,0,0,0,1,1.1,1),C(pick2([0x9a4a24,0xa8582c,0x7a3a1c]))); }
+  const [oX,oZ]=toW(dox,-1.3-0.6*nSt), [iX,iZ]=toW(dox,T+1.3); // devant la porte (au pied des marches) et juste à l'intérieur
+  let stair=null; if(f2){ const v0=D-T-7*0.62, [ax,az]=toW(us+0.55,v0-0.7), [bx,bz]=toW(us+0.55,D-T-0.5), [cx,cz]=toW(us-0.9,D-T-0.6); stair={x0:ax,z0:az,x1:bx,z1:bz,x2:cx,z2:cz}; }
+  // point au hasard à l'intérieur, au rez-de-chaussée (lvl 0) ou à l'étage (lvl 1), loin de l'escalier
+  const rnd=lvl=>toW(rr(-L/2+T+0.7,(lvl||f2?us:L/2-T)-0.7),rr(lvl?T+0.8:T+1.6,D-T-0.8));
+  return {minX,minZ,maxX,maxZ,top,style,fl,f2,door:{ox:oX,oz:oZ,ix:iX,iz:iZ},stair,rnd};
 }
 function pick2(a){ return a[Math.floor(R()*a.length)]; }
 const JAR=new THREE.SphereGeometry(0.3,8,6); JAR.__keep=true; const POLE=boxGeo(0.1,2.5,0.1); POLE.__keep=true;
@@ -624,7 +671,7 @@ function addStairRun(x0,z0,dx,dz,b,H,wid,tint,mg){ const n=Math.ceil(H/0.5), run
 // muret en banco (1,1 m) : abri pour les combats en ville
 function addLowWall(x,z,len,alongX,tint){ const w=alongX?len:0.5, d=alongX?0.5:len, minX=x-w/2,maxX=x+w/2,minZ=z-d/2,maxZ=z+d/2;
   if(!freeArea(minX,minZ,maxX,maxZ,1.2)) return false; footprints.push({minX,minZ,maxX,maxZ}); const b=baseY(minX,minZ,maxX,maxZ)+0.2;
-  MG.banco.add(boxGeo(w,1.25,d),M4(x,b+0.625,z),tint||C(0xe8d2b8)); addSolid(minX,b,minZ,maxX,b+1.25,maxZ,{harvest:true}); return true; }
+  MG.banco.add(boxGeo(w,1.25,d),M4(x,b+0.625,z),tint||C(0xe8d2b8)); addSolid(minX,b,minZ,maxX,b+1.25,maxZ,{harvest:true,climb:true}); return true; }
 function scatterLowWalls(c,n){ let k=0; for(let t=0;t<n*8&&k<n;t++){ const a=R()*6.28, r=Math.sqrt(R())*c.r*0.85; if(addLowWall(c.x+Math.cos(a)*r,c.z+Math.sin(a)*r,rr(4,7),R()<0.5)) k++; } }
 // cylindre/prisme aux UV à l'échelle (texture répétée tous les 4 m)
 function prismGeo(rTop,rBot,H,sides,circ){ const g=new THREE.CylinderGeometry(rTop,rBot,H,sides,1); const uv=g.attributes.uv; for(let i=0;i<uv.count;i++) uv.setXY(i,uv.getX(i)*circ/4,uv.getY(i)*H/4); return g; }
@@ -641,7 +688,7 @@ function addMosque(cx,cz){
   for(const [y0,y1,hw] of [[0,6,2.85],[6,12,2.35],[12,17,1.9],[17,H+0.7,1.45]]) addSolid(cx-hw,b+y0,cz-hw,cx+hw,b+y1,cz+hw,{harvest:true});
   // salle de prière
   const hx=cx+half+hallW/2, top=b+hallH;
-  MG.banco.add(boxGeo(hallW,hallH,hallD),M4(hx,b+hallH/2,cz),tint); addSolid(hx-hallW/2,b,cz-hallD/2,hx+hallW/2,top,cz+hallD/2,{harvest:true});
+  MG.banco.add(boxGeo(hallW,hallH,hallD),M4(hx,b+hallH/2,cz),tint); addSolid(hx-hallW/2,b,cz-hallD/2,hx+hallW/2,top,cz+hallD/2,{harvest:true,climb:true,lip:0.55});
   for(const zz of [cz-hallD/2+0.15,cz+hallD/2-0.15]) MG.banco.add(boxGeo(hallW,0.55,0.3),M4(hx,top+0.27,zz),tint);
   MG.banco.add(boxGeo(0.3,0.55,hallD),M4(hx+hallW/2-0.15,top+0.27,cz),tint);
   for(let t=-hallW/2+1;t<hallW/2;t+=1.6){ MG.plain.add(TORON,M4(hx+t,b+hallH*0.7,cz+hallD/2+0.2,0,Math.PI/2),wood); MG.plain.add(TORON,M4(hx+t,b+hallH*0.7,cz-hallD/2-0.2,0,Math.PI/2),wood); }
@@ -659,7 +706,7 @@ function addHeadframe(x,z){ const steel=C(0x5b6670), H=15; footprints.push({minX
   MG.neon.add(boxGeo(3.65,0.08,0.08),M4(x,b+H+0.2,z-1.8),C(0x3fd6e8)); MG.neon.add(boxGeo(3.65,0.08,0.08),M4(x,b+H+0.2,z+1.8),C(0x3fd6e8));
   chestSpots.push([x,b+H+0.15,z,'mine']); }
 function addShed(x,z,w,d,h,rot){ const minX=x-w/2,maxX=x+w/2,minZ=z-d/2,maxZ=z+d/2; if(!freeArea(minX,minZ,maxX,maxZ,2)) return; footprints.push({minX,minZ,maxX,maxZ});
-  const b=baseY(minX,minZ,maxX,maxZ), top=b+h; MG.plaster.add(boxGeo(w,h,d),M4(x,b+h/2,z),C(0xd9d5cc)); addSolid(minX,b,minZ,maxX,top,maxZ,{harvest:true});
+  const b=baseY(minX,minZ,maxX,maxZ), top=b+h; MG.plaster.add(boxGeo(w,h,d),M4(x,b+h/2,z),C(0xd9d5cc)); addSolid(minX,b,minZ,maxX,top,maxZ,{harvest:true,climb:true});
   MG.plain.add(boxGeo(w+0.6,0.25,d+0.6),M4(x,top+0.12,z),C(0x8f9ba4)); MG.plain.add(boxGeo(w*0.45,h*0.7,0.1),M4(x,b+h*0.35,maxZ+0.05),C(0x4a555e));
   MG.neon.add(boxGeo(w+0.62,0.07,0.07),M4(x,top+0.27,maxZ+0.3),C(0x3fd6e8));
   addStairRun(minX-0.55,minZ+0.2,0,1,b,h+0.25,1.1,C(0xb8b2a6),MG.plaster); lootSpots.push([x,terrainH(x,maxZ+1.6),maxZ+1.6],[x+w/3,terrainH(x+w/3,minZ-1.5),minZ-1.5]);
@@ -687,7 +734,7 @@ function addPirogue(x,z,ry){ const y=WATER_Y+0.05; MG.plain.add(PIROGUE,M4(x,y,z
 function addFort(cx,cz,size=28,wh=6.5,th=1.3){
   const half=size/2, b=terrainH(cx,cz)-0.6, top=b+wh; const tint=C(0xf0e0d0), wood=C(0x5a3818);
   footprints.push({minX:cx-half-2,minZ:cz-half-2,maxX:cx+half+2,maxZ:cz+half+2});
-  const wall=(x0,z0,x1,z1)=>{ const w=Math.max(x1-x0,th), d=Math.max(z1-z0,th); const x=(x0+x1)/2, z=(z0+z1)/2; MG.banco.add(boxGeo(w,wh,d),M4(x,b+wh/2,z),tint); addSolid(x-w/2,b,z-d/2,x+w/2,top,z+d/2,{harvest:true});
+  const wall=(x0,z0,x1,z1)=>{ const w=Math.max(x1-x0,th), d=Math.max(z1-z0,th); const x=(x0+x1)/2, z=(z0+z1)/2; MG.banco.add(boxGeo(w,wh,d),M4(x,b+wh/2,z),tint); addSolid(x-w/2,b,z-d/2,x+w/2,top,z+d/2,{harvest:true,climb:true,lip:0.4});
     const bump=new THREE.BoxGeometry(0.5,0.6,0.5); if(w>d){ for(let t=x0+0.5;t<x1;t+=1.4) MG.banco.add(bump,M4(t,top+0.3,z),tint); } else { for(let t=z0+0.5;t<z1;t+=1.4) MG.banco.add(bump,M4(x,top+0.3,t),tint); } bump.dispose(); };
   wall(cx-half,cz-half-th/2,cx+half,cz-half+th/2);
   wall(cx-half-th/2,cz-half,cx-half+th/2,cz+half); wall(cx+half-th/2,cz-half,cx+half+th/2,cz+half);
@@ -922,6 +969,33 @@ function buildWeapon(kind){
   else { const h=add(new THREE.CylinderGeometry(0.03,0.035,0.95,6),lam(0x8a5a2b),0,0,0,Math.PI/2); add(BOX(0.3,0.03,0.2),lam(0x9aa0a6),0,-0.08,-0.45); }
   return g;
 }
+/* ---------- parapente ----------
+   v1.0 : la voile était tournée sur deux axes (rotation.z puis rotation.y = π/2) : l'arc se retrouvait sur le côté droit,
+   à la verticale. Ici : un seul quart de tour sur X, l'arc au-dessus de la tête, envergure gauche-droite, profondeur avant-arrière. */
+const GLIDER_LINE=new THREE.MeshLambertMaterial({color:0xeee6d8});
+function rodBetween(a,b,r,mat){ const d=new THREE.Vector3().subVectors(b,a), len=d.length(); const m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,len,4,1),mat);
+  m.position.copy(a).addScaledVector(d,0.5); m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.normalize()); return m; }
+function makeGlider(){
+  const R=2.35, AXIS=2.15, SPAN=1.1, DEPTH=1.7; // rayon de l'arc, hauteur de l'axe, demi-angle d'envergure, profondeur
+  const glider=new THREE.Group(), wing=new THREE.Group(); wing.position.y=AXIS; glider.add(wing);
+  const can=new THREE.Mesh(new THREE.CylinderGeometry(R,R,DEPTH,18,1,true,-SPAN,SPAN*2),new THREE.MeshLambertMaterial({map:TEX.wax[Math.floor(Math.random()*4)],side:THREE.DoubleSide}));
+  can.rotation.x=-Math.PI/2; wing.add(can);
+  // intrados (surface du dessous) plus sombre, 22 cm sous l'extrados : la voile a une épaisseur, comme un vrai parapente
+  const inner=new THREE.Mesh(new THREE.CylinderGeometry(R-0.22,R-0.22,DEPTH*0.96,18,1,true,-SPAN*0.97,SPAN*1.94),new THREE.MeshLambertMaterial({color:0x6b4a32,side:THREE.DoubleSide}));
+  inner.rotation.x=-Math.PI/2; wing.add(inner);
+  const ribM=lam(0x3a2412);
+  for(let k=0;k<=6;k++){ const a=-SPAN+k/6*SPAN*2; const rib=new THREE.Mesh(new THREE.BoxGeometry(0.03,0.05,DEPTH+0.02),ribM); rib.position.set(Math.sin(a)*(R-0.01),Math.cos(a)*(R-0.01),0); rib.rotation.z=-a; wing.add(rib); }
+  // suspentes : des épaules vers les bords d'attaque et de fuite, en 3 points de l'envergure de chaque côté
+  for(const sx of [-1,1]) for(const a of [0.35,0.72,1.05]) for(const z of [-DEPTH*0.45,DEPTH*0.45]){
+    const top=new THREE.Vector3(sx*Math.sin(a)*R,AXIS+Math.cos(a)*R,z), base=new THREE.Vector3(sx*0.24,1.48,0);
+    glider.add(rodBetween(base,top,0.008,GLIDER_LINE)); }
+  glider.userData.wing=wing; glider.visible=false; return glider; }
+// ouverture (léger rebond) et inclinaison dans les virages
+function updateGlider(c,dt){ const gl=c.model.glider; if(!gl||!gl.visible) return; c.gliderT=(c.gliderT||0)+dt;
+  const u=Math.min(1,c.gliderT/0.55), e=1+2.2*Math.pow(u-1,3)+1.2*Math.pow(u-1,2); // easeOutBack
+  gl.scale.set(Math.max(0.05,e),Math.max(0.05,Math.min(1,u*1.6)),Math.max(0.2,e));
+  const s=Math.sin(c.yaw), co=Math.cos(c.yaw), side=c.vel.x*co-c.vel.z*s; gl.rotation.z=lerp(gl.rotation.z,clamp(-side*0.05,-0.35,0.35),1-Math.exp(-4*dt));
+  gl.userData.wing.rotation.x=Math.sin(c.gliderT*1.7)*0.03; }
 function buildChar(skinKey){
   const S=SKINS[skinKey]; const g=new THREE.Group(); const body=new THREE.Group(); g.add(body);
   const mk=(geo,mat,x,y,z,parent)=>{ const m=new THREE.Mesh(geo,mat); m.position.set(x,y,z); m.castShadow=true; parent.add(m); return m; };
@@ -947,11 +1021,7 @@ function buildChar(skinKey){
   const A=arm(-0.36), B=arm(0.36);
   const mount=new THREE.Group(); mount.position.set(0.14,0.38,-0.3); spine.add(mount);
   const w={}; const bp=makeBlueprint(); bp.position.set(-0.12,-0.04,0.04); bp.rotation.x=-0.7; mount.add(bp); bp.visible=false;
-  const glider=new THREE.Group(); glider.position.y=3.5; g.add(glider);
-  const can=new THREE.Mesh(new THREE.CylinderGeometry(2.2,2.2,1.6,12,1,true,-1.1,2.2),new THREE.MeshLambertMaterial({map:TEX.wax[Math.floor(Math.random()*4)],side:THREE.DoubleSide}));
-  can.rotation.z=Math.PI/2; can.rotation.y=Math.PI/2; can.position.y=-1.6; glider.add(can);
-  for(const sx of [-1,1]){ const l=new THREE.Mesh(BOX(0.02,2.0,0.02),lam(0xeeeeee)); l.position.set(sx*0.8,-0.9,0); l.rotation.z=-sx*0.45; glider.add(l); }
-  glider.visible=false;
+  const glider=makeGlider(); g.add(glider);
   return {g,body,spine,head,hipL:L.hip,kneeL:L.knee,hipR:Rg.hip,kneeR:Rg.knee,armL:A.sh,armR:B.sh,mount,w,glider,st:{},handR:B.hand,bp};
 }
 /* ---------- modèles 3D importés (armes + persos réalistes) ---------- */
@@ -1008,14 +1078,14 @@ function decodeAnims(data){ const out={}; for(const k in data) out[k]=decodeAnim
 const STRIDE={walk:1.24,jog:5.49,sprint:5.96,cwalk:1.5};
 const LOCO_STAND=[['idle',0],['walk',1.6],['jog',6.3],['sprint',8.4]], LOCO_CROUCH=[['cidle',0],['cwalk',2.4]];
 const FULL_KEYS=['idle','walk','jog','sprint','cidle','cwalk','jstart','jloop','jland','sstart','sloop','sexit','death','roll'];
-function newAnState(){ return {phase:0,it:0,sp:0,wa:0,ws:0,wasAir:false,airT:0,jt:-1,fallV:0,landT:9,landDur:0.3,slT:0,sxT:-1,legYaw:0,dir:1,pitch:0,sprintW:0,hitT:9,lastHurt:0,useW:0,useT:0,chopT:9,prevSwing:0,deathT:0,stepI:0,ikW:0,ikKey:null,tB:1,tRl:null,tLl:null,tFR:null,tFL:null}; }
+function newAnState(){ return {phase:0,it:0,sp:0,wa:0,ws:0,wasAir:false,airT:0,jt:-1,fallV:0,landT:9,landDur:0.3,slT:0,sxT:-1,legYaw:0,dir:1,pitch:0,sprintW:0,hitT:9,lastHurt:0,useW:0,useT:0,chopT:9,prevSwing:0,deathT:0,stepI:0,ikW:0,ikWL:0,ikWR:0,chId:null,chU:0,tRl:null,tLl:null}; }
 function blend1D(s,pts,out,mul){ if(s<=pts[0][1]){ out[pts[0][0]]+=mul; return; } for(let i=0;i<pts.length-1;i++){ const a=pts[i],b=pts[i+1]; if(s<=b[1]){ const t=(s-a[1])/(b[1]-a[1]); out[a[0]]+=mul*(1-t); out[b[0]]+=mul*t; return; } } out[pts[pts.length-1][0]]+=mul; }
 const RIGB=['Hips','Spine','Spine1','Spine2','Neck','Head','LeftUpLeg','LeftLeg','LeftFoot','RightUpLeg','RightLeg','RightFoot','LeftShoulder','LeftArm','LeftForeArm','LeftHand','RightShoulder','RightArm','RightForeArm','RightHand'];
 // tenues : on ne recolore que le haut et le bas (v0.9 teintait tout le corps de la Guerrière, peau comprise)
 const OUTFITS=[{name:'Indigo touareg',c:[0.35,0.4,0.75]},{name:'Terre rouge',c:[0.7,0.25,0.25]},{name:'Sable',c:[0.85,0.75,0.55]},{name:'Vert du fleuve',c:[0.3,0.55,0.35]},{name:'Blanc boubou',c:[1.3,1.3,1.3]},{name:'Bronze',c:[0.95,0.6,0.3]},{name:'Violet de Zinder',c:[0.55,0.35,0.7]}];
 function applyOutfit(sk,idx){ if(idx==null||idx<0||!OUTFITS[idx]) return; const col=OUTFITS[idx].c;
   sk.traverse(o=>{ if(o.isMesh&&/Outfit_Top|Outfit_Bottom|^Tops$|^Bottoms$/.test(o.name)){ o.material=o.material.clone(); o.material.color.setRGB(col[0],col[1],col[2]); } }); }
-function applyGlider(m,idx){ const can=m.glider&&m.glider.children[0]; if(can&&TEX.wax[idx]){ can.material.map=TEX.wax[idx]; can.material.needsUpdate=true; } }
+function applyGlider(m,idx){ const can=m.glider&&m.glider.userData.wing&&m.glider.userData.wing.children[0]; if(can&&TEX.wax[idx]){ can.material.map=TEX.wax[idx]; can.material.needsUpdate=true; } }
 function buildRealChar(kind,outfit){
   const A=ASSETS.c[kind]; const g=new THREE.Group(); const inner=new THREE.Group(); inner.rotation.y=Math.PI; inner.scale.setScalar(A.scale); g.add(inner);
   const sk=SkeletonUtils.clone(A.scene); inner.add(sk);
@@ -1030,11 +1100,7 @@ function buildRealChar(kind,outfit){
   const pivot=new THREE.Group(); pivot.position.set(0.12,1.37,0); g.add(pivot);
   const hold=new THREE.Group(); hold.position.set(-0.05,-0.13,-0.22); pivot.add(hold);
   const bp=makeBlueprint(); bp.position.set(-0.17,-0.1,-0.32); bp.rotation.x=-0.75; pivot.add(bp); bp.visible=false;
-  const glider=new THREE.Group(); glider.position.y=3.5; g.add(glider);
-  const can=new THREE.Mesh(new THREE.CylinderGeometry(2.2,2.2,1.6,12,1,true,-1.1,2.2),new THREE.MeshLambertMaterial({map:TEX.wax[Math.floor(Math.random()*4)],side:THREE.DoubleSide}));
-  can.rotation.z=Math.PI/2; can.rotation.y=Math.PI/2; can.position.y=-1.6; glider.add(can);
-  for(const sx of [-1,1]){ const l=new THREE.Mesh(BOX(0.02,2.0,0.02),lam(0xeeeeee)); l.position.set(sx*0.8,-0.9,0); l.rotation.z=-sx*0.45; glider.add(l); }
-  glider.visible=false;
+  const glider=makeGlider(); g.add(glider);
   const detail=[]; sk.traverse(o=>{ if(o.isMesh&&/Hair|Eyelash|EyeLeft|EyeRight|Facewear/.test(o.name)) detail.push(o); });
   const m={real:true,g,inner,bones,rest,dups,scale:A.scale,pivot,hold,bp,w:{},glider,st:{},frame:0,acc:0,detail,far:false};
   const AN=ASSETS.anim[kind];
@@ -1319,6 +1385,74 @@ function moveChar(c,wx,wz,speed,dt,jump){
     if(c.pos.distanceTo(camera.position)<40) for(let i=0;i<6;i++) spawnParticle(c.pos.x+rnd(-0.4,0.4),c.pos.y+0.05,c.pos.z+rnd(-0.4,0.4),rnd(-2,2),rnd(0.5,1.5),rnd(-2,2),0xe2c28c,0.5,1.2,4); }
 }
 
+/* ---------- v1.1 : escalade et franchissement (joueur) ----------
+   Saut face à un rebord de 0,6 à 2,35 m : on s'y hisse (mains posées sur le rebord). Saut face à un mur plus haut marqué
+   « climb » (murs des maisons, murets, forts, hangars) : on grimpe ; arrivé en haut on se hisse sur le toit.
+   Pendant l'escalade : on monte tout seul, de côté avec le stick, on lâche en tirant vers l'arrière ou avec accroupi,
+   saut = on se repousse du mur. Les bots ne grimpent pas. */
+const CLIMB_UP=2.4, CLIMB_LAT=1.3, MANTLE_MAX=2.35, _ct=new THREE.Vector3();
+function solidAt(x,y,z,ignore){ const list=gridQuery(x-0.05,z-0.05,x+0.05,z+0.05); for(const s of list){ if(s!==ignore&&x>=s.minX&&x<=s.maxX&&z>=s.minZ&&z<=s.maxZ&&y>=s.minY&&y<=s.maxY) return s; } return null; }
+function spaceFree(x,z,y0,y1,r){ const list=gridQuery(x-r-0.1,z-r-0.1,x+r+0.1,z+r+0.1);
+  for(const s of list){ if(x+r>s.minX&&x-r<s.maxX&&z+r>s.minZ&&z-r<s.maxZ&&s.maxY>y0&&s.minY<y1) return false; } return true; }
+// mur juste devant (direction dx,dz) : solide touché, face (normale vers le perso), haut de la colonne, point d'arrivée en haut
+function wallAhead(c,dx,dz){
+  const px=c.pos.x+dx*(RADIUS+0.3), pz=c.pos.z+dz*(RADIUS+0.3); let s=null;
+  for(const y of [c.pos.y+0.9,c.pos.y+1.5,c.pos.y+0.35]){ s=solidAt(px,y,pz); if(s&&s.maxY>c.pos.y+STEP) break; s=null; }
+  if(!s) return null;
+  const cx=clamp(c.pos.x,s.minX,s.maxX), cz=clamp(c.pos.z,s.minZ,s.maxZ), ex=c.pos.x-cx, ez=c.pos.z-cz;
+  if(Math.abs(ex)<1e-4&&Math.abs(ez)<1e-4) return null;
+  const nx=Math.abs(ex)>=Math.abs(ez)?Math.sign(ex):0, nz=nx?0:Math.sign(ez);
+  if(-(dx*nx+dz*nz)<0.55) return null; // il faut aller vers le mur
+  let top=s.maxY, climb=!!s.climb; for(let k=0;k<4;k++){ const o=solidAt(px,top+0.05,pz,s); if(!o) break; top=o.maxY; climb=climb&&!!o.climb; }
+  const fx=nx?(nx>0?s.maxX:s.minX):c.pos.x, fz=nz?(nz>0?s.maxZ:s.minZ):c.pos.z;
+  return {s,nx,nz,top,climb,fx,fz,lx:fx-nx*0.5,lz:fz-nz*0.5,lip:s.lip||0};
+}
+function canMantle(c,W){ if(!spaceFree(W.lx,W.lz,W.top+0.05,W.top+1.7,0.3)) return false;
+  if(!spaceFree(c.pos.x,c.pos.z,c.pos.y+1.0,W.top+1.7,0.3)) return false;
+  return groundAt(W.lx,W.lz,W.top)>=W.top-0.1; }
+function startMantle(c,W){ const rise=W.top-c.pos.y; c.climb=null;
+  c.mantle={t:0,dur:0.34+clamp(rise,0,2.4)*0.14,x0:c.pos.x,y0:c.pos.y,z0:c.pos.z,x1:W.lx,y1:W.top,z1:W.lz,nx:W.nx,nz:W.nz,fx:W.fx,fz:W.fz,hy:W.top+W.lip};
+  c.vel.set(0,0,0); c.grounded=false; c.reloadT=0; c.reloadShells=0; c.useT=0; c.useKind=null; c.slideT=0; c.yaw=Math.atan2(W.nx,W.nz);
+  if(c===player) sfxStep(); }
+function tryClimb(c,dx,dz,jumpEdge){
+  const W=wallAhead(c,dx,dz); if(!W) return false; const rise=W.top-c.pos.y;
+  if(c.grounded&&!jumpEdge) return false;
+  if(rise<=MANTLE_MAX&&rise>(c.grounded?STEP:0.25)){ if(!c.grounded&&c.vel.y>4) return false; if(!canMantle(c,W)) return false; startMantle(c,W); return true; }
+  if(rise>MANTLE_MAX&&W.climb){ if(!spaceFree(c.pos.x,c.pos.z,c.pos.y+1.0,c.pos.y+2.4,0.3)) return false;
+    c.climb={s:W.s,nx:W.nx,nz:W.nz,top:W.top,lip:W.lip,ph:0,fx:W.fx,fz:W.fz}; c.vel.set(0,0,0); c.grounded=false; c.slideT=0; c.crouch=false;
+    c.reloadT=0; c.reloadShells=0; c.useT=0; c.useKind=null; c.yaw=Math.atan2(W.nx,W.nz); return true; }
+  return false;
+}
+function updateClimb(c,dt,wx,wz,jumpEdge){
+  const C=c.climb, into=-(wx*C.nx+wz*C.nz), lat=wx*(-C.nz)+wz*C.nx; c.yaw=Math.atan2(C.nx,C.nz);
+  if(jumpEdge){ c.climb=null; c.vel.set(C.nx*4.6,5.2,C.nz*4.6); c.grounded=false; c.yaw=Math.atan2(-C.nx,-C.nz); return; } // on se repousse du mur
+  if(into<-0.5||c.crouch){ c.climb=null; c.crouch=false; c.vel.set(C.nx*1.2,0,C.nz*1.2); return; }                         // on lâche
+  const up=into>-0.2?CLIMB_UP:0; c.pos.y+=up*dt; C.ph+=up*dt;
+  // déplacement latéral si le mur continue
+  if(Math.abs(lat)>0.25){ const tx=-C.nz, tz=C.nx, st=Math.sign(lat)*CLIMB_LAT*dt, ox=c.pos.x, oz=c.pos.z; c.pos.x+=tx*st; c.pos.z+=tz*st;
+    const W=wallAhead(c,-C.nx,-C.nz); if(!W||!W.climb||W.nx!==C.nx||W.nz!==C.nz){ c.pos.x=ox; c.pos.z=oz; } else { C.top=W.top; C.s=W.s; C.lip=W.lip; C.ph+=Math.abs(st)*0.8; } }
+  // collé au mur
+  if(C.nx) c.pos.x=C.fx+C.nx*(RADIUS+0.02); else c.pos.z=C.fz+C.nz*(RADIUS+0.02);
+  c.vel.set(0,up,0); c.grounded=false;
+  if(c===player&&Math.floor(C.ph/0.35)!==Math.floor((C.ph-up*dt)/0.35)) sfxStep();
+  // en haut : on se hisse ; plafond (toit qui dépasse) : on reste accroché
+  if(c.pos.y+1.5>=C.top){ const W=wallAhead(c,-C.nx,-C.nz); if(W&&canMantle(c,W)) startMantle(c,W); else { c.pos.y=C.top-1.5; } }
+  else if(!spaceFree(c.pos.x,c.pos.z,c.pos.y+1.75,c.pos.y+1.95,0.3)) c.pos.y-=up*dt;
+}
+function updateMantle(c,dt){ const M=c.mantle; M.t+=dt; const u=Math.min(1,M.t/M.dur), uy=1-Math.pow(1-Math.min(1,u/0.72),2), uh=smooth(0.5,1,u);
+  c.pos.set(lerp(M.x0,M.x1,uh),lerp(M.y0,M.y1+0.04,uy),lerp(M.z0,M.z1,uh)); c.vel.set(0,0,0); c.yaw=Math.atan2(M.nx,M.nz);
+  if(u>=1){ c.mantle=null; c.pos.y=M.y1; c.grounded=true; c.landT=0; } }
+// cibles des mains (repère local du perso) pendant l'escalade et le franchissement
+function climbHands(c,g,oL,oR){
+  if(c.mantle){ const M=c.mantle, rx=M.nz, rz=-M.nx; // mains posées sur le rebord, de part et d'autre (droite du perso = (nz,-nx))
+    for(const [o,sd] of [[oL,-1],[oR,1]]){ if(M.nx) _ct.set(M.fx-M.nx*0.12,M.hy+0.02,M.z0+rz*sd*0.26); else _ct.set(M.x0+rx*sd*0.26,M.hy+0.02,M.fz-M.nz*0.12);
+      g.worldToLocal(o.copy(_ct)); } return; }
+  const C=c.climb, Lc=0.7;
+  for(const [o,sd,off] of [[oL,-1,0],[oR,1,0.5]]){ const q=((C.ph/Lc+off)%1+1)%1; let y, zz=-0.4;
+    if(q<0.8) y=2.02-q*Lc; else { const k=(q-0.8)/0.2; y=2.02-0.8*Lc+k*0.8*Lc; zz=-0.4+Math.sin(k*Math.PI)*0.12; }
+    o.set(sd*0.24,Math.min(y,C.top-c.pos.y+0.05),zz); }
+}
+
 /* ---------- rayons ---------- */
 function rayBox(o,d,s){
   let tmin=0,tmax=1e9,t1,t2,t;
@@ -1444,17 +1578,20 @@ const GUNS=['revolver','mitraillette','fusil','pompe','mitrailleuse','sniper'];
 const RAR_COL=[0x9aa0a6,0x63c74d,0x3d8bff,0xb65cff,0xffb300], RAR_CSS=['#9aa0a6','#63c74d','#3d8bff','#b65cff','#ffb300'];
 function randGun(boost=0){ const w=[24-boost*8,22-boost*4,22,16+boost*2,9+boost*4,7+boost*4]; let r=Math.random()*w.reduce((a,b)=>a+b); for(let i=0;i<6;i++){ r-=w[i]; if(r<=0) return GUNS[i]; } return 'fusil'; }
 function setSel(c,i){ c.sel=i; c.cur = i===0 ? 'daba' : (c.slots[i-1]||'daba'); }
+// changement d'arme animé : rangement de l'ancienne puis sortie de la nouvelle, durée selon la catégorie (GRIP.draw)
+function beginSwitch(c,from){ if(from===c.cur) return; const G=GRIP[c.cur]; c.switchFrom=from; c.switchDur=G?G.draw:0.3; c.switchT=c.switchDur;
+  c.fireCD=Math.max(c.fireCD,c.switchDur*0.85); c.reloadT=0; c.reloadShells=0; c.boltT=0; c.pumpT=0; }
 function giveWeapon(c,type){
   if(c.slots.includes(type)){ if(c.ammo>=300) return false; c.ammo=Math.min(300,c.ammo+20); return true; }
   let e=c.slots.indexOf(null); if(!c.isPlayer&&e>=2) e=-1;
-  if(e>=0){ c.slots[e]=type; c.mag[type]=WEAP[type].mag; if(c.isPlayer){ if(c.sel===0||!c.slots[c.sel-1]){ setSel(c,e+1); c.switchT=0.25; } } else botAutoWeapon(c,30); return true; }
+  if(e>=0){ c.slots[e]=type; c.mag[type]=WEAP[type].mag; if(c.isPlayer){ if(c.sel===0||!c.slots[c.sel-1]){ const from=c.cur; setSel(c,e+1); beginSwitch(c,from); } } else botAutoWeapon(c,30); return true; }
   if(c.isPlayer) return false;
   let worst=WEAP[c.slots[0]].rar<=WEAP[c.slots[1]].rar?0:1;
   if(WEAP[type].rar>WEAP[c.slots[worst]].rar){ c.slots[worst]=type; c.mag[type]=WEAP[type].mag; botAutoWeapon(c,30); return true; }
   return false;
 }
 function botAutoWeapon(b,d){ let best=null,sc=-99; for(const t of b.slots){ if(!t) continue; let s2=WEAP[t].rar; if(t==='pompe') s2+= d<10?5:-3; if(t==='sniper') s2+= d>50?4:-3; if(t==='mitraillette'&&d<20) s2+=1; if(s2>sc){ sc=s2; best=t; } }
-  if(best&&b.cur!==best){ setSel(b,b.slots.indexOf(best)+1); } }
+  if(best&&b.cur!==best){ const from=b.cur; setSel(b,b.slots.indexOf(best)+1); beginSwitch(b,from); } }
 const NAMES=['Moussa','Aïcha','Ousmane','Mariama','Hadiza','Ibrahim','Zeinabou','Amadou','Rahila','Souleymane','Fati','Hassane','Habsatou','Boubacar','Ramatou','Idrissa','Safiatou','Issa','Balkissa','Yacouba','Nafissa','Harouna','Mariam','Seydou','Bintou'];
 const chars=[]; let player=null; const bots=[];
 class Char{
@@ -1464,18 +1601,27 @@ class Char{
     this.slots=[null,null,null,null,null]; this.mag={}; this.ammo=this.isPlayer?60:999;
     { const t=this.isPlayer?'revolver':pick(['revolver','revolver','mitraillette','fusil','fusil','pompe']); this.slots[0]=t; this.mag[t]=WEAP[t].mag; setSel(this,1); }
     this.banco=this.isPlayer?60:rint(30,70); this.kilishi=this.isPlayer?1:rint(0,1); this.the=0; this.kills=0;
-    this.fireCD=0; this.buildCD=0; this.noiseT=0; this.reloadT=0; this.useT=0; this.useKind=null; this.useMax=1; this.swingT=0; this.anim=0; this.onRamp=null; this.lastHitBy=null;
+    this.fireCD=0; this.buildCD=0; this.noiseT=0; this.reloadT=0; this.useT=0; this.useKind=null; this.useMax=1; this.climb=null; this.mantle=null; this.jumpHeld=false; this.swingT=0; this.anim=0; this.onRamp=null; this.lastHitBy=null;
+    this.boltT=0; this.pumpT=0; this.switchDur=0; this.switchFrom=null; this.reloadDur=0; this.reloadShells=0; this.reloadDone=0; this.combatT=0;
     this.dmgDealt=0; this.built=0; this.chestsOpened=0; this.harvested=0; this.recorded=false; this.dummy=false; this.respawnT=0; this.deathT=0; this.hurtT=0; this.moving=false; this.model.g.visible=false; this.model.g.rotation.set(0,0,0); this.model.g.scale.setScalar(1); this.model.glider.visible=false;
     this.target=null; this.moveTarget=null; this.thinkT=Math.random()*0.3; this.reactT=0; this.burst=0; this.strafe=Math.random()<0.5?1:-1; this.strafeT=0; this.stuck=0; this.lastPos=V(); this.seeT=0; this.blocker=null; this.canSee=false; this.wantJump=false; this.jumpAt=0; this.landTarget=null; this.rank=0; this.calmT=0; this.killer=null; this.inStorm=false; this.stormAcc=0; this.detourT=0;
     this.crouch=false; this.slideT=0; this.slideDir=V(); this.ck=0; this.landT=0; this.sprint=false; this.sprintCD=0; if(this.model.an) this.model.an=newAnState(); this.recoil=0; this.switchT=0; this.aimPitch=0; this.height=1.75; this.model.st={}; }
 }
-function startReload(c){ const w=WEAP[c.cur]; if(!c.alive||w.melee||c.reloadT>0||c.mag[c.cur]>=w.mag||c.ammo<=0) return; c.reloadT=w.reload; c.useT=0; }
+function startReload(c){ const w=WEAP[c.cur]; if(!c.alive||w.melee||c.reloadT>0||c.switchT>0||c.mag[c.cur]>=w.mag||c.ammo<=0) return;
+  if(c.cur==='pompe'){ const need=Math.min(w.mag-c.mag[c.cur],c.isPlayer?c.ammo:w.mag); c.reloadShells=need; c.reloadDone=0; c.reloadT=c.reloadDur=0.25+need*0.42+0.3; }
+  else c.reloadT=c.reloadDur=w.reload;
+  c.useT=0; c.boltT=0; c.pumpT=0; }
 function finishReload(c){ const w=WEAP[c.cur]; const need=w.mag-c.mag[c.cur]; const take=c.isPlayer?Math.min(need,c.ammo):need; c.mag[c.cur]+=take; if(c.isPlayer) c.ammo-=take; }
 function useItem(c,kind){ if(!c||!c.alive||c.phase==='bus'||c.useT>0||c.reloadT>0) return; if(kind==='kilishi'&&(c.kilishi<=0||c.hp>=100)) return; if(kind==='the'&&(c.the<=0||c.shield>=75)) return; c.useKind=kind; c.useT=c.useMax=kind==='kilishi'?2.0:1.6; }
 function finishUse(c){ if(c.useKind==='kilishi'){ c.kilishi--; c.hp=Math.min(100,c.hp+25); } else { c.the--; c.shield=Math.min(75,c.shield+25); } if(c.isPlayer) sfxPick(); c.useKind=null; }
 function updateTimers(c,dt){
   c.fireCD-=dt; c.buildCD-=dt; c.hurtT-=dt; c.swingT-=dt; if(c.noiseT>0) c.noiseT-=dt;
-  if(c.reloadT>0){ c.reloadT-=dt; if(c.reloadT<=0) finishReload(c); }
+  if(c.reloadT>0){ c.reloadT-=dt;
+    if(c.cur==='pompe'&&c.reloadShells){ // une cartouche glissée toutes les 0,42 s
+      const el=c.reloadDur-c.reloadT, want=Math.min(c.reloadShells,Math.max(0,Math.floor((el-0.61)/0.42)+1));
+      while(c.reloadDone<want){ c.reloadDone++; c.mag.pompe=Math.min(WEAP.pompe.mag,c.mag.pompe+1); if(c.isPlayer) c.ammo--; const d=c.pos.distanceTo(camera.position); if(d<30) sfxMech('shell',d); } }
+    if(c.reloadT<=0){ c.reloadT=0; if(c.cur==='pompe'&&c.reloadShells){ c.reloadShells=0; const d=c.pos.distanceTo(camera.position); if(d<30) sfxMech('pump',d); } else finishReload(c); } }
+  if(c.boltT>0) c.boltT-=dt; if(c.pumpT>0) c.pumpT-=dt;
   if(c.useT>0){ c.useT-=dt; if(c.useT<=0) finishUse(c); }
 }
 
@@ -1498,7 +1644,7 @@ function killChar(t,att,wname){
     t.alive=false; t.hp=0; t.deathT=0; t.respawnT=3; t.useT=0; t.reloadT=0; if(att){ att.kills++; if(att===player){ showMsg('MANNEQUIN À TERRE','il se relève dans 3 s',1.1); sfxElim(); } }
     for(let k=0;k<12;k++) spawnParticle(t.pos.x+rnd(-0.4,0.4),t.pos.y+rnd(0,1.6),t.pos.z+rnd(-0.4,0.4),rnd(-3,3),rnd(1,5),rnd(-3,3),[0x7fd0ff,0xffffff,0xffd166][k%3],rnd(0.5,1),1,6); return; }
   t.alive=false; t.hp=0; t.deathT=0; t.rank=aliveCount; t.killer=att; aliveCount--;
-  t.useT=0; t.useKind=null; t.reloadT=0; // un kilishi entamé ne soigne pas un mort
+  t.useT=0; t.useKind=null; t.reloadT=0; t.climb=null; t.mantle=null; // un kilishi entamé ne soigne pas un mort
   t.model.glider.visible=false;
   if(att){ att.kills++; const verb=wname==='daba'?'a assommé':'a éliminé';
     feed(`<b>${att===player?'Toi':att.name}</b> ${verb} <b>${t===player?'toi':t.name}</b>`, att===player||t===player);
@@ -1526,7 +1672,8 @@ function muzzle(c,out){ const wo=c.model.w&&c.model.w[c.cur]; if(wo&&wo.visible&
 let bloom=0;
 function playerFire(){
   const p=player, w=WEAP[p.cur];
-  if(p.fireCD>0||p.reloadT>0) return;
+  if(p.reloadT>0&&p.cur==='pompe'&&p.mag.pompe>0){ p.reloadT=0; p.reloadShells=0; } // au pompe, on peut tirer pendant le rechargement balle par balle
+  if(p.fireCD>0||p.reloadT>0||p.switchT>0) return;
   if(p.useT>0){ p.useT=0; p.useKind=null; }
   updateCamVectors();
   const piv=_t.set(p.pos.x,p.pos.y+1.55,p.pos.z);
@@ -1561,8 +1708,9 @@ function playerFire(){
     if(i<3) tracer(mz,pt);
   }
   sfxShot(p.cur,0); flash.position.copy(mz); flash.material.rotation=Math.random()*6.28; const fs=rnd(0.75,1.15)*(p.cur==='pompe'||p.cur==='sniper'?1.35:1); flash.scale.set(fs,fs,1); flash.visible=true; flashT=0.06; mLight.position.copy(mz); p.recoil=1;
-  // douille éjectée vers la droite (rouge pour le pompe)
-  { const r=camRight; spawnParticle(mz.x-camFwd.x*0.3,mz.y+0.02,mz.z-camFwd.z*0.3,r.x*rnd(1.6,2.6)+rnd(-0.4,0.4),rnd(1.8,2.8),r.z*rnd(1.6,2.6)+rnd(-0.4,0.4),p.cur==='pompe'?0xb03020:0xd8a840,0.9,0.42,16); } addShake(w.kick>0.02?0.06:0.012);
+  // douille éjectée vers la droite ; au sniper et au pompe elle sort au mouvement de culasse / de pompe (chorégraphie)
+  if(p.cur==='sniper') p.boltT=0.9; else if(p.cur==='pompe') p.pumpT=0.5;
+  else { const r=camRight; spawnParticle(mz.x-camFwd.x*0.3,mz.y+0.02,mz.z-camFwd.z*0.3,r.x*rnd(1.6,2.6)+rnd(-0.4,0.4),rnd(1.8,2.8),r.z*rnd(1.6,2.6)+rnd(-0.4,0.4),0xd8a840,0.9,0.42,16); } addShake(w.kick>0.02?0.06:0.012);
   camPitch=clamp(camPitch+w.kick*(ads?0.6:1),-1.25,1.15); camYaw+=rnd(-0.004,0.004);
   if(p.mag[p.cur]===0&&p.ammo>0) setTimeout(()=>{ if(p.alive) startReload(p); },220);
 }
@@ -1587,7 +1735,7 @@ function updateItems(dt){
 let nearItem=null;
 function tryPickups(c){ let near=null; for(const it of items){ if(!it.alive||it.noPick>0) continue; const dx=it.x-c.pos.x, dz=it.z-c.pos.z, dy=it.y-c.pos.y; if(dx*dx+dz*dz<2.6&&Math.abs(dy)<1.8){ if(!pickup(c,it)&&c===player&&it.kind.startsWith('w:')&&!c.slots.includes(it.kind.slice(2))) near=it; } } if(c===player) nearItem=near; }
 function swapTake(){ const p=player, it=nearItem; if(!it||!it.alive||!p.alive||p.phase!=='ground') return; if(p.sel===0){ showMsg("CHOISIS UNE CASE D'ARME",'pour échanger',1); return; }
-  const type=it.kind.slice(2), old=p.slots[p.sel-1]; removeItem(it); p.slots[p.sel-1]=type; p.mag[type]=WEAP[type].mag; setSel(p,p.sel); p.switchT=0.25; p.reloadT=0;
+  const type=it.kind.slice(2), old=p.slots[p.sel-1]; removeItem(it); p.slots[p.sel-1]=type; p.mag[type]=WEAP[type].mag; setSel(p,p.sel); beginSwitch(p,old);
   const d=spawnItem('w:'+old,p.pos.x,p.pos.y+0.4,p.pos.z,1,true); d.noPick=1.5; nearItem=null; sfxPick(); showMsg('+ '+WEAP[type].name,'',0.9); }
 function openChest(ch,c){ ch.open=true; ch.t=0; c.chestsOpened++; const n=[ 'ammo', Math.random()<0.5?'kilishi':'the', 'w:'+randGun(1) ]; if(Math.random()<0.4) n.push('banco');
   n.forEach(k=>spawnItem(k,ch.x,ch.y+0.6,ch.z,k==='ammo'?40:k==='banco'?40:1,true));
@@ -1687,7 +1835,7 @@ function botOnDamaged(b,att){
   if(b.banco>=10&&b.buildCD<=0&&b.phase==='ground'&&Math.random()<0.5){ const dir=dirFromYaw(Math.atan2(-(att.pos.x-b.pos.x),-(att.pos.z-b.pos.z))); tryBuild(b,'wall',dir); if(Math.random()<0.3) setTimeout(()=>{ if(b.alive&&b.banco>=10){ b.buildCD=0; tryBuild(b,'ramp',dir); } },350); }
 }
 function botShoot(b,target){
-  const w=b.cur; if(b.fireCD>0||w==='daba') return; const W=WEAP[w], B=W.bot; b.recoil=1; b.noiseT=1.5;
+  const w=b.cur; if(b.fireCD>0||b.switchT>0||w==='daba') return; const W=WEAP[w], B=W.bot; b.recoil=1; b.noiseT=1.5; if(w==='sniper') b.boltT=0.9; else if(w==='pompe') b.pumpT=0.5;
   _o.set(b.pos.x,b.pos.y+1.45,b.pos.z);
   const d=Math.hypot(target.pos.x-b.pos.x,target.pos.z-b.pos.z);
   let p = B.shotgun ? (d<7?0.85:d<15?0.45:0.12) : B.sniper ? clamp(0.62-d*0.002,0.25,0.6) : clamp(0.5-d*0.009,0.06,0.45)*(B.acc||1);
@@ -1704,6 +1852,23 @@ function botShoot(b,target){
   if(Array.isArray(B.cd)) b.fireCD=rnd(B.cd[0],B.cd[1]);
   else { b.burst--; if(b.burst<=0){ b.burst=rint(B.burst[0],B.burst[1]); b.fireCD=rnd(B.pause[0],B.pause[1]); } else b.fireCD=B.cd; }
 }
+// v1.1 : les bots passent par la porte pour entrer dans une maison ou en sortir (porte extérieure puis intérieure, ou l'inverse)
+let houseGrid=null;
+function houseAt(x,z){
+  if(!houseGrid){ houseGrid=new Map(); for(const h of housesInfo){ if(!h.door) continue; for(let i=Math.floor(h.minX/16);i<=Math.floor(h.maxX/16);i++) for(let j=Math.floor(h.minZ/16);j<=Math.floor(h.maxZ/16);j++){ const k=gk(i,j); let a=houseGrid.get(k); if(!a){ a=[]; houseGrid.set(k,a); } a.push(h); } } }
+  const a=houseGrid.get(gk(Math.floor(x/16),Math.floor(z/16))); if(a) for(const h of a) if(x>h.minX&&x<h.maxX&&z>h.minZ&&z<h.maxZ) return h; return null; }
+function houseNav(b,tx,tz){
+  const hb=houseAt(b.pos.x,b.pos.z), ht=houseAt(tx,tz); if(hb===ht){ b.navS=0; return null; }
+  if(hb){ const D=hb.door; if(b.navS!==2&&Math.hypot(D.ix-b.pos.x,D.iz-b.pos.z)>0.8) return [D.ix,D.iz]; b.navS=2; return [D.ox,D.oz]; }
+  const D=ht.door; if(b.navS!==1&&Math.hypot(D.ox-b.pos.x,D.oz-b.pos.z)>0.8) return aroundHouse(ht,b.pos.x,b.pos.z,D.ox,D.oz); b.navS=1; return [D.ix,D.iz]; }
+// segment (2D) qui traverse la maison (élargie) ? alors on passe par le coin qui raccourcit le trajet jusqu'à la porte
+function segHitsBox(x0,z0,x1,z1,a,m){ let t0=0,t1=1; const dx=x1-x0, dz=z1-z0;
+  for(const [p,d,lo,hi] of [[x0,dx,a.minX-m,a.maxX+m],[z0,dz,a.minZ-m,a.maxZ+m]]){ if(Math.abs(d)<1e-9){ if(p<lo||p>hi) return false; continue; }
+    let u=(lo-p)/d, v=(hi-p)/d; if(u>v){ const t=u; u=v; v=t; } t0=Math.max(t0,u); t1=Math.min(t1,v); if(t0>t1) return false; } return true; }
+function aroundHouse(h,x,z,tx,tz){ if(!segHitsBox(x,z,tx,tz,h,0.5)) return [tx,tz];
+  let best=null, bd=1e9; for(const cx of [h.minX-1.3,h.maxX+1.3]) for(const cz of [h.minZ-1.3,h.maxZ+1.3]){
+    if(segHitsBox(x,z,cx,cz,h,0.5)) continue; const d=Math.hypot(cx-x,cz-z)+Math.hypot(tx-cx,tz-cz)+(segHitsBox(cx,cz,tx,tz,h,0.5)?6:0); if(d<bd){ bd=d; best=[cx,cz]; } }
+  return best||[tx,tz]; }
 function updateBot(b,dt){
   updateTimers(b,dt);
   if(b.dummy){ moveChar(b,0,0,0,dt,false); b.moving=false; b.yaw=Math.atan2(-(player.pos.x-b.pos.x),-(player.pos.z-b.pos.z)); return; }
@@ -1714,7 +1879,8 @@ function updateBot(b,dt){
   let wx=0,wz=0; const t=b.target;
   if(t&&t.alive&&!b.flee){ const dx=t.pos.x-b.pos.x, dz=t.pos.z-b.pos.z, d=Math.hypot(dx,dz)||1; const nx=dx/d, nz=dz/d; const want=b.cur==='pompe'?5:b.cur==='sniper'?40:b.cur==='mitraillette'?12:18;
     const rad = d>want+5?1:d<want-5?-0.7:0; wx=nx*rad+(-nz)*b.strafe*0.85; wz=nz*rad+nx*b.strafe*0.85; b.yaw=Math.atan2(-dx,-dz); b.aimPitch=clamp(Math.atan2(t.pos.y-b.pos.y-0.2,d),-0.8,0.8); }
-  else if(b.moveTarget){ const dx=b.moveTarget.x-b.pos.x, dz=b.moveTarget.z-b.pos.z, d=Math.hypot(dx,dz); if(d>1.5){ wx=dx/d; wz=dz/d; if(t&&t.alive) { const tx=t.pos.x-b.pos.x, tz=t.pos.z-b.pos.z; b.yaw=Math.atan2(-tx,-tz); } else b.yaw=Math.atan2(-wx,-wz); } }
+  else if(b.moveTarget){ let mx=b.moveTarget.x, mz=b.moveTarget.z; const nv=houseNav(b,mx,mz); if(nv){ mx=nv[0]; mz=nv[1]; }
+    const dx=mx-b.pos.x, dz=mz-b.pos.z, d=Math.hypot(dx,dz); if(d>(nv?0.25:1.5)){ wx=dx/d; wz=dz/d; if(t&&t.alive) { const tx=t.pos.x-b.pos.x, tz=t.pos.z-b.pos.z; b.yaw=Math.atan2(-tx,-tz); } else b.yaw=Math.atan2(-wx,-wz); } }
   const l=Math.hypot(wx,wz); if(l>1){wx/=l;wz/=l;} b.moving=l>0.1;
   b.sprint=!b.crouch&&b.moving&&(b.flee||(!t&&b.moveTarget&&Math.hypot(b.moveTarget.x-b.pos.x,b.moveTarget.z-b.pos.z)>30));
   moveChar(b,wx,wz,5.3*(b.sprint?1.4:1),dt,b.wantJump); b.wantJump=false;
@@ -1723,7 +1889,8 @@ function updateBot(b,dt){
 }
 function updateAir(c,dt,wx,wz){
   const g=groundAt(c.pos.x,c.pos.z,c.pos.y);
-  if(c.phase==='fall'){ c.vel.y=Math.max(c.vel.y-30*dt,-42); if(c.pos.y-g<44){ c.phase='glide'; c.model.glider.visible=true; } }
+  if(c.phase==='fall'){ c.vel.y=Math.max(c.vel.y-30*dt,-42); if(c.pos.y-g<44){ c.phase='glide'; c.model.glider.visible=true; c.gliderT=0; } }
+  if(c.phase==='glide') updateGlider(c,dt);
   let hs=c.phase==='fall'?17:11;
   if(c.phase==='glide') c.vel.y=lerp(c.vel.y,-6.5,1-Math.exp(-3*dt));
   const k=1-Math.exp(-2.2*dt); c.vel.x=lerp(c.vel.x,wx*hs,k); c.vel.z=lerp(c.vel.z,wz*hs,k);
@@ -1763,8 +1930,8 @@ function animChar(c,dt){
   else if(c.phase==='fall'){ aL=2.3; aLz=1.0; aR=2.3; aRz=-1.0; }
   else if(c.useT>0){ const e=Math.sin(matchTime*9)*0.12; aL=1.5; aLz=0.55; aR=2.35+e; aRz=-0.35; }
   else if(gun){ aR=1.4+pitch*0.85; aRz=-0.08; aL=1.32+pitch*0.85; aLz=0.52; mX=pitch*0.85; spineX+=pitch*0.12;
-    if(c.reloadT>0){ const rp=1-c.reloadT/WEAP[c.cur].reload; const s1=Math.sin(rp*Math.PI); aL-=s1*1.05; aLz+=s1*0.15; mZ=s1*0.6; mX-=s1*0.35; }
-    if(c.switchT>0){ const s3=c.switchT/0.25; mX-=s3*1.2; aR-=s3*0.9; aL-=s3*0.9; }
+    if(c.reloadT>0){ const rp=1-c.reloadT/(c.reloadDur||WEAP[c.cur].reload); const s1=Math.sin(rp*Math.PI); aL-=s1*1.05; aLz+=s1*0.15; mZ=s1*0.6; mX-=s1*0.35; }
+    if(c.switchT>0){ const s3=c.switchT/(c.switchDur||0.25); mX-=s3*1.2; aR-=s3*0.9; aL-=s3*0.9; }
     mPz=-0.3+(c.recoil||0)*0.1; spineX+=(c.recoil||0)*0.05; }
   else { aL=-Math.sin(ph)*0.65*moveK+0.05; aLz=0.08; aRz=-0.1;
     if(c.swingT>0){ const s1=1-c.swingT/WEAP.daba.rate; aR = s1<0.3 ? lerp(0.9,2.9,s1/0.3) : lerp(2.9,0.45,Math.min(1,(s1-0.3)/0.35)); spineX+= s1<0.3?0.12:-0.22; ka=1-Math.exp(-45*dt); }
@@ -1786,6 +1953,96 @@ function animChar(c,dt){
 const _ax=V(), _aqq=new THREE.Quaternion(), _apq=new THREE.Quaternion(), _UP=V(0,1,0), _chest=V();
 function addRot(bone,axisW,ang){ if(!bone||Math.abs(ang)<1e-4) return; bone.parent.getWorldQuaternion(_apq); _aqq.setFromAxisAngle(axisW,ang); bone.quaternion.premultiply(_apq.clone().invert().multiply(_aqq).multiply(_apq)); }
 const AW={}; for(const k of FULL_KEYS) AW[k]=0;
+/* ---------- prises et animations des armes (v1.1) ----------
+   hands : 1 = revolver tenu à une main hors combat (deux mains pour viser / tirer), 2 = toujours à deux mains
+   draw : durée du changement d'arme (rangement puis sortie) ; holster : pose de l'arme rangée [rx,ry,rz,dx,dy,dz] */
+const GRIP={
+  revolver:    {hands:1,draw:0.32,holster:[-1.35,0.15,0.05,0.1,-0.3,0.12]},
+  mitraillette:{hands:2,draw:0.42,holster:[-1.05,0.55,0.25,0.04,-0.12,0.08]},
+  fusil:       {hands:2,draw:0.48,holster:[-1.0,0.7,0.35,0.02,-0.1,0.1]},
+  pompe:       {hands:2,draw:0.5, holster:[-1.0,0.7,0.35,0.02,-0.1,0.1]},
+  mitrailleuse:{hands:2,draw:0.7, holster:[-0.9,0.8,0.4,0.0,-0.14,0.12]},
+  sniper:      {hands:2,draw:0.55,holster:[-1.0,0.75,0.35,0.02,-0.1,0.1]},
+};
+// points d'appui des mains sur chaque arme (repère de l'arme : canon vers −z, haut +y ; mesurés sur les modèles 3D)
+const ANCH={
+  revolver:    {grip:[0,-0.05,0.07],cup:[-0.02,-0.08,0.05],cyl:[-0.01,0.02,-0.03]},
+  mitraillette:{grip:[0,-0.05,0.07],fore:[-0.01,-0.04,-0.2],mag:[0,-0.11,-0.06],slap:[-0.035,0.06,-0.24],slapU:[-0.035,0.12,-0.24]},
+  fusil:       {grip:[0,-0.05,0.07],fore:[-0.01,-0.04,-0.24],mag:[0,-0.1,-0.08],handle:[0.05,0.05,-0.02],handleB:[0.05,0.05,0.07]},
+  pompe:       {grip:[0,-0.05,0.07],fore:[-0.01,-0.07,-0.3],foreB:[-0.01,-0.07,-0.2],port:[0,-0.1,-0.02]},
+  mitrailleuse:{grip:[0,-0.05,0.07],fore:[-0.01,-0.04,-0.24],mag:[-0.06,-0.1,-0.06],cover:[0,0.12,0.02],coverU:[0,0.24,0.06],handle:[0.06,0.03,-0.1],handleB:[0.06,0.03,0.0]},
+  sniper:      {grip:[0,-0.05,0.07],fore:[-0.01,-0.04,-0.24],mag:[0,-0.1,-0.02],bolt:[0.06,0.05,0.12],boltB:[0.06,0.05,0.21]},
+};
+// points d'appui sur le corps (repère du perso)
+const BODY={belt:[-0.16,0.98,-0.14],pouchR:[0.17,0.98,-0.12]};
+/* chorégraphies : t (0→1), g (pose ajoutée à l'arme), L / R (point d'appui de chaque main), p (accessoire tenu dans la main
+   gauche, ou droite si pR), e (événements : sons, chargeur qui tombe, douilles). Interpolation lissée entre deux clés. */
+const G0=[0,0,0,0,0,0];
+const RELOAD={
+  fusil:{e:[[0.15,'magout'],[0.53,'magin'],[0.72,'rack']],keys:[
+    {t:0,g:G0,L:'fore'},{t:0.12,g:[0.12,0,0.5,0.02,-0.02,0],L:'mag'},{t:0.3,g:[0.12,0,0.5,0.02,-0.02,0],L:'belt'},{t:0.38,g:[0.12,0,0.5,0.02,-0.02,0],L:'belt',p:'mag'},
+    {t:0.52,g:[0.12,0,0.45,0.02,-0.02,0],L:'mag'},{t:0.62,g:[0.05,0,-0.3,0,0,0],L:'handle'},{t:0.74,g:[0.05,0,-0.3,0,0,0.02],L:'handleB'},{t:0.88,g:G0,L:'fore'},{t:1,g:G0,L:'fore'}]},
+  mitraillette:{e:[[0.13,'magout'],[0.5,'magin'],[0.7,'slap']],keys:[
+    {t:0,g:G0,L:'fore'},{t:0.1,g:[0.1,0,0.45,0.02,-0.02,0],L:'mag'},{t:0.27,g:[0.1,0,0.45,0.02,-0.02,0],L:'belt'},{t:0.35,g:[0.1,0,0.45,0.02,-0.02,0],L:'belt',p:'mag'},
+    {t:0.49,g:[0.1,0,0.4,0.02,-0.02,0],L:'mag'},{t:0.6,g:[0.15,0,-0.2,0,0.02,0],L:'slapU'},{t:0.7,g:[0.12,0,-0.2,0,0,0],L:'slap'},{t:0.86,g:G0,L:'fore'},{t:1,g:G0,L:'fore'}]},
+  revolver:{e:[[0.1,'cylopen'],[0.27,'eject6'],[0.66,'click'],[0.78,'cylclose']],keys:[
+    {t:0,g:G0,L:'cup'},{t:0.1,g:[0.35,0,0.95,0.03,0.04,0.02],L:'cyl'},{t:0.26,g:[1.0,0.1,0.95,0.03,0.08,0.04],L:'cyl'},{t:0.42,g:[-0.35,0,0.9,0.03,0,0.03],L:'belt'},
+    {t:0.5,g:[-0.35,0,0.9,0.03,0,0.03],L:'belt',p:'speed'},{t:0.66,g:[-0.3,0,0.85,0.03,0,0.03],L:'cyl'},{t:0.76,g:[-0.1,0,0.15,0.01,0,0.01],L:'cyl'},{t:0.9,g:G0,L:'cup'},{t:1,g:G0,L:'cup'}]},
+  mitrailleuse:{e:[[0.1,'cover'],[0.26,'magout'],[0.59,'magin'],[0.77,'cover'],[0.9,'rack']],keys:[
+    {t:0,g:G0,L:'fore'},{t:0.08,g:[0.1,0,0.25,0,0.02,0],L:'cover'},{t:0.16,g:[0.1,0,0.25,0,0.02,0],L:'coverU'},{t:0.24,g:[0.1,0,0.3,0,0,0],L:'mag'},
+    {t:0.36,g:[0.1,0,0.3,0,0,0],L:'belt'},{t:0.44,g:[0.1,0,0.3,0,0,0],L:'belt',p:'box'},{t:0.58,g:[0.1,0,0.3,0,0,0],L:'mag'},{t:0.66,g:[0.1,0,0.25,0,0.02,0],L:'coverU'},
+    {t:0.76,g:[0.1,0,0.25,0,0.02,0],L:'cover'},{t:0.84,g:[0.05,0,-0.2,0,0,0],L:'handle'},{t:0.92,g:[0.05,0,-0.2,0,0,0.02],L:'handleB'},{t:1,g:G0,L:'fore'}]},
+  sniper:{e:[[0.12,'magout'],[0.52,'magin'],[0.73,'boltopen'],[0.82,'boltclose']],keys:[
+    {t:0,g:G0,L:'fore'},{t:0.1,g:[0.08,0,0.4,0.02,-0.02,0],L:'mag'},{t:0.28,g:[0.08,0,0.4,0.02,-0.02,0],L:'belt'},{t:0.36,g:[0.08,0,0.4,0.02,-0.02,0],L:'belt',p:'mag'},
+    {t:0.5,g:[0.08,0,0.35,0.02,-0.02,0],L:'mag'},{t:0.6,g:[0,0,0.15,0,0,0],L:'fore'},{t:0.66,g:[0,0,0.15,0,0,0],L:'fore',R:'bolt'},
+    {t:0.74,g:[0,0,0.15,0,0,0],L:'fore',R:'boltB'},{t:0.82,g:[0,0,0.15,0,0,0],L:'fore',R:'bolt'},{t:0.9,g:G0,L:'fore'},{t:1,g:G0,L:'fore'}]},
+};
+// après chaque tir : culasse du sniper (0,9 s), pompe du fusil à pompe (0,5 s)
+const BOLT={e:[[0.4,'boltopen+eject'],[0.62,'boltclose']],keys:[{t:0,g:G0,L:'fore'},{t:0.2,g:[0,0,0.12,0,0,0],L:'fore',R:'bolt'},{t:0.42,g:[0,0,0.12,0,0,0],L:'fore',R:'boltB'},{t:0.62,g:[0,0,0.12,0,0,0],L:'fore',R:'bolt'},{t:0.85,g:G0,L:'fore'},{t:1,g:G0,L:'fore'}]};
+const PUMP={e:[[0.3,'pump+eject']],keys:[{t:0,g:G0,L:'fore'},{t:0.35,g:[0.04,0,0,0,0,0.02],L:'foreB'},{t:0.7,g:G0,L:'fore'},{t:1,g:G0,L:'fore'}]};
+// soins : la main droite porte le kilishi / le verre à la bouche
+const USE={
+  kilishi:{e:[[0.32,'bite'],[0.52,'bite'],[0.72,'bite']],wL:0,keys:[
+    {t:0,R:'pouchR'},{t:0.12,R:'pouchR',pR:'kil'},{t:0.3,R:'mouth',pR:'kil'},{t:0.4,R:'mouthA',pR:'kil'},{t:0.5,R:'mouth',pR:'kil'},{t:0.6,R:'mouthA',pR:'kil'},{t:0.7,R:'mouth',pR:'kil'},{t:0.86,R:'pouchR',pR:'kil'},{t:1,R:'pouchR'}]},
+  // thé : le petit verre se tient du bout des doigts, sans soucoupe (comme au grin) ; la main gauche reste libre
+  the:{e:[[0.4,'sip'],[0.6,'sip']],wL:0,keys:[
+    {t:0,R:'pouchR'},{t:0.12,R:'pouchR',pR:'glass'},{t:0.3,R:'mouth',pR:'glass'},{t:0.72,R:'mouth',pR:'glass'},{t:0.88,R:'pouchR',pR:'glass'},{t:1,R:'pouchR'}]},
+};
+function sampleChoreo(ch,u,out){ const K=ch.keys; let i=0; while(i<K.length-2&&u>=K[i+1].t) i++;
+  const a=K[i], b=K[i+1], e=smooth(0,1,clamp((u-a.t)/Math.max(1e-4,b.t-a.t),0,1));
+  for(let k=0;k<6;k++) out.g[k]=lerp((a.g||G0)[k],(b.g||G0)[k],e);
+  out.LA=a.L||'fore'; out.LB=b.L||'fore'; out.RA=a.R||'grip'; out.RB=b.R||'grip'; out.e=e; out.p=a.p||null; out.pR=a.pR||null; return out; }
+// accessoires tenus en main (créés au besoin, enfants du perso)
+const PROP_GEO={}; function propMesh(kind){
+  if(!PROP_GEO[kind]){ const mg=new Merger();
+    if(kind==='mag') mg.add(new THREE.BoxGeometry(0.035,0.16,0.07),M4(0,-0.05,0,0,0.25),C(0x2a2a2a));
+    else if(kind==='box') mg.add(new THREE.BoxGeometry(0.1,0.11,0.13),M4(0,-0.02,0),C(0x4a5238));
+    else if(kind==='speed'){ mg.add(new THREE.CylinderGeometry(0.03,0.03,0.04,8),M4(0,0,0),C(0x1d1d1d)); for(let k=0;k<6;k++){ const a=k/6*6.28; mg.add(new THREE.CylinderGeometry(0.007,0.007,0.03,5),M4(Math.cos(a)*0.02,0.03,Math.sin(a)*0.02),C(0xd8a840)); } }
+    else if(kind==='kil'){ for(let k=0;k<3;k++) mg.add(new THREE.BoxGeometry(0.03,0.006,0.13),M4((k-1)*0.012,k*0.006,-0.05,0.15*(k-1)),C(k%2?0x7b2f14:0x8e3a18)); }
+    else if(kind==='glass'){ mg.add(new THREE.CylinderGeometry(0.024,0.019,0.07,10),M4(0,0.03,0),C(0xc9e6d8)); mg.add(new THREE.CylinderGeometry(0.022,0.018,0.045,10),M4(0,0.022,0),C(0x8a3a10)); mg.add(new THREE.CylinderGeometry(0.0225,0.0225,0.008,10),M4(0,0.047,0),C(0xf2e6c8)); }
+    PROP_GEO[kind]=mg.mesh(MAT.plain).geometry; }
+  const m=new THREE.Mesh(PROP_GEO[kind],MAT.plain); m.castShadow=false; return m; }
+// chargeurs qui tombent au sol
+const DEBRIS=[]; function dropDebris(kind,pos,vel){ let d=DEBRIS.find(x=>x.t<=0); if(!d){ if(DEBRIS.length>=10) d=DEBRIS[0]; else { d={m:propMesh(kind)}; scene.add(d.m); DEBRIS.push(d); } }
+  d.m.geometry=PROP_GEO[kind]||propMesh(kind).geometry; d.m.position.copy(pos); d.v=vel.clone(); d.t=4; d.m.visible=true; d.spin=rnd(-6,6); }
+function updateDebris(dt){ for(const d of DEBRIS){ if(d.t<=0) continue; d.t-=dt; if(d.t<=0){ d.m.visible=false; continue; } const g=groundAt(d.m.position.x,d.m.position.z,d.m.position.y+0.2);
+  if(d.m.position.y>g+0.03){ d.v.y-=18*dt; d.m.position.addScaledVector(d.v,dt); d.m.rotation.x+=d.spin*dt; if(d.m.position.y<g+0.03){ d.m.position.y=g+0.03; d.v.set(0,0,0); d.spin=0; } } } }
+// sons mécaniques (chargeur, culasse, pompe, barillet…)
+function sfxMech(kind,dist){ if(!actx) return; const v=1/(1+dist/6); if(v<0.08) return;
+  const click=(f,dl=0,vol=0.18)=>tone(f,0.03,vol*v,'square',f*0.6,dl);
+  if(kind==='magout'){ click(900); noiseBurst(0.12*v,2400,0.06,'bandpass',2); }
+  else if(kind==='magin'){ click(1300,0,0.22); click(700,0.03,0.12); noiseBurst(0.14*v,3000,0.05,'bandpass',2); }
+  else if(kind==='rack'||kind==='slap'){ noiseBurst(0.18*v,1800,0.08,'bandpass',1.4); click(1100,0.07,0.2); click(800,0.11,0.16); }
+  else if(kind==='cover'){ tone(260,0.08,0.25*v,'square',160); noiseBurst(0.12*v,900,0.08); }
+  else if(kind.startsWith('boltopen')){ click(950); noiseBurst(0.12*v,2200,0.07,'bandpass',1.5); }
+  else if(kind==='boltclose'){ click(1400,0,0.22); click(900,0.04,0.14); }
+  else if(kind.startsWith('pump')){ noiseBurst(0.22*v,1500,0.12,'bandpass',1.2); click(700,0.1,0.2); }
+  else if(kind==='shell'){ click(1000,0,0.16); noiseBurst(0.08*v,2600,0.04,'bandpass',2); }
+  else if(kind==='cylopen'||kind==='cylclose'){ click(kind==='cylopen'?1100:1500,0,0.2); }
+  else if(kind==='click') click(1700,0,0.15);
+  else if(kind==='eject6'){ for(let k=0;k<5;k++) tone(rnd(3200,4400),0.04,0.05*v,'triangle',null,0.05+k*0.035); }
+  else if(kind==='bite') noiseBurst(0.06*v,900,0.06,'bandpass',3);
+  else if(kind==='sip') noiseBurst(0.05*v,600,0.12,'bandpass',4); }
 /* ---------- pose animée de référence (correctif v1.0 du buste qui tourne à 360°) ----------
    three.js (PropertyMixer.apply) ne réécrit un os QUE si le résultat de l'animation a changé depuis l'image précédente.
    Or l'os Spine est immobile dans les 17 clips (et d'autres os le sont dans certains clips : RightArm en glissade, épaules…).
@@ -1832,7 +2089,7 @@ function animRealAnim(c,dt){
   an.ws=lerp(an.ws,wSlT,1-Math.exp(-dt*(wSlT?22:9)));
   // --- jambes vers la direction du déplacement (pas chassés, marche arrière) ---
   const cy=Math.cos(c.yaw), sy=Math.sin(c.yaw), lx=c.vel.x*cy-c.vel.z*sy, lz=c.vel.x*sy+c.vel.z*cy; let legT=0, dirT=1;
-  if(sp>0.8&&!air&&!sliding){ const a=Math.atan2(lx,-lz); if(Math.abs(a)<1.95) legT=clamp(a,-1.25,1.25)*0.8; else { let b=a-Math.sign(a)*Math.PI; legT=clamp(b,-1.25,1.25)*0.8; dirT=-1; } }
+  if(sp>0.8&&!air&&!sliding){ const a=Math.atan2(lx,-lz); if(Math.abs(a)<1.95) legT=clamp(a,-1.4,1.4)*0.85; else { let b=a-Math.sign(a)*Math.PI; legT=clamp(b,-1.4,1.4)*0.85; dirT=-1; } }
   an.legYaw=lerp(an.legYaw,legT,1-Math.exp(-10*dt)); an.dir=dirT;
   // --- sprint (pour l'arme portée en travers) ---
   an.sprintW=lerp(an.sprintW,c.sprint&&!air&&!sliding?1:0,1-Math.exp(-8*dt));
@@ -1858,55 +2115,112 @@ function animRealAnim(c,dt){
   // --- gestes du haut du corps ---
   if(c.hurtT>0.15&&an.lastHurt<=0.15) an.hitT=0; an.lastHurt=c.hurtT; an.hitT+=dt;
   const hitW=an.hitT<0.33?0.55*Math.min(1,an.hitT/0.04)*(1-an.hitT/0.33):0; A.hit_ub.time=Math.min(an.hitT,0.32);
-  an.useW=lerp(an.useW,c.useT>0?0.92:0,1-Math.exp(-10*dt)); if(c.useT>0) an.useT+=dt; else an.useT=0; A.consume_ub.time=an.useT%A.consume_ub.getClip().duration;
   if(c.cur==='daba'&&c.swingT>0&&an.prevSwing<=0) an.chopT=0; an.prevSwing=c.swingT; an.chopT+=dt;
-  const chopW=c.cur==='daba'&&an.chopT<0.62?(an.chopT<0.5?smooth(0,0.07,an.chopT):1-(an.chopT-0.5)/0.12):0; // fondu d'entrée : plus de saut du buste au début du coup A.chop_ub.time=Math.min(an.chopT*1.7,0.95);
+  // coup de daba : fondu d'entrée (pas de saut du buste au début du coup)
+  const chopW=c.cur==='daba'&&an.chopT<0.62?(an.chopT<0.5?smooth(0,0.07,an.chopT):1-(an.chopT-0.5)/0.12):0;
+  A.chop_ub.time=Math.min(an.chopT*1.7,0.95);
   const ubw=a=>a/(1-a+0.02);
-  A.hit_ub.setEffectiveWeight(ubw(hitW)); A.consume_ub.setEffectiveWeight(ubw(an.useW)); A.chop_ub.setEffectiveWeight(ubw(chopW*0.97));
+  A.hit_ub.setEffectiveWeight(ubw(hitW)); A.consume_ub.setEffectiveWeight(0); A.chop_ub.setEffectiveWeight(ubw(chopW*0.97));
   mixPose(m);
   // --- retouches procédurales ---
   addRot(B.Hips,_UP,an.legYaw); addRot(B.Spine,_UP,-an.legYaw*0.45); addRot(B.Spine1,_UP,-an.legYaw*0.3); addRot(B.Spine2,_UP,-an.legYaw*0.25);
   const pitch=clamp(c.isPlayer?camPitch:(c.aimPitch||0),-1.1,1.1); an.pitch=lerp(an.pitch,pitch,1-Math.exp(-14*dt)); const pS=an.pitch;
-  const gun=c.cur!=='daba', bm=c===player&&buildMode&&c.phase==='ground', showW=!sky&&c.useT<=0&&!bm;
+  const bm=c===player&&buildMode&&c.phase==='ground', using=c.useT>0&&!!c.useKind;
+  // changement d'arme : l'ancienne arme pendant la 1re moitié (rangement), la nouvelle pendant la 2e (sortie)
+  let sw=0, wType=c.cur;
+  if(c.switchT>0&&c.switchDur>0){ sw=clamp(1-c.switchT/c.switchDur,0,1); if(sw<0.5&&c.switchFrom) wType=c.switchFrom; }
+  const climbing=!!(c.climb||c.mantle), gun=wType!=='daba', Gp=GRIP[wType], showW=!sky&&!using&&!bm&&!climbing;
   _ax.set(1,0,0).applyQuaternion(g.quaternion);
   const pk=sliding||air?0.5:1; addRot(B.Spine1,_ax,pS*0.1*pk); addRot(B.Spine2,_ax,pS*0.16*pk); addRot(B.Neck,_ax,pS*0.2); addRot(B.Head,_ax,pS*(gun?0.2:0.3));
+  // soins : la tête mord (kilishi) ou bascule en arrière pour boire (thé)
+  let headX=0, useU=0;
+  if(using){ useU=1-c.useT/c.useMax; if(c.useKind==='the') headX=-0.38*smooth(0.25,0.36,useU)*(1-smooth(0.7,0.82,useU)); else headX=0.13*Math.max(0,Math.sin((useU-0.3)*Math.PI*10))*smooth(0.28,0.32,useU)*(1-smooth(0.72,0.78,useU)); }
+  if(headX){ addRot(B.Neck,_ax,headX*0.4); addRot(B.Head,_ax,headX*0.6); }
   // stabilisation du buste : en courant arme en main, on retire l'essentiel du balancement gauche-droite des épaules
-  // (la course balance le buste de ±36°, l'arme ballottait). Mesuré sur la ligne des épaules, corrigé sur Spine1/Spine2.
-  const stab=(gun&&!sky&&!sliding&&c.useT<=0&&!bm?0.8:0.3)*clamp(s/2.5,0,1);
+  const stab=(gun&&!sky&&!sliding&&!using&&!bm?0.8:0.3)*clamp(s/2.5,0,1);
   if(B.LeftArm&&B.RightArm){ B.LeftArm.getWorldPosition(_sa); B.RightArm.getWorldPosition(_sb); _sb.sub(_sa);
     const yc=wrapA(Math.atan2(-_sb.z,_sb.x)-c.yaw); an.cy=an.cy===undefined?yc:an.cy+wrapA(yc-an.cy)*(1-Math.exp(-1.5*dt));
     if(stab>0.01){ const corr=-wrapA(yc-an.cy)*stab; addRot(B.Spine2,_UP,corr*0.6); addRot(B.Spine1,_UP,corr*0.4); } }
   g.updateMatrixWorld(true);
-  // --- arme / plan ---
-  const wo=ensureWeapon(m,c.cur); const lod=!c.isPlayer&&dc>Q.gunLod&&c.cur!=='daba';
-  for(const kk in m.w) m.w[kk].visible=showW&&kk===c.cur&&!lod; gunLow(m,c.cur,showW&&lod); m.bp.visible=bm;
+  // --- arme portée ---
+  const wo=ensureWeapon(m,wType); const lod=!c.isPlayer&&dc>Q.gunLod&&gun;
+  for(const kk in m.w) m.w[kk].visible=showW&&kk===wType&&!lod; gunLow(m,wType,showW&&lod); m.bp.visible=bm;
   const far=!c.isPlayer&&dc>Q.detail; if(m.far!==far){ m.far=far; for(const o of m.detail) o.visible=!far; }
   B.Spine2.getWorldPosition(_chest); g.worldToLocal(_chest);
   m.pivot.position.set(0.12+(_chest.x-m.chest0.x)*0.6, 1.37+(_chest.y-m.chest0.y), (_chest.z-m.chest0.z)*0.8);
-  let pX=pS*0.9-an.sprintW*0.55, hRz=0, hRx=0, hZ=-0.22;
-  if(gun){ hZ=-0.22+(c.recoil||0)*0.08; if(c.reloadT>0){ const s1=Math.sin((1-c.reloadT/WEAP[c.cur].reload)*Math.PI); hRz=s1*0.5; hRx=-s1*0.45; } if(c.switchT>0) pX-=c.switchT/0.25*1.1; }
-  m.pivot.rotation.x=sm(m.st,'px',pX,1-Math.exp(-14*dt)); m.pivot.rotation.y=sm(m.st,'py',an.sprintW*0.55,1-Math.exp(-10*dt));
-  m.hold.position.z=hZ; m.hold.rotation.z=sm(m.st,'hz',hRz,1-Math.exp(-14*dt)); m.hold.rotation.x=sm(m.st,'hx',hRx,1-Math.exp(-14*dt));
+  // prise : deux mains pour viser / tirer ; hors combat le revolver se tient bas, à une main
+  const inCombat=c.isPlayer?((c.combatT||0)>0||ads):!!(c.target&&c.canSee);
+  let pX=pS*0.9-an.sprintW*0.55, pY=an.sprintW*0.55, hx=-0.05, hy=-0.13, hz=-0.22, wL=gun?1:0, wR=gun?1:0;
+  const oneHand=gun&&Gp&&Gp.hands===1&&!inCombat&&c.reloadT<=0&&sw===0;
+  if(oneHand){ pX=pS*0.2-1.0; pY=0.1; hx=0.08; hy=-0.24; hz=-0.1; wL=0; }
+  if(gun&&c.isPlayer&&ads) hz-=0.05;
+  hz+=(c.recoil||0)*0.08;
+  // chorégraphie en cours : rechargement, culasse ou pompe après un tir
+  const S_=_samp; for(let k=0;k<6;k++) S_.g[k]=0; S_.LA=S_.LB=(Gp&&Gp.hands===1)?'cup':'fore'; S_.RA=S_.RB='grip'; S_.e=0; S_.p=S_.pR=null;
+  let ch=null, chU=0, chId=null;
+  if(gun&&!using&&!bm&&sw===0&&c.phase==='ground'){
+    if(c.reloadT>0&&c.reloadDur>0){ chU=1-c.reloadT/c.reloadDur; if(wType==='pompe'){ shellsSample(c,S_); chId='shells'; } else if(RELOAD[wType]){ ch=RELOAD[wType]; chId='r'+wType; } }
+    else if(c.boltT>0){ ch=BOLT; chU=1-c.boltT/0.9; chId='bolt'; }
+    else if(c.pumpT>0){ ch=PUMP; chU=1-c.pumpT/0.5; chId='pump'; }
+    if(ch) sampleChoreo(ch,chU,S_);
+    if(chId) wL=1; } // rechargement, culasse, pompe : toujours à deux mains
+  if(using){ const U=USE[c.useKind]; if(U){ sampleChoreo(U,useU,S_); ch=U; chU=useU; chId='u'+c.useKind; wR=1; wL=U.wL; } }
+  // changement d'arme : pose « rangée » propre à la catégorie (hanche pour le revolver, épaule pour les armes longues)
+  if(sw>0&&Gp){ const k=sw<0.5?smooth(0,0.5,sw):1-smooth(0.5,1,sw); for(let i=0;i<6;i++) S_.g[i]+=Gp.holster[i]*k; wL=Gp.hands===2?Math.max(0,1-k*2.2):0; }
+  const fk=1-Math.exp(-14*dt);
+  m.pivot.rotation.x=sm(m.st,'px',pX,fk); m.pivot.rotation.y=sm(m.st,'py',pY,1-Math.exp(-10*dt));
+  m.hold.position.set(sm(m.st,'hpx',hx,fk)+S_.g[3],sm(m.st,'hpy',hy,fk)+S_.g[4],hz+S_.g[5]);
+  m.hold.rotation.set(sm(m.st,'hrx',S_.g[0],fk),sm(m.st,'hry',S_.g[1],fk),sm(m.st,'hrz',S_.g[2],fk));
   g.updateMatrixWorld(true);
-  let ik=false;
-  if(c.phase==='glide'){ g.localToWorld(_tR.set(0.3,2.15,0.05)); g.localToWorld(_tL.set(-0.3,2.15,0.05)); ik=true; }
-  else if(c.phase==='fall'){ g.localToWorld(_tR.set(0.75,1.5,0.2)); g.localToWorld(_tL.set(-0.75,1.5,0.2)); ik=true; }
-  else if(c.useT>0){ ik=false; }
-  else if(bm){ m.bp.localToWorld(_tR.set(0.16,-0.02,0.05)); m.bp.localToWorld(_tL.set(-0.16,-0.02,0.05)); ik=true; }
-  else if(gun&&dc<110){ const W=WEAP[c.cur]; wo.localToWorld(_tR.set(0.0,-0.05,0.07)); wo.localToWorld(_tL.set(-0.01,-0.04,-Math.min(W.fore,0.24))); ik=true; }
-  // cibles des mains dans le repère du perso : fondu de 0,18 s quand l'arme change (sinon les bras sautent d'une prise à l'autre)
-  if(ik){ g.worldToLocal(_lR.copy(_tR)); g.worldToLocal(_lL.copy(_tL));
-    const key=c.phase+'|'+(bm?'bp':c.cur);
-    if(an.ikKey!==key){ if(an.ikKey&&an.tRl){ an.tFR=an.tRl.clone(); an.tFL=an.tLl.clone(); an.tB=0; } an.ikKey=key; }
-    if(an.tB<1){ an.tB=Math.min(1,an.tB+dt/0.18); const e=smooth(0,1,an.tB); _lR.lerpVectors(an.tFR,_lR,e); _lL.lerpVectors(an.tFL,_lL,e); }
-    if(!an.tRl){ an.tRl=V(); an.tLl=V(); } an.tRl.copy(_lR); an.tLl.copy(_lL); }
-  else an.ikKey=null;
-  // poids de l'IK en fondu (≈ 0,1 s) : quand on prend la daba, mange ou boit, les bras repartent en douceur vers l'animation
-  an.ikW=lerp(an.ikW||0,ik?1:0,1-Math.exp(-(ik?18:12)*dt));
-  if(an.tRl&&an.ikW>0.001){ g.localToWorld(_tR.copy(an.tRl)); g.localToWorld(_tL.copy(an.tLl));
-    _pR.set(0.7,-1,0.45).applyQuaternion(g.quaternion); _pL.set(-0.7,-1,0.45).applyQuaternion(g.quaternion); ikArmW(m,'Right',_tR,_pR,an.ikW); ikArmW(m,'Left',_tL,_pL,an.ikW); }
+  // événements de la chorégraphie (sons, chargeur qui tombe, douilles), une seule fois chacun
+  if(an.chId!==chId){ an.chId=chId; an.chU=0; }
+  if(ch&&ch.e){ const prev=an.chU; for(const [t,name] of ch.e) if(prev<t&&chU>=t) choreoEvent(c,m,g,wo,wType,name); }
+  an.chU=chU;
+  // --- mains (IK) ---
+  let have=false;
+  if(climbing){ climbHands(c,g,_lL,_lR); wL=wR=1; have=true; }
+  else if(c.phase==='glide'){ _lR.set(0.34,2.08,0.02); _lL.set(-0.34,2.08,0.02); wL=wR=1; have=true; }
+  else if(c.phase==='fall'){ _lR.set(0.75,1.5,0.2); _lL.set(-0.75,1.5,0.2); wL=wR=1; have=true; }
+  else if(bm){ m.bp.localToWorld(_tR.set(0.16,-0.02,0.05)); m.bp.localToWorld(_tL.set(-0.16,-0.02,0.05)); g.worldToLocal(_lR.copy(_tR)); g.worldToLocal(_lL.copy(_tL)); wL=wR=1; have=true; }
+  else if(using||(gun&&dc<110)){
+    anchorLocal(m,g,wo,wType,S_.LA,_la); anchorLocal(m,g,wo,wType,S_.LB,_lb); _lL.lerpVectors(_la,_lb,S_.e);
+    anchorLocal(m,g,wo,wType,S_.RA,_la); anchorLocal(m,g,wo,wType,S_.RB,_lb); _lR.lerpVectors(_la,_lb,S_.e); have=true; }
+  else { wL=wR=0; }
+  if(have){ if(!an.tRl){ an.tRl=V(); an.tLl=V(); } an.tRl.copy(_lR); an.tLl.copy(_lL); }
+  an.ikWR=lerp(an.ikWR||0,wR,1-Math.exp(-(wR>an.ikWR?18:12)*dt)); an.ikWL=lerp(an.ikWL||0,wL,1-Math.exp(-(wL>an.ikWL?18:12)*dt));
+  if(an.tRl&&(an.ikWR>0.001||an.ikWL>0.001)){ g.localToWorld(_tR.copy(an.tRl)); g.localToWorld(_tL.copy(an.tLl));
+    _pR.set(0.7,-1,0.45).applyQuaternion(g.quaternion); _pL.set(-0.7,-1,0.45).applyQuaternion(g.quaternion); ikArmW(m,'Right',_tR,_pR,an.ikWR); ikArmW(m,'Left',_tL,_pL,an.ikWL); }
+  // --- accessoires dans les mains ---
+  if(m.props) for(const k in m.props) m.props[k].visible=false;
+  if(S_.p&&an.ikWL>0.5) showProp(m,g,S_.p,an.tLl,c,useU);
+  if(S_.pR&&an.ikWR>0.5) showProp(m,g,S_.pR,an.tRl,c,useU,headX);
   c.recoil=Math.max(0,(c.recoil||0)-dt*10); if(c.switchT>0) c.switchT-=dt;
 }
+const _samp={g:[0,0,0,0,0,0],LA:'fore',LB:'fore',RA:'grip',RB:'grip',e:0,p:null,pR:null}, _la=V(), _lb=V(), _hw=V();
+// point d'appui d'une main, dans le repère du perso
+function anchorLocal(m,g,wo,type,name,out){
+  if(BODY[name]) return out.fromArray(BODY[name]);
+  if(name==='mouth'||name==='mouthA'){ m.bones.Head.getWorldPosition(out); g.worldToLocal(out); out.y-=0.07; out.z-=name==='mouth'?0.11:0.2; out.x+=0.01; return out; }
+  const A=ANCH[type]||ANCH.fusil; let a=A[name];
+  if(!a) a=name==='fore'?[-0.01,-0.04,-Math.min((WEAP[type]&&WEAP[type].fore)||0.24,0.24)]:name==='cup'?[-0.02,-0.08,0.05]:(A.grip||[0,-0.05,0.07]);
+  wo.localToWorld(out.fromArray(a)); return g.worldToLocal(out); }
+// fusil à pompe : montée 0,25 s, puis 0,42 s par cartouche (ceinture → fenêtre de chargement), puis coup de pompe 0,3 s
+function shellsSample(c,out){ const el=c.reloadDur-c.reloadT, n=Math.max(1,c.reloadShells||1), tilt=[0.1,0,-0.55,0.02,0,0.02]; out.RA=out.RB='grip'; out.p=null;
+  if(el<0.25){ const e=smooth(0,0.25,el); for(let k=0;k<6;k++) out.g[k]=tilt[k]*e; out.LA='fore'; out.LB='port'; out.e=e; }
+  else if(el<0.25+n*0.42){ const k=((el-0.25)%0.42)/0.42; for(let i=0;i<6;i++) out.g[i]=tilt[i];
+    if(k<0.42){ out.LA='port'; out.LB='belt'; out.e=smooth(0,0.42,k); } else { out.LA='belt'; out.LB='port'; out.e=smooth(0.42,0.86,k); out.p='shell'; } }
+  else { const k=clamp((el-0.25-n*0.42)/0.3,0,1); const back=1-smooth(0,0.5,k); for(let i=0;i<6;i++) out.g[i]=tilt[i]*back;
+    if(k<0.4){ out.LA='port'; out.LB='fore'; out.e=smooth(0,0.4,k); } else { out.LA='fore'; out.LB='foreB'; out.e=k<0.7?smooth(0.4,0.7,k):1-smooth(0.7,1,k); } } }
+function showProp(m,g,kind,local,c,useU,headX){ if(!m.props) m.props={}; let o=m.props[kind];
+  if(!o){ o=kind==='shell'?(()=>{ const sm2=new THREE.Mesh(new THREE.CylinderGeometry(0.011,0.011,0.07,6),lam(0xb03020)); sm2.rotation.x=Math.PI/2; const gg=new THREE.Group(); gg.add(sm2); return gg; })():propMesh(kind); o.castShadow=false; g.add(o); m.props[kind]=o; }
+  o.visible=true; o.position.copy(local); o.rotation.set(0,0,0); o.scale.set(1,1,1);
+  if(kind==='kil'){ const bites=useU<0.32?0:useU<0.52?1:useU<0.72?2:3; o.scale.z=1-bites*0.26; o.rotation.x=-0.5; }
+  else if(kind==='glass'){ o.rotation.x=(headX||0)*2.3; o.position.y-=0.02; } }
+function choreoEvent(c,m,g,wo,type,name){ const d=c.pos.distanceTo(camera.position); if(d>40) return; sfxMech(name.split('+')[0],d);
+  if(name==='magout'){ anchorLocal(m,g,wo,type,'mag',_hw); g.localToWorld(_hw); dropDebris(type==='mitrailleuse'?'box':'mag',_hw,V(rnd(-0.3,0.3),-0.4,rnd(-0.3,0.3))); }
+  else if(name==='eject6'){ anchorLocal(m,g,wo,type,'cyl',_hw); g.localToWorld(_hw); for(let k=0;k<6;k++) spawnParticle(_hw.x,_hw.y,_hw.z,rnd(-0.6,0.6),rnd(-0.5,0.4),rnd(-0.6,0.6),0xd8a840,1.1,0.35,16); }
+  else if(name.endsWith('+eject')){ anchorLocal(m,g,wo,type,type==='pompe'?'port':'bolt',_hw); g.localToWorld(_hw); const r=V(Math.cos(c.yaw),0,-Math.sin(c.yaw));
+    spawnParticle(_hw.x,_hw.y+0.03,_hw.z,r.x*rnd(1.6,2.4),rnd(1.6,2.6),r.z*rnd(1.6,2.4),type==='pompe'?0xb03020:0xd8a840,1.0,type==='pompe'?0.55:0.45,16); } }
 function isScoped(){ return !!(player&&ads&&WEAP[player.cur]&&WEAP[player.cur].scope&&player.alive&&player.phase==='ground'&&!buildMode&&!editing); }
 const _tR=V(), _tL=V(), _pR=V(), _pL=V();
 function animReal(c,dt){
@@ -1942,17 +2256,18 @@ function animReal(c,dt){
   boneRot(m,'Neck',-pS*0.3); boneRot(m,'Head',-pS*0.4);
   if(m.bones.Hips&&m.rest.hipsModel){ _i1.copy(m.rest.hipsModel); _i1.y+=bodyY/m.scale; m.bones.Hips.position.copy(_i1.applyMatrix4(m.rest.hipsPInv)); }
   // arme / plan
-  const gun=c.cur!=='daba', bm=c===player&&buildMode&&c.phase==='ground', showW=!(c.phase==='fall'||c.phase==='glide')&&c.useT<=0&&!bm;
+  const gun=c.cur!=='daba', bm=c===player&&buildMode&&c.phase==='ground', showW=!(c.phase==='fall'||c.phase==='glide')&&c.useT<=0&&!bm&&!c.climb&&!c.mantle;
   const wo=ensureWeapon(m,c.cur); for(const kk in m.w) m.w[kk].visible=showW&&kk===c.cur; m.bp.visible=bm;
   m.pivot.position.y=1.37+bodyY-0.08*c.ck;
   let pX=pS*0.9, hRz=0, hRx=0, hZ=-0.22;
-  if(gun){ hZ=-0.22+(c.recoil||0)*0.08; if(c.reloadT>0){ const s1=Math.sin((1-c.reloadT/WEAP[c.cur].reload)*Math.PI); hRz=s1*0.5; hRx=-s1*0.45; } if(c.switchT>0) pX-=c.switchT/0.25*1.1; }
+  if(gun){ hZ=-0.22+(c.recoil||0)*0.08; if(c.reloadT>0){ const s1=Math.sin((1-c.reloadT/(c.reloadDur||WEAP[c.cur].reload))*Math.PI); hRz=s1*0.5; hRx=-s1*0.45; } if(c.switchT>0) pX-=c.switchT/(c.switchDur||0.25)*1.1; }
   else { hRx=1.2; if(c.swingT>0){ const s1=1-c.swingT/WEAP.daba.rate; pX = s1<0.3? lerp(0.4,1.9,s1/0.3) : lerp(1.9,-0.8,Math.min(1,(s1-0.3)/0.35)); } else pX=-0.25+Math.sin(ph)*0.12*moveK; }
   m.pivot.rotation.x = c.swingT>0&&!gun ? (st.px=pX) : sm(st,'px',pX,k);
   m.hold.position.z=hZ; m.hold.rotation.z=sm(st,'hz',hRz,k); m.hold.rotation.x=sm(st,'hx',hRx,k);
   g.updateMatrixWorld(true);
   if(c.phase==='glide'){ g.localToWorld(_tR.set(0.3,2.15,0.05)); g.localToWorld(_tL.set(-0.3,2.15,0.05)); }
   else if(c.phase==='fall'){ g.localToWorld(_tR.set(0.75,1.5,0.2)); g.localToWorld(_tL.set(-0.75,1.5,0.2)); }
+  else if(c.climb||c.mantle){ climbHands(c,g,_tL,_tR); g.localToWorld(_tL); g.localToWorld(_tR); }
   else if(c.useT>0){ g.localToWorld(_tR.set(0.05,1.6+bodyY,-0.2)); g.localToWorld(_tL.set(-0.12,1.28+bodyY,-0.24)); }
   else if(bm){ m.bp.localToWorld(_tR.set(0.16,-0.02,0.05)); m.bp.localToWorld(_tL.set(-0.16,-0.02,0.05)); }
   else if(gun){ const W=WEAP[c.cur]; wo.localToWorld(_tR.set(0.0,-0.05,0.07)); wo.localToWorld(_tL.set(-0.01,-0.04,-Math.min(W.fore,0.24))); }
@@ -1999,7 +2314,7 @@ function aimSens(){ return SET.sens*(ads?(isScoped()?SET.scopeSens:SET.adsSens):
 const invY=()=>SET.invertY?-1:1;
 addEventListener('mousemove',e=>{ if(state!=='play'&&state!=='bus') return; if(IS_TOUCH&&!document.pointerLockElement) return; const s=0.0024*aimSens(); camYaw-=e.movementX*s; camPitch=clamp(camPitch-e.movementY*s*invY(),-1.25,1.15); });
 addEventListener('wheel',e=>{ if(state!=='play') return; const dirn=e.deltaY>0?1:-1; if(buildMode){ const o=['wall','ramp','floor','cone']; let i=o.indexOf(buildType); setBuildType(o[(i+dirn+4)%4]); return; } const o=[0,1,2,3,4,5].filter(i=>i===0||player.slots[i-1]); let i=o.indexOf(player.sel); selectSlot(o[(i+dirn+o.length)%o.length]); },{passive:true});
-function selectSlot(i){ const p=player; if(!p||(i>0&&!p.slots[i-1])) return; if(editing) confirmEdit(); if(buildMode) toggleBuild(false); if(p.sel!==i){ setSel(p,i); p.reloadT=0; p.switchT=0.25; p.fireCD=Math.max(p.fireCD,0.25); ads=false; $('bAim').classList.remove('on'); } }
+function selectSlot(i){ const p=player; if(!p||(i>0&&!p.slots[i-1])) return; if(editing) confirmEdit(); if(buildMode) toggleBuild(false); if(p.sel!==i){ const from=p.cur; setSel(p,i); beginSwitch(p,from); ads=false; $('bAim').classList.remove('on'); } }
 function crouchPress(){ const p=player; if(!p||!p.alive||p.phase!=='ground'||p.slideT>0) return;
   const sp=Math.hypot(p.vel.x,p.vel.z);
   if(!p.crouch&&sp>4.6&&p.grounded){ p.slideT=1.0; p.crouch=true; p.sprint=false; sprintOn=false; p.slideDir.set(p.vel.x,0,p.vel.z).normalize(); sfxSlide(); addShake(0.025); return; }
@@ -2087,7 +2402,7 @@ function updateHUD(dt){
   updatePV(dt);
   if(nearItem&&nearItem.alive&&p.alive){ const nm=WEAP[nearItem.kind.slice(2)].name; setTxt('take', IS_TOUCH?`↻ PRENDRE ${nm.toUpperCase()}`:`<b>E</b> : prendre ${nm} (échange)`); $('take').classList.remove('hidden'); } else $('take').classList.add('hidden');
   // canalisation
-  let ct='',cv=0; if(p.reloadT>0){ ct='Recharge…'; cv=1-p.reloadT/WEAP[p.cur].reload; } else if(p.useT>0){ ct=p.useKind==='kilishi'?'Tu manges ton kilishi…':'Tu bois ton thé…'; cv=1-p.useT/p.useMax; }
+  let ct='',cv=0; if(p.reloadT>0){ ct='Recharge…'; cv=1-p.reloadT/(p.reloadDur||WEAP[p.cur].reload); } else if(p.useT>0){ ct=p.useKind==='kilishi'?'Tu manges ton kilishi…':'Tu bois ton thé…'; cv=1-p.useT/p.useMax; }
   $('chan').style.opacity=ct?1:0; $('chanTxt').style.opacity=ct?1:0; if(ct){ $('chan').firstElementChild.style.width=(cv*100)+'%'; setTxt('chanTxt',ct); }
   // effets
   if(msgT>0){ msgT-=dt; if(msgT<=0) $('msg').style.opacity=0; }
@@ -2111,13 +2426,25 @@ function updatePlayer(dt){
   let ix=0,iz=0; if(keys.KeyW||keys.ArrowUp) iz+=1; if(keys.KeyS||keys.ArrowDown) iz-=1; if(keys.KeyD||keys.ArrowRight) ix+=1; if(keys.KeyA||keys.ArrowLeft) ix-=1;
   ix+=joy.x; iz-=joy.y; const l=Math.hypot(ix,iz); if(l>1){ix/=l;iz/=l;}
   const sy=Math.sin(camYaw), cy=Math.cos(camYaw); const wx=-sy*iz+cy*ix, wz=-cy*iz-sy*ix;
-  p.yaw=camYaw;
-  if(p.phase==='fall'||p.phase==='glide'){ updateAir(p,dt,wx,wz); return; }
-  const jump=jumpPressed||keys.Space; jumpPressed=false;
+  // orientation (v1.1) : hors combat, le perso se tourne vers où il va (course naturelle, plus de pas chassés en crabe) ;
+  // en combat (viser, tirer, construire, éditer, et 1,2 s après) il fait face à la visée et se déplace en pas chassés
+  if(firing||ads||buildMode||editing) p.combatT=1.2; else p.combatT=Math.max(0,(p.combatT||0)-dt);
+  const combat=p.combatT>0;
+  if(p.phase==='fall'||p.phase==='glide'){ p.yaw=camYaw; updateAir(p,dt,wx,wz); return; }
+  { const want=combat?camYaw:(l>0.1?Math.atan2(-wx,-wz):p.yaw); let dy=want-p.yaw; dy=Math.atan2(Math.sin(dy),Math.cos(dy));
+    if(combat&&firing&&Math.abs(dy)>1.0) p.yaw=want; // on tire tout de suite dans la bonne direction
+    else p.yaw+=dy*(1-Math.exp(-(combat?24:p.sprint?8:11)*dt)); }
+  const jump=jumpPressed||keys.Space; jumpPressed=false; const jumpEdge=jump&&!p.jumpHeld; p.jumpHeld=jump;
+  // escalade / franchissement (v1.1)
+  if(p.mantle){ updateMantle(p,dt); p.moving=false; p.sprint=false; tryPickups(p); return; }
+  if(p.climb){ updateClimb(p,dt,wx,wz,jumpEdge); p.moving=false; p.sprint=false; tryPickups(p); return; }
+  if(p.phase==='ground'&&p.slideT<=0&&!buildMode&&!editing&&(jumpEdge||(!p.grounded&&l>0.3))){
+    let dx=wx, dz=wz; if(l<0.3){ dx=-Math.sin(p.yaw); dz=-Math.cos(p.yaw); } else { dx/=l; dz/=l; }
+    if(tryClimb(p,dx,dz,jumpEdge)){ p.moving=false; return; } }
   // sprint : Maj (clavier), bouton 🏃, ou joystick poussé à fond (option) — seulement en avançant, sans viser ni tirer
   if(firing&&!buildMode&&!editing) p.sprintCD=0.45; p.sprintCD-=dt;
-  const joyMag=Math.hypot(joy.x,joy.y), fwd=iz>0.55;
-  const wantSprint=(keys.ShiftLeft||keys.ShiftRight||sprintOn||(SET.autoSprint&&IS_TOUCH&&joy.id!==null&&joyMag>0.93&&-joy.y>0.7))&&fwd;
+  const joyMag=Math.hypot(joy.x,joy.y), fwd=combat?iz>0.55:l>0.55; // hors combat on sprinte dans toutes les directions
+  const wantSprint=(keys.ShiftLeft||keys.ShiftRight||sprintOn||(SET.autoSprint&&IS_TOUCH&&joy.id!==null&&joyMag>0.93&&(combat?-joy.y>0.7:true)))&&fwd;
   p.sprint=wantSprint&&p.grounded&&!p.crouch&&!ads&&p.sprintCD<=0&&!editing&&p.useT<=0;
   // le bouton sprint reste actif jusqu'à ce qu'on s'arrête après avoir couru
   if(sprintOn&&l>0.3) sprintArmed=true; if(sprintOn&&sprintArmed&&l<0.1){ sprintOn=false; sprintArmed=false; $('bSprint').classList.remove('on'); }
@@ -2167,7 +2494,7 @@ function update(dt){
   updatePlayer(dt);
   for(const b of bots) if(b.alive) updateBot(b,dt);
   for(const c of chars) (c.model.real?(c.model.mx?animRealAnim:animReal):animChar)(c,dt);
-  updateItems(dt); updateChests(dt);
+  updateItems(dt); updateChests(dt); updateDebris(dt);
   for(const p of pieceList){ if(p.anim<1){ p.anim=Math.min(1,p.anim+dt/0.16); setPieceScale(p,1-Math.pow(1-p.anim,3)); }
     if(p.build<1){ const db=dt/p.buildTime; p.build=Math.min(1,p.build+db); p.hp=Math.min(p.maxHp,p.hp+p.maxHp*0.9*db); p.mat.opacity=0.3+0.7*Math.pow(p.build,1.6); if(p.build>=1){ p.mat.transparent=false; p.mat.opacity=1; p.mat.needsUpdate=true; } }
     if(p.flash>0) p.flash=Math.max(0,p.flash-dt*6); const k=0.55+0.45*p.hp/p.maxHp, bl=1-p.build;
@@ -2188,7 +2515,7 @@ function updateStormVisualMenu(){ stormMesh.visible=false; stormInner.visible=fa
 let last=performance.now();
 let fpsC=0, fpsT2=0, cpuAcc=0, gpuAcc=0;
 function loop(now){ requestAnimationFrame(loop); const dt=Math.min(0.05,(now-last)/1000); last=now;
-  const t0=performance.now(); if(!paused||state==='menu') update(dt); const t1=performance.now(); if(state==='menu'&&lobby) lobby.render(); else renderer.render(scene,camera); const t2=performance.now();
+  const t0=performance.now(); if((!paused||state==='menu')&&!window.__freeze) update(dt); /* __freeze : tests pas à pas */ const t1=performance.now(); if(state==='menu'&&lobby) lobby.render(); else renderer.render(scene,camera); const t2=performance.now();
   if((state==='play'||state==='bus')&&!paused) adaptRes(dt);
   cpuAcc+=t1-t0; gpuAcc+=t2-t1; fpsC++; fpsT2+=dt;
   if(fpsT2>=0.5){ if(SET.showFps||SET.showStats){ let t=Math.round(fpsC/fpsT2)+' FPS';
@@ -2404,7 +2731,7 @@ requestAnimationFrame(loop);
 loadAssets().then(()=>{ initLobby(); goMenu(); try{ lobby.precompile(); lobby.warm(); lobby.render(); }catch(e){} requestAnimationFrame(()=>$('loading').remove()); }); // une image rendue derrière l'écran : ombres comprises
 
 // accès de débogage
-window.FR={get lobby(){return lobby;}, PROFILE, Profile, get matchMode(){return matchMode;}, get camPitch(){return camPitch;}, get sprintOn(){return sprintOn;}, setSprint:v=>{sprintOn=v;}, placementProblem, computePlacement, dirFromYaw, get camYaw(){return camYaw;}, SET, openSettings, closeSettings, openHudEditor, renderTab, get paused(){return paused;}, THREE, ASSETS, selectSlot, swapTake, giveWeapon, get nearItem(){return nearItem;}, setAds:v=>{ads=v;}, startEdit, confirmEdit, resetEdit, rayCast, crouchPress, get editing(){return editing;}, get state(){return state;}, get player(){return player;}, bots, chars, items, chests, pieces, storm, bus, startMatch, update, jumpFromBus:()=>jumpFromBus(player), tryBuild, setBuildType, toggleBuild, setFiring:v=>{firing=v;}, setCam:(y,p)=>{camYaw=y;camPitch=p;}, keys, renderer, scene, camera, get aliveCount(){return aliveCount;}, solids, terrainH};
+window.FR={get lobby(){return lobby;}, PROFILE, Profile, get matchMode(){return matchMode;}, get camPitch(){return camPitch;}, get sprintOn(){return sprintOn;}, setSprint:v=>{sprintOn=v;}, placementProblem, computePlacement, dirFromYaw, get camYaw(){return camYaw;}, SET, openSettings, closeSettings, openHudEditor, renderTab, get paused(){return paused;}, THREE, ASSETS, selectSlot, swapTake, giveWeapon, get nearItem(){return nearItem;}, setAds:v=>{ads=v;}, startEdit, confirmEdit, resetEdit, rayCast, crouchPress, get editing(){return editing;}, get state(){return state;}, get player(){return player;}, bots, chars, items, chests, pieces, housesInfo, storm, bus, startMatch, update, jumpFromBus:()=>jumpFromBus(player), tryBuild, setBuildType, toggleBuild, setFiring:v=>{firing=v;}, setCam:(y,p)=>{camYaw=y;camPitch=p;}, keys, renderer, scene, camera, get aliveCount(){return aliveCount;}, solids, terrainH};
 </script>
 </body>
 </html>
