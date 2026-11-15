@@ -255,7 +255,7 @@ export function createLobby(ctx) {
     <button data-p="profile">${ico('profile')}<span>Profil</span></button>
   </nav>
   <div class="lb-home" id="lbHome">
-    <div class="lb-logo"><div class="lb-flag"><i></i><i></i><i></i></div><h1>FADA<br>ROYALE</h1><p><b>v1.4</b>Le battle royale du Sahel</p></div>
+    <div class="lb-logo"><div class="lb-flag"><i></i><i></i><i></i></div><h1>FADA<br>ROYALE</h1><p><b>v1.5</b>Le battle royale du Sahel</p></div>
     <div class="lb-who"><small>Ton personnage</small><b id="lbCharName">—</b><span class="lb-hint">${ctx.IS_TOUCH ? 'Glisse pour le tourner · pince pour zoomer' : 'Glisse pour le tourner · molette pour zoomer'}</span></div>
     <div class="lb-playbox"><button class="lb-mode" id="lbModeBtn"><small>Mode</small><b id="lbModeName">Battle Royale · Solo</b>${ico('chev')}</button>
       <button class="lb-play" id="play">JOUER</button></div>
@@ -363,6 +363,12 @@ export function createLobby(ctx) {
   // --- événements
   function htmlEvents() {
     return `<div class="lb-ev"><b>Aucun événement en cours</b><p>Les événements (défis à durée limitée, récompenses spéciales) arriveront dans une prochaine version. Rien n’est simulé ici.</p></div>
+      <h3>Nouveautés de la v1.5</h3><ul class="lb-list">
+      <li><b>Plus de mur dans le vide :</b> en haut de tes rampes, le mur se pose au bout de ta rampe. Une pièce qui ne tient sur rien est refusée.</li>
+      <li><b>Effondrement :</b> casse le bas d’une construction et tout ce qui ne tient plus tombe.</li>
+      <li><b>Appui mémorisé :</b> MUR puis RAMPE ou RAMPE puis MUR, la montée marche dans les deux ordres.</li>
+      <li><b>Déplacements :</b> ton perso regarde toujours où vise la caméra, ses jambes suivent ta marche (pas chassés, marche arrière). Réglable dans Paramètres › Contrôles.</li>
+      <li><b>Saut plus tolérant</b> au bord d’une rampe ou juste avant d’atterrir ; contour blanc sur la pièce à poser.</li></ul>
       <h3>Nouveautés de la v1.4 : construction rapide</h3><ul class="lb-list">
       <li><b>Les 4 pièces toujours à l’écran</b> (MUR, RAMPE, SOL, TOIT) : touche une pièce pour la poser tout de suite, garde le doigt pour en poser à la chaîne en avançant.</li>
       <li><b>Monter vite :</b> mur puis rampe, mur puis rampe… le mur se place tout seul au bout de la rampe de devant, il ne te bloque plus.</li>

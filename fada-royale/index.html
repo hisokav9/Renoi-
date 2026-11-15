@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>Fada Royale v1.4</title>
+<title>Fada Royale v1.5</title>
 <!-- three.js r160 est hébergé avec le jeu (dossier lib/) : plus besoin d'un CDN pour démarrer -->
 <script type="importmap">{"imports":{"three":"./lib/three/three.module.min.js","three/addons/":"./lib/three/addons/"}}</script>
 <script>
@@ -400,7 +400,7 @@ const IS_TOUCH = (()=>{ try{ const f=/[?&]touch=([01])/.exec(location.search); i
 const ico=(n,c)=>'<svg class="ic'+(c?' '+c:'')+'"><use href="#i-'+n+'"/></svg>';
 const V=(x=0,y=0,z=0)=>new THREE.Vector3(x,y,z);
 const SET_DEF={sens:1,adsSens:0.6,scopeSens:0.3,invertY:false,aimAssist:true,vibra:true,joyFixed:false,autoSprint:true,fov:70,res:100,viewDist:340,showFps:false,showStats:false,vol:80,sfx:100,amb:70,btnOp:100,btnScale:100,minimap:true,killfeed:true,dmgNums:true,layout:{},
-  tapBuild:true,editRelease:true,buildSens:1,editSens:1,fpsCap:0}; // v1.4 : construction rapide, limite d'images (0 = aucune)
+  tapBuild:true,editRelease:true,buildSens:1,editSens:1,fpsCap:0,faceCam:true}; // v1.5 : faceCam = le perso regarde toujours où vise la caméra (jambes vers la marche) // v1.4 : construction rapide, limite d'images (0 = aucune)
 const SET=Object.assign({},SET_DEF,(()=>{ try{ return JSON.parse(localStorage.getItem('fr_set')||'{}')||{}; }catch(e){ return {}; } })());
 if(!SET.layout||typeof SET.layout!=='object') SET.layout={};
 try{ if(/[?&]stats=1/.test(location.search)) SET.showStats=true; }catch(e){}
@@ -1401,7 +1401,23 @@ function dirFromYaw(yaw){ const fx=-Math.sin(yaw), fz=-Math.cos(yaw); if(Math.ab
 // v1.4 : rampe sous les pieds : celle sur laquelle on marche ou, en l'air (saut d'une rampe à l'autre), celle de la case où l'on est
 function rampUnder(c,cx,cz){ const r=c.onRamp; if(r&&r.kind!=='cone'&&r.piece.alive&&r.cx===cx&&r.cz===cz) return r; if(c.grounded) return null;
   for(const q of ramps){ if(q.kind!=='cone'&&q.cx===cx&&q.cz===cz&&q.piece.alive&&c.pos.y>q.lvl-0.3&&c.pos.y<q.lvl+5) return q; } return null; }
-function computePlacement(c,type,dir){
+/* v1.5 : une pièce « tient » si elle touche le terrain, le décor (maison, mur, rocher…) ou une autre pièce. Boîtes : murs et sols = leur
+   collision ; rampes et toits = leur case. Sert au placement des murs (plus de mur dans le vide) et à l'effondrement. */
+function plBox(pl){ if(pl.type==='wall'||pl.type==='floor') return pieceBox(pl); return [pl.cx*4,pl.lvl,pl.cz*4,pl.cx*4+4,pl.lvl+(pl.type==='cone'?2:4),pl.cz*4+4]; }
+function qBox(q){ if(q.type==='wall') return q.axis==='z'?[q.x0,q.lvl,q.plane-0.15,q.x0+4,q.lvl+4,q.plane+0.15]:[q.plane-0.15,q.lvl,q.z0,q.plane+0.15,q.lvl+4,q.z0+4];
+  if(q.type==='floor') return [q.x0,q.lvl-0.25,q.z0,q.x0+4,q.lvl,q.z0+4]; const r=q.ramp; return [r.cx*4,q.lvl,r.cz*4,r.cx*4+4,q.lvl+(q.type==='cone'?2:4),r.cz*4+4]; }
+const boxTouch=(a,b,e)=>a[0]-e<=b[3]&&a[3]+e>=b[0]&&a[1]-e<=b[4]&&a[4]+e>=b[1]&&a[2]-e<=b[5]&&a[5]+e>=b[2];
+function boxGrounded(b){ // posé sur le terrain (marge : la grille de 4 m laisse jusqu'à ~1 m de vide sous une pièce au sol) ou contre le décor
+  for(const [x,z] of [[(b[0]+b[3])/2,(b[2]+b[5])/2],[b[0]+0.2,b[2]+0.2],[b[3]-0.2,b[2]+0.2],[b[0]+0.2,b[5]-0.2],[b[3]-0.2,b[5]-0.2]]) if(b[1]<=terrainH(x,z)+1.1) return true;
+  for(const s of gridQuery(b[0]-0.3,b[2]-0.3,b[3]+0.3,b[5]+0.3)) if(!s.piece&&!s.door&&boxTouch(b,[s.minX,s.minY,s.minZ,s.maxX,s.maxY,s.maxZ],0.3)) return true;
+  return false; }
+function plAttached(pl){ const b=plBox(pl); if(boxGrounded(b)) return true;
+  for(const q of pieceList){ if(!q.alive||q.key===pl.key||Math.abs(q.center.x-(b[0]+b[3])/2)>7||Math.abs(q.center.z-(b[2]+b[5])/2)>7) continue; if(boxTouch(b,qBox(q),0.3)) return true; }
+  return false; }
+function wallAt(bx,bz,dx,dz,L){ if(dx!==0){ const ex=bx+(dx>0?1:0); return {type:'wall',key:`w|x|${ex}|${bz}|${L}`,axis:'x',ex,cz:bz,lvl:L}; } const ez=bz+(dz>0?1:0); return {type:'wall',key:`w|z|${bx}|${ez}|${L}`,axis:'z',cx:bx,ez,lvl:L}; }
+// opts.wait : appui mémorisé (v1.5) : en montée, si le mur au bout de la rampe suivante ne tient encore sur rien (la rampe n'est pas
+// encore posée), on renvoie null : l'appui est retenté pendant 0,3 s ; ensuite le mur se pose devant soi, au bout de sa rampe
+function computePlacement(c,type,dir,opts){
   const cx=Math.floor(c.pos.x/CELL), cz=Math.floor(c.pos.z/CELL); const [dx,dz]=DIRS[dir];
   let lvl; const r=rampUnder(c,cx,cz), up=!!r&&r.dir===dir;
   if(r) lvl = up ? r.lvl+4 : r.lvl;
@@ -1413,8 +1429,13 @@ function computePlacement(c,type,dir){
     let far=up&&pit<=0.85; if(!far&&!r&&pit<=0.85){ const q=pieces.get(`r|${cx+dx}|${cz+dz}|${lvl}`); far=!!(q&&q.alive&&q.ramp&&q.ramp.dir===dir); }
     // collé contre la ligne du mur (moins de 0,5 m) : le mur se poserait dans le perso, on le met à la ligne suivante
     if(!far){ const pl0=dx!==0?(cx+(dx>0?1:0))*4:(cz+(dz>0?1:0))*4, d0=dx!==0?Math.abs(c.pos.x-pl0):Math.abs(c.pos.z-pl0); if(d0<0.5) far=true; }
-    const bx=far?cx+dx:cx, bz=far?cz+dz:cz;
-    if(dx!==0){ const ex=bx+(dx>0?1:0); return {type,key:`w|x|${ex}|${bz}|${L}`,axis:'x',ex,cz:bz,lvl:L}; } const ez=bz+(dz>0?1:0); return {type,key:`w|z|${bx}|${ez}|${L}`,axis:'z',cx:bx,ez,lvl:L}; }
+    // v1.5 : en montée, le mur de devant n'est posé au bout de la rampe SUIVANTE que si elle est là (sinon il serait dans le vide :
+    // bug « 5 rampes puis un mur ») ; sinon il va devant soi, au bout de la rampe où l'on est : au-dessus de son bord quand on est
+    // dans le haut de la rampe, dessous quand on est dans le bas (s'il est déjà pris, l'autre)
+    if(up&&pit<=0.85){ const rush=wallAt(cx+dx,cz+dz,dx,dz,L); if(plAttached(rush)) return rush; if(opts&&opts.wait) return null;
+      const hi=wallAt(cx,cz,dx,dz,r.lvl+4), lo=wallAt(cx,cz,dx,dz,r.lvl), upper=c.pos.y>r.lvl+2;
+      return upper?(pieces.has(hi.key)&&!pieces.has(lo.key)?lo:hi):(pieces.has(lo.key)&&!pieces.has(hi.key)?hi:lo); }
+    return wallAt(far?cx+dx:cx,far?cz+dz:cz,dx,dz,L); }
   if(type==='ramp'){ const tx=cx+dx, tz=cz+dz; return {type,key:`r|${tx}|${tz}|${lvl}`,cx:tx,cz:tz,lvl,dir}; }
   if(type==='cone'){ if(pit>0.15) return {type,key:`c|${cx}|${cz}|${lvl+4}`,cx,cz,lvl:lvl+4}; const tx=cx+dx,tz=cz+dz; return {type,key:`c|${tx}|${tz}|${lvl}`,cx:tx,cz:tz,lvl}; }
   if(pit>0.38) return {type,key:`f|${cx}|${cz}|${lvl+4}`,cx,cz,lvl:lvl+4};
@@ -1478,9 +1499,24 @@ function destroyPiece(p,quiet){
   for(const so of p.solids) removeSolid(so); p.solids=[]; if(p.edited){ scene.remove(p.panel); p.panel.geometry.dispose(); } if(p.ramp){ const i=ramps.indexOf(p.ramp); if(i>=0) ramps.splice(i,1); }
   pieces.delete(p.key); const i=pieceList.indexOf(p); if(i>=0) pieceList.splice(i,1);
   if(quiet) return;
+  scheduleIntegrity();
   for(let k=0;k<14;k++) spawnParticle(p.center.x+rnd(-1.5,1.5),p.center.y+rnd(-1.5,1.5),p.center.z+rnd(-1.5,1.5),rnd(-4,4),rnd(1,6),rnd(-4,4),k%3?0xc7743f:0x6b3a1e,rnd(0.6,1.1),1.6);
   sfxBreak(p.center.distanceTo(camera.position));
 }
+/* v1.5 : effondrement (idée reprise de l'autre version) : après une destruction, tout ce qui n'est plus relié au sol (terrain ou décor),
+   de pièce en pièce, s'écroule morceau par morceau. Parcours en largeur depuis les pièces posées au sol ; voisinage par cases de 4 m. */
+let integT=-1; const collapseQ=[];
+function scheduleIntegrity(){ if(integT<0) integT=0.15; }
+function checkIntegrity(){ integT=-1; if(!pieceList.length) return;
+  const cells=new Map(), K=(i,j,k)=>i*1e6+j*1e3+k, boxes=new Map(), seen=new Set(), queue=[];
+  for(const q of pieceList){ if(!q.alive) continue; const b=qBox(q); boxes.set(q,b); q._cells=[];
+    for(let i=Math.floor((b[0]-0.3)/4);i<=Math.floor((b[3]+0.3)/4);i++) for(let j=Math.floor((b[1]-0.3)/4);j<=Math.floor((b[4]+0.3)/4);j++) for(let k=Math.floor((b[2]-0.3)/4);k<=Math.floor((b[5]+0.3)/4);k++){
+      const kk=K(i,j,k); let l=cells.get(kk); if(!l) cells.set(kk,l=[]); l.push(q); q._cells.push(l); }
+    if(boxGrounded(b)){ seen.add(q); queue.push(q); } }
+  while(queue.length){ const q=queue.pop(), b=boxes.get(q); for(const l of q._cells) for(const o of l) if(!seen.has(o)&&boxTouch(b,boxes.get(o),0.3)){ seen.add(o); queue.push(o); } }
+  let n=0; for(const q of pieceList){ q._cells=null; if(q.alive&&!seen.has(q)&&!collapseQ.some(e=>e.q===q)) collapseQ.push({q,t:0.08+(n++)*0.06+Math.random()*0.05}); } }
+function updateCollapse(dt){ if(integT>=0){ integT-=dt; if(integT<0) checkIntegrity(); }
+  for(let i=collapseQ.length-1;i>=0;i--){ const e=collapseQ[i]; e.t-=dt; if(e.t<=0){ collapseQ.splice(i,1); if(e.q.alive) destroyPiece(e.q); } } }
 // boîte occupée par une pièce (murs et sols : la même que leur collision)
 function pieceBox(pl){
   if(pl.type==='wall') return pl.axis==='z' ? [pl.cx*4,pl.lvl,pl.ez*4-0.15,pl.cx*4+4,pl.lvl+4,pl.ez*4+0.15] : [pl.ex*4-0.15,pl.lvl,pl.cz*4,pl.ex*4+0.15,pl.lvl+4,pl.cz*4+4];
@@ -1499,18 +1535,22 @@ function placementProblem(pl){
   else if(pl.type==='cone') pts=[[x0+2,z0+2,2]];
   else { const [dx,dz]=DIRS[pl.dir]; const lowX=x0+2-dx*2, lowZ=z0+2-dz*2; pts=[[lowX,lowZ,0.12],[x0+2,z0+2,2],[x0+2+dx*2,z0+2+dz*2,4]]; }
   if(pts.every(([x,z,h])=>terrainH(x,z)>pl.lvl+h+0.3)) return 'enterre';
+  if(!plAttached(pl)) return 'vide'; // v1.5 : plus de pièce dans le vide (rien pour la tenir)
   return ''; }
-let buildMsgT=0;
-function tryBuild(c,type,dir){
+let buildMsgT=0, camLand=0, camLandK=0;
+function tryBuild(c,type,dir,opts){
   if(c.banco<10 || c.buildCD>0) return false;
-  const pl=computePlacement(c,type,dir??dirFromYaw(c===player?camYaw:c.yaw));
-  if(pieces.has(pl.key)) return false;
+  const pl=computePlacement(c,type,dir??dirFromYaw(c===player?camYaw:c.yaw),opts);
+  if(!pl||pieces.has(pl.key)) return false;
   const why=placementProblem(pl);
-  if(why){ if(c===player&&performance.now()-buildMsgT>900){ buildMsgT=performance.now(); showMsg(why==='joueur'?'QUELQU\'UN EST DANS LE PASSAGE':'IMPOSSIBLE ICI', why==='joueur'?'recule un peu pour poser':'la pièce serait sous le sable',0.9); } return false; }
+  if(why){ if(c===player&&performance.now()-buildMsgT>900){ buildMsgT=performance.now(); showMsg(why==='joueur'?'QUELQU\'UN EST DANS LE PASSAGE':why==='vide'?'RIEN POUR LA TENIR':'IMPOSSIBLE ICI', why==='joueur'?'recule un peu pour poser':why==='vide'?'pose-la contre le sol ou une autre pièce':'la pièce serait sous le sable',0.9); } return false; }
   createPiece(pl,c); if(!(c===player&&matchMode==='train')) c.banco-=10; c.buildCD=c===player?0.05:1.2; c.built++;
   sfxBuild(c.pos.distanceTo(camera.position)); return true;
 }
 const ghosts={}; for(const k of ['wall','floor','ramp','cone']){ ghosts[k]=makePieceObj(k,MAT.ghost,MAT.ghost).obj; }
+// v1.5 : contour blanc sur le fantôme (repris de l'autre version) : la pièce prévue se lit même au soleil, sur le sable clair
+{ const em=new THREE.LineBasicMaterial({color:0xffffff,transparent:true,opacity:0.8,depthWrite:false});
+  for(const k in ghosts){ let pm=null; ghosts[k].traverse(o=>{ if(o.isMesh&&o.geometry===GEO[k]) pm=o; }); if(pm){ const ln=new THREE.LineSegments(new THREE.EdgesGeometry(GEO[k],20),em); ln.renderOrder=6; pm.add(ln); } } }
 for(const k in ghosts){ ghosts[k].visible=false; ghosts[k].traverse(o=>{o.castShadow=false; o.receiveShadow=false; o.renderOrder=5;}); scene.add(ghosts[k]); }
 
 /* ---------- ÉDITION (fenêtres, portes, trous dans les sols) ---------- */
@@ -1597,7 +1637,8 @@ function moveChar(c,wx,wz,speed,dt,jump){
   if(c.slideT>0){ c.slideT-=dt; const f=clamp(c.slideT/1.0,0,1); sp=lerp(3,12,f*f); wx=c.slideDir.x; wz=c.slideDir.z; k=1-Math.exp(-20*dt);
     if(c.slideT<=0){ c.slideT=0; if(canStand(c)) c.crouch=false; } }
   c.vel.x=lerp(c.vel.x,wx*sp,k); c.vel.z=lerp(c.vel.z,wz*sp,k);
-  if(jump && c.grounded){ if(c.crouch){ if(canStand(c)){ c.crouch=false; c.slideT=0; } else jump=false; } if(jump){ c.vel.y=7.4; c.grounded=false; } }
+  // v1.5 (repris de l'autre version) : on peut encore sauter 0,12 s après avoir quitté un bord (fin de rampe, bord de toit)
+  if(jump && (c.grounded||(c.coyote||0)>0) && c.vel.y<=0.5){ if(c.crouch){ if(canStand(c)){ c.crouch=false; c.slideT=0; } else jump=false; } if(jump){ c.vel.y=7.4; c.grounded=false; c.coyote=0; c.jumpBuf=0; } }
   c.height=c.crouch?1.2:1.75;
   const wasAir=!c.grounded;
   c.vel.y-=22*dt; if(c.vel.y<-45) c.vel.y=-45;
@@ -1611,7 +1652,8 @@ function moveChar(c,wx,wz,speed,dt,jump){
   else if(c.grounded && c.vel.y<=0 && c.pos.y-g<0.7){ c.pos.y=g; c.vel.y=0; }
   else c.grounded=false;
   c.onRamp = c.grounded ? gRamp : null;
-  if(wasAir&&c.grounded&&vyLand<-6){ c.landT=0.22; if(c===player){ sfxLand(); addShake(Math.min(0.08,-vyLand*0.006)); }
+  c.coyote = c.grounded ? 0.12 : Math.max(0,(c.coyote||0)-dt);
+  if(wasAir&&c.grounded&&vyLand<-6){ c.landT=0.22; if(c===player){ sfxLand(); addShake(Math.min(0.08,-vyLand*0.006)); camLand=0.3; camLandK=Math.min(1,(-vyLand-6)/12+0.35); }
     if(c.pos.distanceTo(camera.position)<40) for(let i=0;i<6;i++) spawnParticle(c.pos.x+rnd(-0.4,0.4),c.pos.y+0.05,c.pos.z+rnd(-0.4,0.4),rnd(-2,2),rnd(0.5,1.5),rnd(-2,2),0xe2c28c,0.5,1.2,4); }
 }
 
@@ -2594,11 +2636,11 @@ function crouchPress(){ const p=player; if(!p||!p.alive||p.phase!=='ground'||p.s
 function setBuildType(t){ buildType=t; refreshBuildUI(); }
 // v1.4 : appui sur une pièce (bouton tactile ou touche) : passe en construction avec cette pièce ; si « poser au toucher »,
 // la pièce est posée tout de suite et tant que le doigt reste appuyé, une nouvelle pièce est posée dès que la case visée change
-let pieceHeld=null;
+let pieceHeld=null, pieceTap=null; // v1.5 : appui mémorisé 0,35 s (case prise, ou mur qui attend sa rampe) — idée reprise de l'autre version
 function pieceDown(t,place){ const p=player; if(!p||!p.alive||p.phase!=='ground'||state!=='play') return; if(editing) confirmEdit(); setBuildType(t); if(!buildMode) toggleBuild(true);
-  if(place){ pieceHeld=t; p.buildCD=Math.min(p.buildCD,0); tryBuild(p,t,dirFromYaw(camYaw)); } }
+  if(place){ pieceHeld=t; pieceTap={t,t0:matchTime}; p.buildCD=Math.min(p.buildCD,0); if(tryBuild(p,t,dirFromYaw(camYaw),{wait:true})) pieceTap.done=true; } }
 function pieceUp(t){ if(pieceHeld===t) pieceHeld=null; }
-function toggleBuild(force){ const on = force===undefined ? !buildMode : force; if(on&&editing) confirmEdit(); buildMode=on; if(!on) pieceHeld=null; refreshBuildUI(); }
+function toggleBuild(force){ const on = force===undefined ? !buildMode : force; if(on&&editing) confirmEdit(); buildMode=on; if(!on){ pieceHeld=null; pieceTap=null; } refreshBuildUI(); }
 function refreshBuildUI(){ const ed=!!editing;
   $('buildBar').classList.toggle('hidden',!buildMode||IS_TOUCH); $('bBuild').classList.toggle('on',buildMode);
   $('bFire').classList.toggle('bmode',buildMode||ed); const fl=ed?'CASE':buildMode?'POSER':'TIRER'; if($('bFire').dataset.l!==fl){ $('bFire').dataset.l=fl; $('bFire').innerHTML=ico(ed?'cell':buildMode?'place':'fire')+'<small>'+fl+'</small>'; }
@@ -2750,12 +2792,14 @@ function updatePlayer(dt){
   // immobile, il se tourne avec la caméra (v1.3) ; en combat (viser, tirer, construire, éditer, et 1,2 s après) il fait face
   // à la visée et se déplace en pas chassés
   if(firing||ads||buildMode||editing) p.combatT=1.2; else p.combatT=Math.max(0,(p.combatT||0)-dt);
-  const combat=p.combatT>0;
+  const combat=p.combatT>0, faceCam=combat||SET.faceCam; // v1.5 (repris de l'autre version) : le buste suit la caméra, les jambes la marche
   if(p.phase==='fall'||p.phase==='glide'){ p.yaw=camYaw; updateAir(p,dt,wx,wz); return; }
-  { const want=combat||l<=0.1?camYaw:Math.atan2(-wx,-wz); let dy=want-p.yaw; dy=Math.atan2(Math.sin(dy),Math.cos(dy));
+  { const want=faceCam||l<=0.1?camYaw:Math.atan2(-wx,-wz); let dy=want-p.yaw; dy=Math.atan2(Math.sin(dy),Math.cos(dy));
     if(combat&&firing&&Math.abs(dy)>1.0) p.yaw=want; // on tire tout de suite dans la bonne direction
-    else p.yaw+=dy*(1-Math.exp(-(combat?24:l<=0.1?9:p.sprint?8:11)*dt)); p.turnRate=dy; }
-  const jump=jumpPressed||keys.Space; jumpPressed=false; const jumpEdge=jump&&!p.jumpHeld; p.jumpHeld=jump;
+    else p.yaw+=dy*(1-Math.exp(-(combat?24:faceCam?(l>0.1?20:12):l<=0.1?9:p.sprint?8:11)*dt)); p.turnRate=dy; }
+  // v1.5 (repris de l'autre version) : appui de saut mémorisé 0,15 s (sauter un poil avant d'atterrir marche quand même)
+  if(jumpPressed) p.jumpBuf=0.15; jumpPressed=false; p.jumpBuf=Math.max(0,(p.jumpBuf||0)-dt);
+  const jump=keys.Space||p.jumpBuf>0; const jumpEdge=jump&&!p.jumpHeld; p.jumpHeld=jump;
   // se hisser sur un rebord (v1.3 : plus de grimpe le long des murs)
   if(p.mantle){ updateMantle(p,dt); p.moving=false; p.sprint=false; tryPickups(p); return; }
   if(p.phase==='ground'&&p.slideT<=0&&!buildMode&&!editing&&(jumpEdge||(!p.grounded&&l>0.3))){
@@ -2763,8 +2807,8 @@ function updatePlayer(dt){
     if(tryMantle(p,dx,dz,jumpEdge)){ p.moving=false; return; } }
   // sprint : Maj (clavier), bouton SPRINT, ou joystick poussé à fond (option) — seulement en avançant, sans viser ni tirer
   if(firing&&!buildMode&&!editing) p.sprintCD=0.45; p.sprintCD-=dt;
-  const joyMag=Math.hypot(joy.x,joy.y), fwd=combat?iz>0.55:l>0.55; // hors combat on sprinte dans toutes les directions
-  const wantSprint=(keys.ShiftLeft||keys.ShiftRight||sprintOn||(SET.autoSprint&&IS_TOUCH&&joy.id!==null&&joyMag>0.93&&(combat?-joy.y>0.7:true)))&&fwd;
+  const joyMag=Math.hypot(joy.x,joy.y), fwd=combat?iz>0.55:faceCam?iz>0.3:l>0.55; // face caméra : on sprinte vers l'avant (diagonales comprises)
+  const wantSprint=(keys.ShiftLeft||keys.ShiftRight||sprintOn||(SET.autoSprint&&IS_TOUCH&&joy.id!==null&&joyMag>0.93&&(faceCam?-joy.y>0.45:true)))&&fwd;
   p.sprint=wantSprint&&p.grounded&&!p.crouch&&!ads&&p.sprintCD<=0&&!editing&&p.useT<=0;
   // le bouton sprint reste actif jusqu'à ce qu'on s'arrête après avoir couru
   if(sprintOn&&l>0.3) sprintArmed=true; if(sprintOn&&sprintArmed&&l<0.1){ sprintOn=false; sprintArmed=false; $('bSprint').classList.remove('on'); }
@@ -2774,7 +2818,10 @@ function updatePlayer(dt){
   else if(buildMode){ const pl=computePlacement(p,buildType,dirFromYaw(camYaw)); for(const k in ghosts) ghosts[k].visible=false; const gh=ghosts[buildType]; placeMesh(gh,pl); gh.visible=true;
     const why=pieces.has(pl.key)?'pris':p.banco<10?'banco':placementProblem(pl,p); const bad=!!why;
     if(gh._bad!==bad){ gh._bad=bad; gh.traverse(o=>{ if(o.isMesh) o.material=bad?MAT.ghostBad:MAT.ghost; }); }
-    if(firing||pieceHeld) tryBuild(p,buildType,dirFromYaw(camYaw)); }
+    // pose : TIRER/clic gardé, pièce gardée, ou appui mémorisé ; pendant 0,3 s on attend un emplacement qui tient (voir computePlacement)
+    if(firing&&!p.fireWas) p.fireT0=matchTime; p.fireWas=firing;
+    const tapOn=pieceTap&&!pieceTap.done&&matchTime-pieceTap.t0<=0.36;
+    if(firing||pieceHeld||tapOn){ const t0=firing&&!pieceHeld&&!tapOn?p.fireT0:pieceTap?pieceTap.t0:matchTime; if(tryBuild(p,buildType,dirFromYaw(camYaw),{wait:matchTime-t0<0.3})&&pieceTap) pieceTap.done=true; } }
   else if(firing) playerFire();
   if(p.crouch!==cache.crouch){ cache.crouch=p.crouch; $('bCrouch').classList.toggle('on',p.crouch); }
   tryPickups(p);
@@ -2788,7 +2835,7 @@ function updateCamera(dt){
   updateCamVectors();
   const air=p.phase!=='ground'; const want=air?7.5:(ads&&p.cur!=='daba'&&!buildMode?(isScoped()?1.2:2.3):3.9);
   camDist=lerp(camDist,want,1-Math.exp(-10*dt));
-  const tY=p.pos.y+1.55-0.45*p.ck-(p.slideT>0?0.15:0);
+  const tY=p.pos.y+1.55-0.45*p.ck-(p.slideT>0?0.15:0)-Math.sin(camLand/0.3*Math.PI)*0.16*camLandK; camLand=Math.max(0,camLand-dt); // v1.5 : la caméra plonge un peu à la réception
   if(camPivY===null||air||Math.abs(camPivY-tY)>3) camPivY=tY; else camPivY=lerp(camPivY,tY,1-Math.exp(-16*dt));
   const piv=_t.set(p.pos.x,camPivY,p.pos.z);
   _m.copy(piv).addScaledVector(camFwd,-camDist).addScaledVector(camRight,0.72); _m.y+=0.2;
@@ -2815,6 +2862,7 @@ function update(dt){
   for(const b of bots) if(b.alive) updateBot(b,dt);
   for(const c of chars) (c.model.real?(c.model.mx?animRealAnim:animReal):animChar)(c,dt);
   updateItems(dt); updateChests(dt); updateDebris(dt);
+  updateCollapse(dt);
   for(const p of pieceList){ if(p.inst!==null){ if(p.flash>0) p.flash=Math.max(0,p.flash-dt*6); pinstColor(p); continue; }
     if(!p.edited&&!p.noInst&&p.build>=1&&p.anim>=1){ pinstAdd(p); if(p.inst!==null) continue; }
     if(p.anim<1){ p.anim=Math.min(1,p.anim+dt/0.16); setPieceScale(p,1-Math.pow(1-p.anim,3)); }
@@ -2854,7 +2902,7 @@ Persos : avatar Ready Player Me, personnage Adobe Fuse / Mixamo<br>
 Animations : « Universal Animation Library » 1 et 2 par Quaternius — licence CC0 (domaine public)<br>
 Moteur 3D : three.js · Jeu : Fada Royale`;
 const HELP_HTML = IS_TOUCH
-  ? 'Joystick à gauche pour bouger · glisse à droite pour viser · TIRER (glisse dessus pour viser) · VISER : viser / lunette · ACCR. : s\'accroupir, en courant = glissade · SPRINT (ou joystick à fond) · SAUT face à un rebord : s\'y hisser · MUR, RAMPE, SOL, TOIT (en haut à droite) : touche une pièce pour la poser, garde le doigt pour en poser à la chaîne en avançant (mur puis rampe, mur puis rampe… pour monter) ; regarde en haut pour poser au-dessus · touche ton arme pour quitter la construction · ÉDITER : modifier ton mur (relâche pour valider) · touche le kilishi ou le thé pour te soigner · près d\'une porte, touche OUVRIR LA PORTE.'
+  ? 'Joystick à gauche pour bouger · glisse à droite pour viser · TIRER (glisse dessus pour viser) · VISER : viser / lunette · ACCR. : s\'accroupir, en courant = glissade · SPRINT (ou joystick à fond) · SAUT face à un rebord : s\'y hisser (on peut sauter juste après le bord d\'une rampe) · MUR, RAMPE, SOL, TOIT (en haut à droite) : touche une pièce pour la poser, garde le doigt pour en poser à la chaîne en avançant (mur puis rampe, mur puis rampe… pour monter) ; regarde en haut pour poser au-dessus · touche ton arme pour quitter la construction · ÉDITER : modifier ton mur (relâche pour valider) · touche le kilishi ou le thé pour te soigner · près d\'une porte, touche OUVRIR LA PORTE.'
   : '<b>ZQSD / WASD</b> bouger · <b>Souris</b> viser · <b>Clic</b> tirer · <b>Clic droit</b> viser de près · <b>Espace</b> sauter (face à un rebord : s\'y hisser) · <b>Maj</b> sprinter · <b>C</b> s\'accroupir (en courant = glissade) · pièces : <b>Q</b> mur, <b>V</b> rampe, <b>Z</b> sol, <b>G</b> toit (ou <b>F1 à F4</b> ; en AZERTY, Q et Z sont les touches A et W), <b>clic gardé</b> = pose en continu · <b>B</b> construction / arme (puis <b>1 2 3 4</b>) · <b>F</b> éditer / valider (relâcher le clic valide aussi), <b>X</b> réinitialiser · <b>1 à 6</b> = daba + 5 armes · <b>E</b> prendre une arme, ouvrir / fermer une porte · <b>R</b> recharger · <b>H</b> kilishi · <b>T</b> thé';
 document.body.classList.toggle('touch',IS_TOUCH);
 $('editBar').innerHTML = IS_TOUCH ? ico('pencil')+' ÉDITION · garde CASE et glisse sur les cases, relâche pour valider' : ico('pencil')+' ÉDITION · clic gardé sur les cases, relâche pour valider · <b>F</b> valider · <b>X</b> réinitialiser';
@@ -2866,7 +2914,8 @@ function uiBlock(){ return settingsOpen||hudEditing; }
 const f2=v=>(+v).toFixed(2)+'×';
 const TABS={
   ctrl:[['html',HELP_HTML],['range','sens','Sensibilité caméra',0.3,2.5,0.05,f2],['range','adsSens','Sensibilité en visée',0.2,1.2,0.05,f2],['range','scopeSens','Sensibilité lunette (sniper)',0.1,0.8,0.05,f2],
-    ['toggle','invertY',"Inverser l'axe vertical"],['toggle','aimAssist','Aide à la visée'],['toggle','vibra','Vibrations quand tu es touché'],['toggle','joyFixed','Joystick fixe (sinon il apparaît où tu poses le doigt)'],['toggle','autoSprint','Sprint auto quand le joystick est poussé à fond']],
+    ['toggle','invertY',"Inverser l'axe vertical"],['toggle','aimAssist','Aide à la visée'],['toggle','vibra','Vibrations quand tu es touché'],['toggle','joyFixed','Joystick fixe (sinon il apparaît où tu poses le doigt)'],['toggle','autoSprint','Sprint auto quand le joystick est poussé à fond'],
+    ['toggle','faceCam','Le perso regarde toujours où vise la caméra (jambes vers la marche, marche arrière). Sinon : il se tourne vers où il court']],
   build:[['toggle','tapBuild','Toucher une pièce la pose tout de suite (doigt gardé : pose en continu). Sinon : toucher une pièce la choisit, POSER la pose'],
     ['toggle','editRelease',"Valider l'édition en relâchant le doigt (ou le clic)"],
     ['range','buildSens','Sensibilité de la caméra en construction',0.5,2,0.05,f2],['range','editSens','Sensibilité de la caméra en édition',0.5,2,0.05,f2],
@@ -2956,7 +3005,7 @@ addEventListener('beforeunload',e=>{ if((state==='play'||state==='bus')&&player&
 function goMenu(){ state='menu'; if(lobby) lobby.show(); $('end').classList.add('hidden'); $('hud').classList.add('hidden'); $('touch').classList.add('hidden'); try{ document.exitPointerLock&&document.exitPointerLock(); }catch(e){} for(const c of chars) c.model.g.visible=false; bus.g.visible=false; resize(); }
 function clearMatch(){
   for(const p of [...pieceList]){ p.alive=false; scene.remove(p.mesh); p.mat.dispose(); for(const so of p.solids) removeSolid(so); if(p.edited){ scene.remove(p.panel); p.panel.geometry.dispose(); } }
-  editing=null; pinstClear();
+  editing=null; pinstClear(); collapseQ.length=0; integT=-1;
   pieceList.length=0; pieces.clear(); ramps.length=0;
   for(const it of items) scene.remove(it.g); items.length=0;
   for(const ch of chests) scene.remove(ch.g); chests.length=0;
@@ -3071,7 +3120,7 @@ requestAnimationFrame(loop);
 loadAssets().then(()=>{ try{ makeWeaponIcons(); }catch(e){} initLobby(); goMenu(); try{ lobby.precompile(); lobby.warm(); lobby.render(); }catch(e){} requestAnimationFrame(()=>$('loading').remove()); }); // une image rendue derrière l'écran : ombres comprises
 
 // accès de débogage
-window.FR={get lobby(){return lobby;}, PROFILE, Profile, get matchMode(){return matchMode;}, get camPitch(){return camPitch;}, get sprintOn(){return sprintOn;}, setSprint:v=>{sprintOn=v;}, placementProblem, computePlacement, dirFromYaw, get camYaw(){return camYaw;}, SET, openSettings, closeSettings, openHudEditor, renderTab, get paused(){return paused;}, THREE, ASSETS, selectSlot, swapTake, giveWeapon, get nearItem(){return nearItem;}, setAds:v=>{ads=v;}, startEdit, confirmEdit, resetEdit, rayCast, crouchPress, get editing(){return editing;}, get state(){return state;}, get player(){return player;}, bots, chars, items, chests, pieces, housesInfo, doors:DOORS, setDoor, interact, hasLOS, findCover, storm, bus, startMatch, update, jumpFromBus:()=>jumpFromBus(player), tryBuild, setBuildType, toggleBuild, warmGPU, pieceDown, pieceUp, get buildMode(){return buildMode;}, get pieceHeld(){return pieceHeld;}, pieceList, PINST, setFiring:v=>{firing=v;}, setCam:(y,p)=>{camYaw=y;camPitch=p;}, keys, renderer, scene, camera, get aliveCount(){return aliveCount;}, solids, terrainH};
+window.FR={get lobby(){return lobby;}, PROFILE, Profile, get matchMode(){return matchMode;}, get camPitch(){return camPitch;}, get sprintOn(){return sprintOn;}, setSprint:v=>{sprintOn=v;}, placementProblem, computePlacement, dirFromYaw, get camYaw(){return camYaw;}, SET, openSettings, closeSettings, openHudEditor, renderTab, get paused(){return paused;}, THREE, ASSETS, selectSlot, swapTake, giveWeapon, get nearItem(){return nearItem;}, setAds:v=>{ads=v;}, startEdit, confirmEdit, resetEdit, rayCast, crouchPress, get editing(){return editing;}, get state(){return state;}, get player(){return player;}, bots, chars, items, chests, pieces, housesInfo, doors:DOORS, setDoor, interact, hasLOS, findCover, storm, bus, startMatch, update, jumpFromBus:()=>jumpFromBus(player), tryBuild, setBuildType, toggleBuild, warmGPU, qBox, boxGrounded, boxTouch, checkIntegrity, destroyPiece, pieceDown, pieceUp, get buildMode(){return buildMode;}, get pieceHeld(){return pieceHeld;}, pieceList, PINST, setFiring:v=>{firing=v;}, setCam:(y,p)=>{camYaw=y;camPitch=p;}, keys, renderer, scene, camera, get aliveCount(){return aliveCount;}, solids, terrainH};
 </script>
 </body>
 </html>

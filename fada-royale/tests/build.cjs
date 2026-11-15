@@ -20,7 +20,13 @@ const [,, base, out = '/tmp/fr-build'] = process.argv; fs.mkdirSync(out, { recur
   const tap = async sel => { await touch('touchStart', sel); await touch('touchEnd', sel); };
   const P = t => `#pick button[data-p="${t}"]`;
   const res = {};
-  await page.evaluate(() => { const FR = window.FR; FR.startMatch('train'); window.__freeze = true; for (let i = 0; i < 20; i++) FR.update(1 / 30); });
+  await page.evaluate(() => { const FR = window.FR; FR.startMatch('train'); window.__freeze = true; for (let i = 0; i < 20; i++) FR.update(1 / 30);
+    // chaque essai part d'un endroit dégagé (aucun obstacle ni pièce à moins de 10 m), près du départ de l'Entraînement
+    const sx = FR.player.pos.x, sz = FR.player.pos.z;
+    window.__goto = (ox, oz) => { const p = FR.player; let x = sx + ox, z = sz + oz;
+      for (let k = 0; k < 36; k++) { const tx = sx + ox + (k % 6) * 9, tz = sz + oz + Math.floor(k / 6) * 9; if (!FR.solids.some(s => s.maxX > tx - 10 && s.minX < tx + 10 && s.maxZ > tz - 10 && s.minZ < tz + 10 && s.maxY > FR.terrainH(tx, tz) - 1)) { x = tx; z = tz; break; } }
+      x = Math.floor(x / 4) * 4 + 2; z = Math.floor(z / 4) * 4 + 2; // au milieu d'une case de construction
+      p.pos.set(x, FR.terrainH(x, z) + 0.5, z); p.vel.set(0, 0, 0); for (let i = 0; i < 30; i++) FR.update(1 / 30); }; });
 
   // 1. barre de pièces
   res.barre = await page.evaluate(() => { const pick = document.getElementById('pick'), r = pick.getBoundingClientRect(), W = innerWidth, H = innerHeight;
@@ -34,7 +40,7 @@ const [,, base, out = '/tmp/fr-build'] = process.argv; fs.mkdirSync(out, { recur
 
   // 3. montée mur + rampe en courant (appuis alternés RAMPE / MUR, comme au doigt)
   res.montee = await (async () => {
-    await page.evaluate(() => { const FR = window.FR, p = FR.player; p.pos.x += 40; p.pos.y = FR.terrainH(p.pos.x, p.pos.z) + 0.5; FR.setCam(0, 0.05); for (let i = 0; i < 10; i++) FR.update(1 / 30); window.__y0 = p.pos.y; window.__n0 = FR.pieceList.length; });
+    await page.evaluate(() => { const FR = window.FR, p = FR.player; window.__goto(40, 0); FR.setCam(0, 0.05); for (let i = 0; i < 10; i++) FR.update(1 / 30); window.__y0 = p.pos.y; window.__n0 = FR.pieceList.length; });
     const pts = []; let flat = 0, prev = 0;
     for (let s = 0; s < 10; s++) { for (let k = 0; k < 3; k++) { await page.evaluate(() => { window.FR.keys.KeyW = true; }); await tap(P('ramp')); await step(5); await tap(P('wall')); await step(5); }
       const h = await page.evaluate(() => window.FR.player.pos.y - window.__y0); pts.push(h.toFixed(1)); if (h - prev < 0.5) flat++; prev = h; }
@@ -45,7 +51,7 @@ const [,, base, out = '/tmp/fr-build'] = process.argv; fs.mkdirSync(out, { recur
 
   // 4. pose en continu : doigt gardé sur RAMPE en avançant 3 s (montée sans lever le doigt), puis doigt gardé sur SOL : un pont en hauteur
   res.continu = await (async () => {
-    await page.evaluate(() => { const FR = window.FR, p = FR.player; p.pos.x -= 80; p.pos.y = FR.terrainH(p.pos.x, p.pos.z) + 1; p.vel.set(0, 0, 0); FR.setCam(Math.PI / 2, 0.05); for (let i = 0; i < 40; i++) FR.update(1 / 30); window.__n0 = FR.pieceList.length; window.__y0 = p.pos.y; });
+    await page.evaluate(() => { const FR = window.FR, p = FR.player; window.__goto(-60, 40); FR.setCam(Math.PI / 2, 0.05); for (let i = 0; i < 10; i++) FR.update(1 / 30); window.__n0 = FR.pieceList.length; window.__y0 = p.pos.y; });
     await touch('touchStart', P('ramp')); for (let i = 0; i < 9; i++) { await page.evaluate(() => { window.FR.keys.KeyW = true; }); await step(10); }
     const held = await page.evaluate(() => window.FR.pieceHeld); await touch('touchEnd', P('ramp')); await step(2);
     const r1 = await page.evaluate(held => { const FR = window.FR, nw = FR.pieceList.slice(window.__n0); window.__n1 = FR.pieceList.length; window.__y1 = FR.player.pos.y; return { rampesEn3s: nw.filter(q => q.type === 'ramp').length, monte: +(FR.player.pos.y - window.__y0).toFixed(1), doigtGarde: held, apresRelache: FR.pieceHeld }; }, held);
@@ -57,7 +63,7 @@ const [,, base, out = '/tmp/fr-build'] = process.argv; fs.mkdirSync(out, { recur
 
   // 5. boîte autour de soi : 4 murs (un appui par direction) + toit au-dessus
   res.boite = await (async () => {
-    await page.evaluate(() => { const FR = window.FR, p = FR.player; p.pos.z += 30; p.pos.y = FR.terrainH(p.pos.x, p.pos.z) + 1; p.vel.set(0, 0, 0); for (let i = 0; i < 40; i++) FR.update(1 / 30); window.__n0 = FR.pieceList.length; });
+    await page.evaluate(() => { const FR = window.FR, p = FR.player; window.__goto(0, 90); for (let i = 0; i < 10; i++) FR.update(1 / 30); window.__n0 = FR.pieceList.length; });
     for (const yaw of [0, Math.PI / 2, Math.PI, -Math.PI / 2]) { await page.evaluate(y => window.FR.setCam(y, 0.05), yaw); await step(1); await tap(P('wall')); await step(2); }
     await page.evaluate(() => window.FR.setCam(0, 0.5)); await step(1); await tap(P('cone')); await step(2);
     return await page.evaluate(() => { const FR = window.FR, p = FR.player, cx = Math.floor(p.pos.x / 4), cz = Math.floor(p.pos.z / 4); const nw = FR.pieceList.slice(window.__n0);

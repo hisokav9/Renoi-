@@ -1,5 +1,42 @@
 # Fada Royale — Rapport de tests
 
+# v1.5
+
+Mêmes conditions que la v1.4 (Chromium sans écran, rendu logiciel SwiftShader, réseau externe coupé, boucle figée). Pas de test sur un vrai téléphone.
+
+## Nouveautés (`tests/support.cjs`, nouveau)
+
+| Vérification | v1.4 | v1.5 |
+|---|---|---|
+| 5 rampes, on monte jusqu'à la dernière (moitié haute), puis MUR | mur une case trop loin et 4 m trop haut, **dans le vide** | mur au bout de la rampe, au-dessus de son bord, il tient |
+| Même chose, moitié basse de la dernière rampe | mur une case trop loin, dans le vide | mur au bout de la rampe, sous son bord, il tient |
+| Montée en 9 s, RAMPE puis MUR | marchait déjà (+62 m en 10 s, autre mesure) | +56 m, 16 rampes, 14 murs, 0 mur dans le vide |
+| Montée en 9 s, MUR puis RAMPE | marchait déjà (+62 m en 10 s, autre mesure) | +56 m, 16 rampes, 15 murs, 0 mur dans le vide |
+| Effondrement : tour de 20 pièces, on détruit les 4 du bas | (pas d'effondrement) | 16 pièces debout, puis 2 après 1 s, 0 après 2 s ; la maison de 4 murs posée à côté reste debout (4 / 4) |
+| Saut 0,07 s après avoir quitté le haut d'une rampe | ne saute pas | saute |
+| Appui de saut 0,1 s avant de toucher le sol (chute de 3 m) | ne saute pas | saute à la réception |
+| Mur demandé en plein air à 14 m du sol | posé | refusé : « RIEN POUR LA TENIR » |
+
+**Autres vérifications**
+- Pas chassés à droite et à gauche, marche arrière et diagonale avec le perso face à la caméra : captures, jambes orientées vers la marche, buste face à la visée.
+- Banc d'animation (`animtest.cjs`, Boss et Guerrière) avec le perso toujours face à la caméra : 14 situations, aucun NaN, quaternions normés, buste ≤ 18° par image, bras ≤ 38°. La rotation cumulée du bassin monte à 73° (changements de direction) et 90° (pas chassés) : ce sont les jambes qui se tournent vers la marche, c'est voulu.
+
+**Problème trouvé pendant les tests**
+- `tests/build.cjs` : l'essai « pose en continu » partait d'une position relative à l'essai précédent et tombait contre une maison (perso bloqué, 1 rampe). Chaque essai part maintenant d'un endroit dégagé, au milieu d'une case. Résultats ensuite identiques à la v1.4.
+
+## Non-régression
+
+| Test | Résultat v1.5 |
+|---|---|
+| `build.cjs` | Identique à la v1.4 : montée +60,7 m en 10 s, pose en continu, boîte, édition au relâchement, réglages, clavier, Entraînement, 42 appels de dessin avec 160 pièces |
+| `sim.cjs` | 3 parties complètes (fin à 300, 308 et 308 s) : 0 erreur, 0 NaN (les bots posent leurs murs avec la nouvelle règle de tenue) |
+| `flows.cjs` ordinateur et téléphone | Tout passe (construction 4 pièces, édition, kilishi 75 PV, pause, fin, rejouer, retour) |
+| `houses.cjs` | Identique (porte, escalier, pas de grimpe, rebord en sautant, caméra 0°, muret, 12 bots sur 12 entrent) |
+| `lobbytest.cjs`, `fixes2.cjs`, `ddatest.cjs`, `decals.cjs`, `hud.cjs` | Tout passe ; 0 différence sur 3 000 rayons ; 10 impacts pour 10 balles |
+| `cover.cjs` | 10 bots sur 11 se cachent |
+
+---
+
 # v1.4
 
 Mêmes conditions que la v1.3 (Chromium sans écran, rendu logiciel SwiftShader, réseau externe coupé, boucle figée). Le nouveau test simule un Pixel 7 en paysage et appuie sur les vrais boutons tactiles. Pas de test sur un vrai téléphone.

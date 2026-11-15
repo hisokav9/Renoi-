@@ -1,5 +1,49 @@
 # Fada Royale — Journal des modifications
 
+# v1.5 — Idées reprises de l'autre version, mur dans le vide
+
+Base : v1.4 (APK 1.4). Matière : une autre version du jeu créée par le propriétaire (`Fada_Royale_4.html`, ~7 000 lignes, three.js r128), à lire pour « prendre tout ce qui améliore notre jeu, le mouvement des personnages, comment on met les constructions », et un bug : « quand on met genre 5 rampes, quand je mets un mur, le mur se met dans l'air ».
+Le fichier a été lu (pas exécuté). On reprend des idées et des réglages, pas le code tel quel : les deux jeux n'ont ni le même moteur de rendu (r128 / r160), ni les mêmes persos (squelettes procéduraux / modèles animés), ni la même grille de construction.
+Mesures : nouveau test `tests/support.cjs`, détail dans `FADA_ROYALE_V1_TEST_REPORT.md`.
+
+## 1. Bug : le mur dans le vide après plusieurs rampes
+
+| | |
+|---|---|
+| **Reproduit** | 5 rampes, on monte jusqu'à la dernière, puis MUR : sur la v1.4, le mur se pose une case plus loin que le bout de la rampe et 4 m plus haut, sans rien dessous (« dans le vide »). Même chose dans la moitié basse de la rampe. |
+| **Cause** | La règle de la v1.4 « en montée, le mur va au bout de la rampe suivante » s'appliquait même quand il n'y avait pas de rampe suivante. |
+| **Fichier** | `index.html` : `computePlacement()`, `wallAt()`, `plBox()`, `qBox()`, `boxTouch()`, `boxGrounded()`, `plAttached()` (nouveaux), `placementProblem()`, `tryBuild()` |
+| **Correction** | Une pièce « tient » si elle touche le terrain, le décor (maison, mur, rocher…) ou une autre pièce. En montée, le mur ne va au bout de la rampe suivante que si elle est là ; sinon il se pose **au bout de la rampe où l'on est** : au-dessus de son bord quand on est dans le haut de la rampe, dessous quand on est dans le bas. Une pièce qui ne tient sur rien (en plein saut, au-dessus du vide) est refusée : fantôme rouge et message « RIEN POUR LA TENIR ». |
+| **Résultat** | Haut et bas de la dernière rampe : mur au bout de la rampe, il tient. Mur demandé à 14 m en plein air : refusé. |
+
+## 2. Construction : idées reprises de l'autre version
+
+| | |
+|---|---|
+| **Appui mémorisé** | Un appui sur une pièce reste en mémoire 0,35 s : si la case visée est prise, la pièce se pose dès qu'une case libre est visée ; en montée, un MUR appuyé avant la RAMPE attend la rampe (0,3 s) au lieu de se poser devant et de bloquer. La montée marche dans les deux ordres d'appui. |
+| **Effondrement** | Après une destruction, tout ce qui n'est plus relié au sol (terrain ou décor), de pièce en pièce, s'écroule morceau par morceau (`scheduleIntegrity()`, `checkIntegrity()`, `updateCollapse()`). Casser le bas d'une tour la fait tomber ; une construction voisine posée au sol reste debout. Pas de vérification à la pose (la règle du §1 suffit), ni quand on efface ses constructions. |
+| **Fantôme lisible** | Contour blanc sur la pièce à poser (lisible sur le sable clair au soleil). |
+
+## 3. Déplacements : idées reprises de l'autre version
+
+| | |
+|---|---|
+| **Orientation** | Comme dans l'autre version : le perso regarde toujours où vise la caméra et ses jambes suivent la marche (pas chassés à gauche et à droite, marche arrière sans se retourner, diagonales). Le système de jambes existait déjà pour le combat ; il sert maintenant tout le temps. Sprint vers l'avant (diagonales comprises). Réglable : Paramètres › Contrôles › « Le perso regarde toujours où vise la caméra » (désactivé : il se tourne vers où il court, comme en v1.4). |
+| **Saut tolérant** | On peut encore sauter 0,12 s après avoir quitté un bord (fin de rampe, bord de toit), et un appui de saut fait 0,15 s avant d'atterrir est gardé (le perso saute à la réception). |
+| **Caméra** | Petite plongée à la réception d'un saut. (Notre caméra avait déjà ce que fait l'autre version : épaule, recul contre les murs, hauteur qui rattrape les marches en douceur, champ de vision plus large en sprint.) |
+| **Fichiers** | `index.html` : `updatePlayer()`, `moveChar()`, `updateCamera()`, `SET_DEF.faceCam`, onglet Contrôles |
+
+## 4. Ce qu'on n'a pas repris (pour l'instant)
+
+Motos kabou-kabou, grenade à souffle, points faibles à la pioche, forges d'amélioration, caisses à fouiller, raretés d'armes, touches modifiables, rotation des rampes. Ce sont de bonnes idées mais elles changent le jeu au-delà de la demande (déplacements et constructions) ; elles sont notées dans la feuille de route.
+
+## 5. Divers
+
+- Version 1.5 : titre, logo du lobby, nouveautés, `AndroidManifest.xml` (versionCode 15).
+- `tests/build.cjs` : chaque essai part d'un endroit dégagé, au milieu d'une case (avant : positions relatives au test précédent, un essai pouvait tomber contre une maison).
+
+---
+
 # v1.4 — Construction rapide
 
 Base : v1.3 (APK 1.3). Demande : « j'arrive pas à faire des solo build comme ça dans notre jeu » avec 20 captures d'un autre jeu de construction (accueil, modes, HUD, réglages) et 5 vidéos (construction rapide en courant, modifications de murs). On reprend les mécaniques du genre (pose rapide, pose en continu, édition au relâchement, réglages), pas l'apparence, les noms ni les cartes de ce jeu : Fada Royale garde son style.

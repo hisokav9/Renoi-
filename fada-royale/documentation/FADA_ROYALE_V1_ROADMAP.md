@@ -1,4 +1,4 @@
-# Fada Royale — Feuille de route (mise à jour v1.4)
+# Fada Royale — Feuille de route (mise à jour v1.5)
 
 Classée par priorité. Chaque point dit pourquoi il compte et ce qu'il demande. Les points réglés sont indiqués avec leur version.
 
@@ -15,6 +15,7 @@ Classée par priorité. Chaque point dit pourquoi il compte et ce qu'il demande.
 6. **Construction** : v1.4 : pièces toujours à l'écran, pose au toucher et en continu, mur au bout de la rampe pour monter, édition au relâchement, pièces en instances. Reste : visée de la grille au regard (comme les jeux du genre, au lieu de « case du joueur + direction »), virages à 90° en montant (enchaînement mur / sol / rampe en tournant), rotation des rampes, édition des rampes et des toits, modes d'entraînement à la construction (duel en boîte, parcours chronométré), touches modifiables et manette, aperçu fantôme plus lisible au soleil, sons de pose par matériau.
 7. **Animation de victoire** dans le lobby après un TOP 1 (aucun clip disponible : en ajouter un depuis une bibliothèque CC0).
 8. ~~**Transitions d'armes**~~ : rangement puis sortie animés en v1.1.
+8 ter. **Idées de l'autre version (`Fada_Royale_4.html`) pas encore reprises** : motos kabou-kabou, grenade à souffle (projette sans blesser), points faibles à la pioche (récolte plus rapide), forges d'amélioration d'armes, caisses à fouiller, raretés d'armes, touches modifiables, rotation des rampes. v1.5 a repris : appui de construction mémorisé, effondrement, contour du fantôme, perso face à la caméra avec jambes vers la marche, saut tolérant.
 8 bis. **Maisons** : vraies fenêtres (ouvertures qui laissent passer la lumière et les balles), ~~portes qui s'ouvrent et se ferment~~ (fait en v1.3), meubles qui servent de couvert, portes qu'on peut casser.
 
 ## Priorité 3 — contenu et lobby
