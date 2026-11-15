@@ -1,5 +1,64 @@
 # Fada Royale — Rapport de tests
 
+# v1.6
+
+Mêmes conditions que la v1.5 (Chromium sans écran, rendu logiciel SwiftShader, réseau externe coupé, boucle figée). Pas de test sur un vrai téléphone. Les temps de rendu en millisecondes viennent du rendu logiciel (processeur) : ils servent à comparer, pas à prédire les images par seconde d'un téléphone.
+
+## Nouveautés (`tests/decor.cjs`, nouveau)
+
+Coût de chaque nouveauté au même endroit (centre d'Agadez, 1280×720, temps médian de 3 images) : on retire une nouveauté à la fois.
+
+| | Basse | Moyenne | Haute |
+|---|---|---|---|
+| Tout (v1.6) | 310 ms, 34 appels, 248k tri | 528 ms, 37 appels, 324k tri | 564 ms, 40 appels, 350k tri |
+| Sans le ciel | 291 ms | 507 ms | 524 ms |
+| Sans les arbres du pack | 297 ms | 531 ms | 571 ms |
+| Sans les rochers du pack | 299 ms | 524 ms | 541 ms (315k tri) |
+| Sans les animaux | 283 ms | 481 ms | 494 ms |
+| Avec le sol de la v1.5 | (même sol) | 516 ms | 516 ms |
+| Sans aucune nouveauté | 286 ms, 28 appels | 456 ms, 30 appels | 447 ms, 30 appels |
+| Programmes GPU compilés en partie (Agadez, Ténéré, Kouré, Parc W, Ayorou, tempête) | +0 partout | +0 partout | +0 partout |
+
+**Ce qu'on en tire**
+- Basse : +8 %. Moyenne : +16 %. Haute : +26 %. Les animaux sont la nouveauté la plus chère (≈ 25 à 70 ms ici selon la qualité : 51 modèles de 4 500 à 9 600 triangles, dessinés à portée seulement).
+- Premier essai du sol avec `textureGrad` : à l'endroit d'atterrissage du test `flows.cjs` (beaucoup de sol à l'écran), +133 ms en Moyenne et +223 à +287 ms en Haute. Avec le niveau de mipmap calculé une fois et `textureLod` : +65 ms en Moyenne au même endroit ; à Agadez +12 ms en Moyenne et +48 ms en Haute. Comparaison d'images (dunes du Ténéré, Niamey) : le sol est à peine plus flou au loin. Essayé aussi : sans branches (6 textures lues partout) = 2 fois plus cher ; filtrage anisotrope coupé = pas de gain.
+- Aucun nouveau shader compilé en cours de partie : les matières des animaux, rochers et ciel de tempête réutilisent des programmes déjà prêts.
+
+**Mesures sur la carte entière** (6 vues fixes : Niamey, Ténéré, Kouré, lac, Aïr, Agadez)
+
+| | Appels de dessin | Triangles | Arrivée au menu |
+|---|---|---|---|
+| Basse v1.5 | 18 à 69 (Kouré 69) | 219k à 224k | — |
+| Basse v1.6 | 20 à 28 | 209k à 254k | — |
+| Moyenne v1.5 | 20 à 73 | 285k à 290k | 10,6 à 11,7 s |
+| Moyenne v1.6 | 24 à 35 | 286k à 341k | 10,6 à 11,6 s |
+
+Les arbres du pack (plans croisés, une espèce = un dessin) font baisser les appels en ville. L'arrivée au menu ne bouge pas : le décor du pack se charge après l'affichage du lobby (un premier essai qui chargeait les sols avant prenait 1 à 5 s de plus).
+
+**Vérifié en images** (vues fixes avant / après, ordinateur et téléphone) : sols par zone (Ténéré ridé, Aïr rouge-brun et caillouteux, latérite des villes du sud, herbe sèche près de l'eau, terre craquelée au lac), ciel sans trait à l'horizon, ciel d'harmattan pendant la tempête, bandeau de ville avec son image (nom dans l'image, plus sur le viseur), animaux posés au sol hors des maisons, palmiers au lac, karités à Kouré, rochers de granite dans le Ténéré et l'Aïr.
+
+**Problèmes trouvés pendant les tests**
+- Rochers du pack invisibles : la sphère englobante d'un groupe de rochers était calculée quand il était encore vide, donc il était toujours jugé hors de l'écran. Corrigé (pas de test hors champ pour ces groupes).
+- Aïr beige et Agadez rouge vif au premier essai des sols : les textures écrasaient la couleur des zones. Corrigé (couleur moyenne de chaque texture rapprochée de celle de la zone ; latérite seulement dans les villes du sud).
+- Ciel gris au-dessus d'un horizon beige : corrigé (bas des images fondu dans la couleur du brouillard).
+- `flows.cjs` sur ordinateur a dépassé une fois le délai de 30 s d'une capture (perso posé sur un toit d'Agadez, vue très chargée, sol `textureGrad`) ; repasse avec le sol actuel.
+
+## Non-régression
+
+| Test | Résultat v1.6 |
+|---|---|
+| `sim.cjs` | 3 parties complètes : 0 erreur, 0 NaN |
+| `flows.cjs` ordinateur et téléphone | Tout passe (construction, édition, kilishi 75 PV, pause, fin, rejouer, retour) |
+| `houses.cjs` | Identique (porte, escalier, pas de grimpe, rebord en sautant, caméra 0°, muret, 12 bots sur 12 entrent) |
+| `support.cjs` | Identique à la v1.5 (mur au bout de la 5e rampe, montée +56 m dans les deux ordres, effondrement, saut tolérant, pièce refusée dans le vide) |
+| `build.cjs` | Identique : montée +60,7 m en 10 s, pose en continu, boîte, édition, Entraînement, 46 appels avec 160 pièces |
+| `lobbytest.cjs` ordinateur et téléphone, `fixes2.cjs`, `ddatest.cjs`, `decals.cjs`, `hud.cjs` | Tout passe ; 0 différence sur 3 000 rayons ; 10 impacts pour 10 balles |
+| `cover.cjs` | 11 bots sur 12 se mettent à couvert et y restent (v1.5 : 10 sur 11) |
+| `animtest.cjs` (Boss) | 14 situations, aucun NaN, quaternions normés |
+| APK 1.6 | Signature v2 vérifiée, même certificat que la 1.0 à 1.5 (`3DB2BF18…`), version 1.6 (code 16), 12,2 Mo ; jeu extrait de l'APK et servi comme dans l'application, hors ligne : 78 fichiers servis, 0 introuvable, 0 erreur JavaScript, partie lancée |
+
+---
+
 # v1.5
 
 Mêmes conditions que la v1.4 (Chromium sans écran, rendu logiciel SwiftShader, réseau externe coupé, boucle figée). Pas de test sur un vrai téléphone.

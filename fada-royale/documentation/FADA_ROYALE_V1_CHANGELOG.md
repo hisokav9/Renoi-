@@ -1,5 +1,71 @@
 # Fada Royale — Journal des modifications
 
+# v1.6 — Décor réaliste (pack du propriétaire)
+
+Base : v1.5 (APK 1.5). Matière : `fada-royale-modele-glb-29mo.zip`, un pack d'images et de modèles 3D généré par le propriétaire du jeu à partir des fiches de `documentation/PROMPTS_DECOR.md` (sols, ciels, panoramas de villes, carte, 11 animaux, 6 arbres, 23 rochers et reliefs). Les fichiers ont été ouverts et mesurés (taille, triangles, textures), pas exécutés. On a pris ce qui rend bien dans le jeu et dans le budget d'un téléphone ; le reste est expliqué au §7.
+Mesures : nouveau test `tests/decor.cjs`, détail dans `FADA_ROYALE_V1_TEST_REPORT.md`.
+
+## 1. Sols
+
+| | |
+|---|---|
+| **Avant** | Une couleur par sommet du terrain (sable, latérite, herbe… selon la zone) et une seule texture de détail pour tout le terrain. |
+| **Maintenant** | 6 textures photo du pack mélangées selon l'endroit : sable fin (partout par défaut), dunes ridées (Ténéré), latérite rouge (villes du sud), herbe sèche (savane du sud, Kouré, Parc W, berges du fleuve), gravier (Aïr, mine d'Arlit), terre craquelée (bord du lac, fonds de mares). Le mélange est calculé une fois par sommet (`groundSplat()`, mêmes zones que `groundColor()`), les transitions sont douces. |
+| **Couleurs** | Chaque texture garde son détail mais sa couleur moyenne (mesurée) est rapprochée de la couleur de la zone, plus ou moins selon le sol : l'Aïr reste rouge-brun et rocheux, Agadez ocre, l'herbe verdit près de l'eau. |
+| **Coût** | Seules les textures qui comptent à un endroit sont lues (1 à 3 en général). Le niveau de mipmap est calculé une fois par pixel puis `textureLod` : moitié moins cher que `textureGrad` (filtrage anisotrope), pour un sol à peine plus flou au loin (comparaison d'images faite). |
+| **Qualité** | Moyenne et Haute. Basse garde le sol de la v1.5. Les 6 textures (2 Mo) se chargent après l'affichage du lobby : le démarrage n'attend pas. |
+| **Fichiers** | `index.html` : `groundSplat()`, `makeSplatMat()`, `applyTerrainMat()`, `loadSols()` ; `assets/textures/sols/` |
+
+## 2. Ciel
+
+| | |
+|---|---|
+| **Avant** | Dégradé de couleur calculé. |
+| **Maintenant** | Photo du ciel du Sahel (pack) sur un dôme ; pendant la tempête, le ciel d'harmattan (poussière) apparaît en fondu. Le bas des deux images a été fondu dans la couleur du brouillard (`#ecd7b4`, brouillard du jeu réglé sur cette couleur) : plus de trait entre le ciel et l'horizon. Le dégradé reste derrière pour le dessous de l'horizon. |
+| **Fichiers** | `index.html` : bloc `SKY_DOME` / `SKY_STORM`, `update()` (fondu de tempête) ; `assets/decor/ciels/` |
+
+## 3. Arrivée dans une ville
+
+Le bandeau du nom de la zone montre maintenant une image de la ville (13 panoramas du pack, réduits à 1 024 px) : fleuve à Niamey, mosquée d'Agadez, dunes du Ténéré, marché de Maradi, girafes de Kouré, pirogues d'Ayorou, falaises de Tahoua, baobabs du Parc W, rizières de Tillabéri… Le nom est écrit dans l'image (avant, il chevauchait le viseur). Images chargées au début de la partie. Fichiers : `index.html` (`ZONE_PIC`, `preloadZonePics()`, `showZone()`) ; `assets/images/lieux/`.
+
+## 4. Animaux
+
+| | |
+|---|---|
+| **Quoi** | 51 animaux de 11 espèces, placés près de leurs villes : girafes à Kouré (elles remplacent les girafes en blocs), dromadaires (dont 2 sellés) à Agadez et dans le Ténéré, zébus à Dosso et Tahoua, chèvres à Maradi et Zinder, moutons à Tillabéri et Dosso, ânes à Niamey et Zinder, pintades à Dosso et Maradi, éléphants au Parc W, hippopotames dans le fleuve à Ayorou, 2 vautours qui tournent dans le ciel. |
+| **Vie** | Les modèles du pack n'ont pas de squelette (ils ne peuvent pas marcher) : ils se retournent lentement de temps en temps, les hippos flottent, les vautours planent en cercle. |
+| **Placement** | Hors des maisons, de l'eau (sauf hippos), des pentes, à 3,5 m les uns des autres ; même placement à chaque partie. Les gros animaux sur terre (girafe, dromadaire, zébu, éléphant, âne) sont des obstacles ; chèvres, moutons et pintades se traversent. |
+| **Coût** | Dessinés seulement à portée (Basse 90 m, Moyenne 140, Haute 220 ; petits animaux à 60 % de cette distance). |
+| **Fichiers** | `index.html` : `AMB_PLAN`, `loadAmbient()`, `placeAmbient()`, `ambSpot()`, `updateAmbient()` ; `assets/decor/animaux/` |
+
+## 5. Arbres
+
+- **Palmiers doum et dattiers** du pack (un sur deux) à la place des palmiers en blocs : lac, fleuve, oasis.
+- **Neems** dans les villes (un acacia sur deux dans les villes) et **karités** dans le sud (un acacia sur trois hors des villes, au sud).
+- Ce sont des « plans croisés » (images avec transparence) : 6 triangles par arbre, tous les arbres d'une espèce en un seul dessin. Les appels de dessin baissent en ville (Kouré : 69 → 28 en Basse).
+- Fichiers : `index.html` : `loadPackTrees()`, `placePackTrees()` ; `assets/decor/arbres/`
+
+## 6. Rochers
+
+Les 125 rochers restent des blocs simples au loin ; près du joueur (Moyenne 70 m, Haute 110 m, Basse jamais), ils deviennent un des 5 rochers de granite du pack (3 500 triangles), mis à la taille du bloc (même collision). Mise à jour 3 fois par seconde. Fichiers : `index.html` : `loadPackRocks()`, `initPackRocks()`, `updatePackRocks()`, `Q.rockNear` ; `assets/decor/rochers/`.
+
+## 7. Ce qu'on n'a pas pris (et pourquoi)
+
+| Fichier du pack | Raison |
+|---|---|
+| `acacia.glb`, `baobab.glb` | Relief tiré d'une seule image : beau de face, mais une plaque de 1 à 3 m d'épaisseur vu de côté. Les acacias et baobabs du jeu (en volume) restent. |
+| `carte-region.glb` | Belle carte, mais elle ne suit pas notre carte (fleuve décalé, lac mal placé) : elle tromperait le joueur sur la mini-carte. |
+| Piles de rochers, strates de grès, termitières, cailloux | Même problème de relief d'une seule image (plaques de 7 cm à 1 m) ; 4 500 à 7 200 triangles chacun pour des objets nombreux. |
+
+## 8. Divers
+
+- Version 1.6 : titre, logo du lobby, nouveautés, `AndroidManifest.xml` (versionCode 16), crédits (« Décor (v1.6) »).
+- Le décor du pack (sols, animaux, arbres, rochers) se charge 0,8 s après l'affichage du lobby : l'arrivée au menu prend le même temps qu'en v1.5.
+- `window.FR` expose aussi `TERRAIN_MAT0`, `setQuality` et `warmGPU` (pour les tests).
+- APK : 12,2 Mo (4,4 Mo en v1.5) : 41 fichiers de décor (8,9 Mo).
+
+---
+
 # v1.5 — Idées reprises de l'autre version, mur dans le vide
 
 Base : v1.4 (APK 1.4). Matière : une autre version du jeu créée par le propriétaire (`Fada_Royale_4.html`, ~7 000 lignes, three.js r128), à lire pour « prendre tout ce qui améliore notre jeu, le mouvement des personnages, comment on met les constructions », et un bug : « quand on met genre 5 rampes, quand je mets un mur, le mur se met dans l'air ».

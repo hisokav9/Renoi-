@@ -1,10 +1,10 @@
-# Fada Royale — Feuille de route (mise à jour v1.5)
+# Fada Royale — Feuille de route (mise à jour v1.6)
 
 Classée par priorité. Chaque point dit pourquoi il compte et ce qu'il demande. Les points réglés sont indiqués avec leur version.
 
 ## Priorité 1 — à faire avant une diffusion publique
 
-1. **Mesurer sur de vrais téléphones Android** (entrée de gamme, milieu de gamme). Ouvrir le jeu avec `?stats=1`, noter FPS, temps de rendu, appels de dessin, triangles en Basse / Moyenne / Haute, au lobby, à l'atterrissage et en fin de partie. Les tests actuels utilisent un rendu logiciel : ils valident la logique, pas la vitesse réelle. (v1.3 : à-coup de la première arme supprimé, Basse ramenée à 75–105 appels de dessin à l'endroit mesuré ; à confirmer sur téléphone.)
+1. **Mesurer sur de vrais téléphones Android** (entrée de gamme, milieu de gamme). Ouvrir le jeu avec `?stats=1`, noter FPS, temps de rendu, appels de dessin, triangles en Basse / Moyenne / Haute, au lobby, à l'atterrissage et en fin de partie. Les tests actuels utilisent un rendu logiciel : ils valident la logique, pas la vitesse réelle. (v1.3 : à-coup de la première arme supprimé, Basse ramenée à 75–105 appels de dessin à l'endroit mesuré ; à confirmer sur téléphone.) v1.6 : le décor réaliste coûte +8 % en Basse, +16 % en Moyenne, +26 % en Haute (rendu logiciel) ; vérifier sur téléphone que la Moyenne reste fluide, sinon réduire la portée des animaux ou passer le nouveau sol en Haute seulement.
 2. **Licences des modèles 3D** : réglé en v1.2 pour le fusil, la mitraillette, le pompe, le sniper, la mitrailleuse et la daba (modèles créés pour le jeu). **Reste le revolver** (Colt, auteur non crédité) : il faut une image du revolver barillet fermé (prompt dans `PROMPTS_ASSETS.md`). Anciennement : MP5 et fusil à pompe sous CC BY-NC (pas d'usage commercial) ; sniper, Minimi et Colt sans auteur crédité. À remplacer par des modèles CC0 / CC BY ou faits maison avant tout usage commercial ou lien avec Renoi Studio. Les prompts de génération sont prêts dans `PROMPTS_ASSETS.md` (avec pièces séparées pour animer le vrai chargeur).
 3. **Poids des persos** : la Guerrière fait ≈ 21 000 triangles, le Boss ≈ 12 000 ; 20 persos proches = jusqu'à 290 000 triangles même en Basse. Préparer des versions allégées (LOD de maillage : ≈ 3 000 à 5 000 triangles) avec un outil comme gltf-transform `simplify`, chargées pour les bots lointains.
 
@@ -19,6 +19,8 @@ Classée par priorité. Chaque point dit pourquoi il compte et ce qu'il demande.
 8 bis. **Maisons** : vraies fenêtres (ouvertures qui laissent passer la lumière et les balles), ~~portes qui s'ouvrent et se ferment~~ (fait en v1.3), meubles qui servent de couvert, portes qu'on peut casser.
 
 ## Priorité 3 — contenu et lobby
+
+8 quater. **Décor (suite du pack v1.6)** : v1.6 a pris les 6 sols, les 2 ciels, 13 panoramas de villes, 11 animaux, 4 arbres et 5 rochers. À refaire pour pouvoir les utiliser : (a) la **carte** illustrée, régénérée en partant de `documentation/guides/carte_guide_sans_texte.jpg` pour qu'elle suive notre carte, puis mise sur la mini-carte ; (b) des **animaux en vrai volume avec squelette** et des clips (marche, broute) pour qu'ils se déplacent ; (c) un **acacia** et un **baobab** en volume (ceux du pack sont des plaques vus de côté) ; (d) piles de rochers, grès et termitières en volume, allégés (< 2 000 triangles). Aussi : maisons du pack (prompts prêts dans `PROMPTS_DECOR.md`, pas encore générées).
 
 9. **Mode Entraînement enrichi** : parcours de construction, cibles mobiles, chronomètre.
 10. **Événements** : défis à durée limitée calculés en local (comme les missions) une fois le système éprouvé.
