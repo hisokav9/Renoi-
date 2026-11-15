@@ -255,7 +255,7 @@ export function createLobby(ctx) {
     <button data-p="profile">${ico('profile')}<span>Profil</span></button>
   </nav>
   <div class="lb-home" id="lbHome">
-    <div class="lb-logo"><div class="lb-flag"><i></i><i></i><i></i></div><h1>FADA<br>ROYALE</h1><p><b>v1.3</b>Le battle royale du Sahel</p></div>
+    <div class="lb-logo"><div class="lb-flag"><i></i><i></i><i></i></div><h1>FADA<br>ROYALE</h1><p><b>v1.4</b>Le battle royale du Sahel</p></div>
     <div class="lb-who"><small>Ton personnage</small><b id="lbCharName">—</b><span class="lb-hint">${ctx.IS_TOUCH ? 'Glisse pour le tourner · pince pour zoomer' : 'Glisse pour le tourner · molette pour zoomer'}</span></div>
     <div class="lb-playbox"><button class="lb-mode" id="lbModeBtn"><small>Mode</small><b id="lbModeName">Battle Royale · Solo</b>${ico('chev')}</button>
       <button class="lb-play" id="play">JOUER</button></div>
@@ -363,6 +363,13 @@ export function createLobby(ctx) {
   // --- événements
   function htmlEvents() {
     return `<div class="lb-ev"><b>Aucun événement en cours</b><p>Les événements (défis à durée limitée, récompenses spéciales) arriveront dans une prochaine version. Rien n’est simulé ici.</p></div>
+      <h3>Nouveautés de la v1.4 : construction rapide</h3><ul class="lb-list">
+      <li><b>Les 4 pièces toujours à l’écran</b> (MUR, RAMPE, SOL, TOIT) : touche une pièce pour la poser tout de suite, garde le doigt pour en poser à la chaîne en avançant.</li>
+      <li><b>Monter vite :</b> mur puis rampe, mur puis rampe… le mur se place tout seul au bout de la rampe de devant, il ne te bloque plus.</li>
+      <li><b>Édition :</b> glisse sur les cases et relâche pour valider, puis tu reviens en construction.</li>
+      <li><b>Entraînement :</b> banco illimité, et le menu pause efface tes constructions.</li>
+      <li><b>Paramètres › Construction :</b> pose au toucher, validation au relâchement, sensibilités ; limite d’images (30 / 60).</li>
+      <li><b>Plus fluide</b> avec beaucoup de pièces construites.</li></ul>
       <h3>Nouveautés de la v1.3</h3><ul class="lb-list">
       <li><b>Caméra :</b> ton perso se tourne avec la caméra, même à l’arrêt.</li>
       <li><b>Se hisser :</b> plus de grimpe le long des murs. Saute face à un muret, un mur ou un toit : si le bord est à portée de main, tu t’y hisses.</li>

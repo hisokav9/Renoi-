@@ -1,5 +1,68 @@
 # Fada Royale — Journal des modifications
 
+# v1.4 — Construction rapide
+
+Base : v1.3 (APK 1.3). Demande : « j'arrive pas à faire des solo build comme ça dans notre jeu » avec 20 captures d'un autre jeu de construction (accueil, modes, HUD, réglages) et 5 vidéos (construction rapide en courant, modifications de murs). On reprend les mécaniques du genre (pose rapide, pose en continu, édition au relâchement, réglages), pas l'apparence, les noms ni les cartes de ce jeu : Fada Royale garde son style.
+Mesures : nouveau test `tests/build.cjs` (téléphone, vrais boutons tactiles), détail dans `FADA_ROYALE_V1_TEST_REPORT.md`.
+
+## 1. Pourquoi on n'arrivait pas à construire vite
+
+| | |
+|---|---|
+| **Constat 1** | Sur téléphone, poser une pièce demandait 3 appuis : BÂTIR, puis la pièce (boutons texte cachés hors construction), puis POSER. |
+| **Constat 2 (le vrai blocage)** | La technique de base (en avançant : rampe, mur, rampe, mur…) bloquait le perso sur place : le mur se posait au bord de la case du joueur, c'est-à-dire **devant le bas de la rampe**. Mesuré sur la v1.3 avec le même schéma (mode construction, POSER gardé, rampe et mur en alternance) : **+0,2 m en 10 s**. |
+| **Constat 3** | Sur un coin de case (c'était le cas au départ de l'Entraînement), le premier mur se posait dans le perso et était refusé (« QUELQU'UN EST DANS LE PASSAGE »). |
+| **Constat 4** | Chaque pièce construite coûtait 1 à 2 appels de dessin : 160 pièces = 339 appels au lieu de 98 en Basse (téléphone qui rame vite en construction solo). |
+
+## 2. Les 4 pièces toujours à l'écran
+
+| | |
+|---|---|
+| **Fichiers** | `index.html` : barre `#pick` (icônes `i-pwall`, `i-pramp`, `i-pfloor`, `i-pcone`), `pieceDown()`, `pieceUp()`, `refreshBuildUI()`, `updateHUD()`, gestion tactile (`touchmove`, `touchEnd`), clavier |
+| **Correction** | MUR, RAMPE, SOL, TOIT sont affichés en permanence en haut à droite quand on est au sol. **Un appui pose la pièce tout de suite** (on passe en construction tout seul). **Doigt gardé : pose en continu**, une nouvelle pièce dès que la case visée change (on avance, on tourne). Le doigt posé sur une pièce oriente aussi la caméra, comme TIRER. Toucher son arme fait revenir au combat. Délai minimal entre deux pièces du joueur : 0,05 s (0,09 s avant). La barre se déplace et se redimensionne dans l'éditeur de HUD. |
+| **Clavier** | Q mur, V rampe, Z sol, G toit (en AZERTY : A et W pour Q et Z), ou F1 à F4 ; B construction / arme ; clic gardé = pose en continu. G ne sert plus à basculer en construction. |
+| **Réglage** | Paramètres › Construction › « Toucher une pièce la pose tout de suite » (activé par défaut). Désactivé : toucher une pièce la choisit, POSER la pose. |
+
+## 3. Placement pour monter
+
+| | |
+|---|---|
+| **Fichier** | `index.html` : `computePlacement()`, `rampUnder()` (nouveau) |
+| **Correction** | En montée (sur sa rampe, face à la pente) ou juste devant une rampe qui monte dans le même sens, **le mur va au bout de la rampe de devant** : il la protège sans barrer le passage. En l'air (saut d'une rampe à l'autre), la rampe de la case où l'on est sert de repère : la pièce suivante va au bon niveau. Collé contre la ligne d'un mur (moins de 0,5 m), le mur va à la ligne suivante au lieu d'être refusé. Départ de l'Entraînement au milieu d'une case. |
+| **Résultat** | Même schéma qu'en v1.3 : +58 m en 10 s (v1.3 : +0,2 m). Avec les boutons : +60,7 m en 10 s, 16 rampes et 16 murs, jamais bloqué. |
+
+## 4. Édition plus rapide
+
+| | |
+|---|---|
+| **Fichier** | `index.html` : `startEdit()`, `cancelEdit()`, `updateEdit()` |
+| **Correction** | **Valider en relâchant** : on garde CASE (ou le clic), on glisse sur les cases, on relâche, c'est validé (réglable). Après l'édition, on revient en construction si on y était. ÉDITER trouve aussi son mur quand on le regarde en biais (avant : « VISE TON MUR OU TON SOL » si on n'était pas bien en face). |
+
+## 5. Entraînement, réglages, divers
+
+| | |
+|---|---|
+| **Entraînement** | Le banco affiche ∞ (il était déjà illimité mais affichait 500) et n'est plus décompté. Menu pause : **Effacer mes constructions** (sans explosion ni bruit pour chaque pièce). |
+| **Paramètres › Construction** (nouvel onglet) | Pose au toucher, validation de l'édition au relâchement, sensibilité de la caméra en construction et en édition (×0,5 à ×2), conseils. |
+| **Paramètres › Graphismes** | Limite d'images par seconde : 30, 60 ou aucune (30 = moins de chauffe et de batterie). |
+| **Invite de rebord** | Elle chevauchait les barres de vie sur téléphone (vu sur la capture de la v1.3) : placée au-dessus du bouton « prendre / porte ». Texte : « SAUT : se hisser » ou « SAUT : attraper le rebord ». |
+
+## 6. Pièces dessinées en instances
+
+| | |
+|---|---|
+| **Fichier** | `index.html` : `PINST`, `pinstAdd()`, `pinstColor()`, `pinstRemove()`, `pinstClear()`, boucle des pièces, `destroyPiece()`, `applyTiles()`, `warmGPU()` |
+| **Correction** | Une pièce terminée et non éditée rejoint un groupe d'instances par type : un appel de dessin pour tous les panneaux d'un type et un pour leurs cadres, quel que soit le nombre de pièces (jusqu'à 700 par type, au-delà la pièce garde son objet). Les dégâts (teinte plus sombre) et l'éclair de touche passent par la couleur de l'instance. Une pièce en construction (transparente) ou éditée garde son propre objet. La préparation GPU couvre aussi les pièces (transparentes, fantômes, instances, ombres). |
+| **Mesure** | Même vue, Basse : 34 appels sans pièce, **40 avec 160 pièces** (339 avant pour 160 pièces dans le premier relevé). Programmes GPU créés à la première pose et quand les pièces passent en instances : 0. |
+| **Bug trouvé** | La préparation GPU libérait les matières de test à la fin, ce qui supprimait aussi les shaders préparés : elles sont gardées. |
+
+## 7. Divers
+
+- Version 1.4 : titre, logo du lobby, nouveautés, `AndroidManifest.xml` (versionCode 14).
+- `tests/flows.cjs` : l'étape d'édition revient face au premier mur (face à une rampe, le mur irait maintenant au bout de la rampe, hors de portée d'édition).
+
+---
+
 # v1.3
 
 Base : v1.2 (commit `b1d9df5`, APK 1.2). Demandes : « quand je tourne la caméra, que le personnage tourne avec », « l'escalade doit se faire toujours au bord des murs des maisons, il ne faut pas qu'il grimpe », plus les problèmes que j'avais listés et que tu as validés (« vas-y attaque ça ») : à-coup à la première sortie d'une arme, trop d'appels de dessin en Basse, portes, rebords de toit, bots qui ne se cachent pas.

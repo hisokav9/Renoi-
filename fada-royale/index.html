@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>Fada Royale v1.3</title>
+<title>Fada Royale v1.4</title>
 <!-- three.js r160 est hébergé avec le jeu (dossier lib/) : plus besoin d'un CDN pour démarrer -->
 <script type="importmap">{"imports":{"three":"./lib/three/three.module.min.js","three/addons/":"./lib/three/addons/"}}</script>
 <script>
@@ -129,9 +129,13 @@ body.touch kbd{display:none}
 #bReload{right:132px;bottom:98px;width:50px;height:50px}
 #bBuild{right:34px;bottom:166px;width:58px;height:58px;font-size:22px!important}
 #bBuild.on{background:rgba(60,140,210,.7)!important}
-#pick{position:absolute;right:24px;bottom:236px;display:flex;gap:5px;pointer-events:auto}
-#pick button{width:56px;height:36px;border-radius:9px;background:rgba(25,14,4,.6);border:2px solid rgba(255,255,255,.35);font:900 12px Rubik;touch-action:none}
+/* v1.4 : les 4 pièces toujours à l'écran (tactile) : appui = construire, doigt gardé = pose en continu */
+#pick{position:absolute;right:20px;bottom:236px;display:flex;gap:6px;pointer-events:auto}
+#pick button{width:50px;height:50px;padding:0;border-radius:12px;background:rgba(25,14,4,.55);border:1.5px solid rgba(255,236,210,.5);color:#fff7ea;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;touch-action:none}
+#pick button .ic{width:24px;height:24px;stroke-width:1.9;filter:drop-shadow(0 1px 1px rgba(0,0,0,.6))}
+#pick button small{font:800 8px/1 Rubik;letter-spacing:.4px}
 #pick button.on{border-color:#8fd3ff;color:#8fd3ff;background:rgba(30,70,110,.7)}
+#pick button.act{background:rgba(60,140,210,.8);color:#fff}
 #bCrouch{right:190px;bottom:92px;width:54px;height:54px;font-size:11px!important}
 #bAim{right:160px;bottom:156px;width:50px;height:50px;font-size:20px!important}
 #bAim.on{background:rgba(242,140,40,.7)!important}
@@ -213,7 +217,7 @@ body.editing-hud #joy{opacity:.7!important}
 #take,#hint{position:absolute;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:8px;font:700 13px Rubik;background:rgba(16,11,6,.8);border:1px solid rgba(255,210,122,.75);border-radius:10px;padding:6px 12px;white-space:nowrap;text-shadow:0 1px 2px #000}
 #take{bottom:132px;pointer-events:auto}#take b{color:var(--acc2)}#take small{color:var(--dim);font-weight:600}
 #take .ic,#hint .ic{width:17px;height:17px;color:var(--acc2)}
-#hint{top:calc(50% + 62px);border-color:rgba(255,236,210,.35);font-weight:600;pointer-events:none}
+#hint{bottom:172px;border-color:rgba(255,236,210,.35);font-weight:600;pointer-events:none}
 .slot{border-bottom-width:4px!important}
 .slot b{white-space:nowrap;overflow:hidden;max-width:100%}
 
@@ -262,6 +266,10 @@ body.editing-hud #joy{opacity:.7!important}
 <symbol id="i-jump" viewBox="0 0 24 24"><path d="M6 12.5l6-6 6 6M6 19l6-6 6 6"/></symbol>
 <symbol id="i-crouch" viewBox="0 0 24 24"><path d="M6 5.5l6 6 6-6"/><path d="M4.5 18.5h15"/></symbol>
 <symbol id="i-fire" viewBox="0 0 24 24"><path d="M9 21V10.4C9 6.9 10.3 4 12 2.4c1.7 1.6 3 4.5 3 8V21z"/><path d="M9 16.8h6"/></symbol>
+<symbol id="i-pwall" viewBox="0 0 24 24"><rect x="4.5" y="4" width="15" height="16" rx="1"/><path d="M4.5 9.3h15M4.5 14.6h15M10 4v5.3M14 9.3v5.3M10 14.6V20"/></symbol>
+<symbol id="i-pramp" viewBox="0 0 24 24"><path d="M3 20h18V5z"/><path d="M8 20v-4.3M12.5 20v-8.2M16.8 20V8.6"/></symbol>
+<symbol id="i-pfloor" viewBox="0 0 24 24"><path d="M12 6.5l9.5 5-9.5 5-9.5-5z"/><path d="M7.2 9l9.6 5M16.8 9l-9.6 5"/></symbol>
+<symbol id="i-pcone" viewBox="0 0 24 24"><path d="M12 3.5l9.5 12.5-9.5 4.5-9.5-4.5z"/><path d="M12 3.5v17"/></symbol>
 <symbol id="i-place" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="9" rx="1.5"/><path d="M12 2.5v6M9 5.5l3 3 3-3"/></symbol>
 <symbol id="i-cell" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="1.6"/><path d="M3 12h18M12 3v18"/><path d="M12 12h9v9h-9z" fill="currentColor" stroke="none" opacity=".45"/></symbol>
 <symbol id="i-layout" viewBox="0 0 24 24"><rect x="3" y="3" width="7.5" height="7.5" rx="1.4"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.4"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.4"/><path d="M17.25 13.5v7.5M13.5 17.25H21"/></symbol>
@@ -337,16 +345,16 @@ body.editing-hud #joy{opacity:.7!important}
   <div class="tb" id="bAim"><svg class="ic"><use href="#i-scope"/></svg><small>VISER</small></div>
   <div class="tb" id="bEdit"><svg class="ic"><use href="#i-pencil"/></svg><small>ÉDITER</small></div>
   <div class="tb hidden" id="bEditReset"><svg class="ic"><use href="#i-undo"/></svg><small>RAZ</small></div>
-  <div id="pick" class="hidden"><button data-p="wall">MUR</button><button data-p="ramp">RAMPE</button><button data-p="floor">SOL</button><button data-p="cone">TOIT</button></div>
+  <div id="pick" class="hidden"><button data-p="wall"><svg class="ic"><use href="#i-pwall"/></svg><small>MUR</small></button><button data-p="ramp"><svg class="ic"><use href="#i-pramp"/></svg><small>RAMPE</small></button><button data-p="floor"><svg class="ic"><use href="#i-pfloor"/></svg><small>SOL</small></button><button data-p="cone"><svg class="ic"><use href="#i-pcone"/></svg><small>TOIT</small></button></div>
 </div>
 
 <div id="lobby" class="hidden"></div>
 
 <div id="settings" class="hidden"><div class="sbox">
   <div class="shead"><span><svg class="ic"><use href="#i-gear"/></svg> Paramètres</span><button id="sClose" aria-label="Fermer"><svg class="ic"><use href="#i-close"/></svg></button></div>
-  <div class="stabs"><button data-t="ctrl" class="on">Contrôles</button><button data-t="gfx">Graphismes</button><button data-t="snd">Son</button><button data-t="hud">HUD</button></div>
+  <div class="stabs"><button data-t="ctrl" class="on">Contrôles</button><button data-t="build">Construction</button><button data-t="gfx">Graphismes</button><button data-t="snd">Son</button><button data-t="hud">HUD</button></div>
   <div class="sbody" id="sBody"></div>
-  <div class="sfoot"><button class="big" id="sResume">REPRENDRE</button><button class="ghost" id="sQuit">Quitter la partie</button></div>
+  <div class="sfoot"><button class="big" id="sResume">REPRENDRE</button><button class="ghost hidden" id="sClear">Effacer mes constructions</button><button class="ghost" id="sQuit">Quitter la partie</button></div>
 </div></div>
 <div id="hudEdit" class="hidden"><div class="he-bar" id="heBar"><span id="heName">Touche un élément</span><label>Taille <input type="range" id="heSize" min="50" max="180" value="100"></label><button id="heReset">Réinitialiser</button><button id="heCancel">Annuler</button><button id="heSave">Enregistrer</button></div></div>
 <div id="end" class="hidden">
@@ -391,7 +399,8 @@ const IS_TOUCH = (()=>{ try{ const f=/[?&]touch=([01])/.exec(location.search); i
 // icônes du HUD : symboles SVG définis en tête de page (aucun emoji)
 const ico=(n,c)=>'<svg class="ic'+(c?' '+c:'')+'"><use href="#i-'+n+'"/></svg>';
 const V=(x=0,y=0,z=0)=>new THREE.Vector3(x,y,z);
-const SET_DEF={sens:1,adsSens:0.6,scopeSens:0.3,invertY:false,aimAssist:true,vibra:true,joyFixed:false,autoSprint:true,fov:70,res:100,viewDist:340,showFps:false,showStats:false,vol:80,sfx:100,amb:70,btnOp:100,btnScale:100,minimap:true,killfeed:true,dmgNums:true,layout:{}};
+const SET_DEF={sens:1,adsSens:0.6,scopeSens:0.3,invertY:false,aimAssist:true,vibra:true,joyFixed:false,autoSprint:true,fov:70,res:100,viewDist:340,showFps:false,showStats:false,vol:80,sfx:100,amb:70,btnOp:100,btnScale:100,minimap:true,killfeed:true,dmgNums:true,layout:{},
+  tapBuild:true,editRelease:true,buildSens:1,editSens:1,fpsCap:0}; // v1.4 : construction rapide, limite d'images (0 = aucune)
 const SET=Object.assign({},SET_DEF,(()=>{ try{ return JSON.parse(localStorage.getItem('fr_set')||'{}')||{}; }catch(e){ return {}; } })());
 if(!SET.layout||typeof SET.layout!=='object') SET.layout={};
 try{ if(/[?&]stats=1/.test(location.search)) SET.showStats=true; }catch(e){}
@@ -1389,13 +1398,23 @@ const GEO={wall:boxGeo(4,4,0.3).translate(0,2,0), floor:boxGeo(4,0.25,4).transla
 GEO.wallF=frameGeo('wall'); GEO.floorF=frameGeo('floor'); GEO.rampF=frameGeo('ramp'); GEO.coneF=frameGeo('cone');
 function dirFromYaw(yaw){ const fx=-Math.sin(yaw), fz=-Math.cos(yaw); if(Math.abs(fx)>Math.abs(fz)) return fx>0?1:3; return fz<0?0:2; }
 // placement à la visée (comme Fortnite) : le regard choisit le niveau
+// v1.4 : rampe sous les pieds : celle sur laquelle on marche ou, en l'air (saut d'une rampe à l'autre), celle de la case où l'on est
+function rampUnder(c,cx,cz){ const r=c.onRamp; if(r&&r.kind!=='cone'&&r.piece.alive&&r.cx===cx&&r.cz===cz) return r; if(c.grounded) return null;
+  for(const q of ramps){ if(q.kind!=='cone'&&q.cx===cx&&q.cz===cz&&q.piece.alive&&c.pos.y>q.lvl-0.3&&c.pos.y<q.lvl+5) return q; } return null; }
 function computePlacement(c,type,dir){
   const cx=Math.floor(c.pos.x/CELL), cz=Math.floor(c.pos.z/CELL); const [dx,dz]=DIRS[dir];
-  let lvl; const r=c.onRamp;
-  if(r && r.kind!=='cone' && r.piece.alive && r.cx===cx && r.cz===cz) lvl = (r.dir===dir) ? r.lvl+4 : r.lvl;
+  let lvl; const r=rampUnder(c,cx,cz), up=!!r&&r.dir===dir;
+  if(r) lvl = up ? r.lvl+4 : r.lvl;
   else lvl = Math.floor(c.pos.y/4+0.25)*4;
   const pit=c===player?camPitch:0;
-  if(type==='wall'){ const L=lvl+(pit>0.85?4:0); if(dx!==0){ const ex=cx+(dx>0?1:0); return {type,key:`w|x|${ex}|${cz}|${L}`,axis:'x',ex,cz,lvl:L}; } const ez=cz+(dz>0?1:0); return {type,key:`w|z|${cx}|${ez}|${L}`,axis:'z',cx,ez,lvl:L}; }
+  if(type==='wall'){ const L=lvl+(pit>0.85?4:0);
+    // v1.4 : en montée (sur sa rampe, face à la pente) ou juste devant une rampe qui monte dans le même sens, le mur va au BOUT de la
+    // rampe de devant : il la protège sans barrer le passage (mur + rampe, mur + rampe… pour monter vite)
+    let far=up&&pit<=0.85; if(!far&&!r&&pit<=0.85){ const q=pieces.get(`r|${cx+dx}|${cz+dz}|${lvl}`); far=!!(q&&q.alive&&q.ramp&&q.ramp.dir===dir); }
+    // collé contre la ligne du mur (moins de 0,5 m) : le mur se poserait dans le perso, on le met à la ligne suivante
+    if(!far){ const pl0=dx!==0?(cx+(dx>0?1:0))*4:(cz+(dz>0?1:0))*4, d0=dx!==0?Math.abs(c.pos.x-pl0):Math.abs(c.pos.z-pl0); if(d0<0.5) far=true; }
+    const bx=far?cx+dx:cx, bz=far?cz+dz:cz;
+    if(dx!==0){ const ex=bx+(dx>0?1:0); return {type,key:`w|x|${ex}|${bz}|${L}`,axis:'x',ex,cz:bz,lvl:L}; } const ez=bz+(dz>0?1:0); return {type,key:`w|z|${bx}|${ez}|${L}`,axis:'z',cx:bx,ez,lvl:L}; }
   if(type==='ramp'){ const tx=cx+dx, tz=cz+dz; return {type,key:`r|${tx}|${tz}|${lvl}`,cx:tx,cz:tz,lvl,dir}; }
   if(type==='cone'){ if(pit>0.15) return {type,key:`c|${cx}|${cz}|${lvl+4}`,cx,cz,lvl:lvl+4}; const tx=cx+dx,tz=cz+dz; return {type,key:`c|${tx}|${tz}|${lvl}`,cx:tx,cz:tz,lvl}; }
   if(pit>0.38) return {type,key:`f|${cx}|${cz}|${lvl+4}`,cx,cz,lvl:lvl+4};
@@ -1415,9 +1434,9 @@ function makePieceObj(type,pmat,fmat){
   return {obj:gr,panel,frame};
 }
 function createPiece(pl,owner){
-  const mat=(pl.type==='ramp'?MAT.pieceRamp:MAT.piece).clone(); mat.transparent=true; mat.opacity=0.3; if(pl.type==='cone') mat.side=THREE.DoubleSide;
+  const mat=(pl.type==='ramp'?MAT.pieceRamp:MAT.piece).clone(); mat.transparent=true; mat.opacity=0.3; if(pl.type==='cone'){ mat.side=THREE.DoubleSide; mat.forceSinglePass=true; } // une seule passe : pas de shader à préparer en pleine partie
   const po=makePieceObj(pl.type,mat,MAT.frame); const mesh=po.obj; placeMesh(mesh,pl);
-  const piece={type:pl.type,key:pl.key,hp:PIECE_HP[pl.type]*0.1,maxHp:PIECE_HP[pl.type],mat,solids:[],ramp:null,anim:0,flash:0,owner,alive:true,lvl:pl.lvl,build:0,buildTime:BUILD_T[pl.type],panel:po.panel};
+  const piece={type:pl.type,key:pl.key,hp:PIECE_HP[pl.type]*0.1,maxHp:PIECE_HP[pl.type],mat,solids:[],ramp:null,anim:0,flash:0,owner,alive:true,lvl:pl.lvl,build:0,buildTime:BUILD_T[pl.type],panel:po.panel,inst:null};
   if(pl.type==='ramp'){ const [dx,dz]=DIRS[pl.dir];
     piece.ramp={piece,kind:'ramp',cx:pl.cx,cz:pl.cz,x0:pl.cx*4,z0:pl.cz*4,dx,dz,ex:pl.cx*4+(dx<0?4:0),ez:pl.cz*4+(dz<0?4:0),lvl:pl.lvl,dir:pl.dir}; ramps.push(piece.ramp);
     piece.center=V(pl.cx*4+2,pl.lvl+2,pl.cz*4+2); }
@@ -1431,12 +1450,34 @@ function createPiece(pl,owner){
   piece.mesh=mesh; scene.add(mesh); pieces.set(pl.key,piece); pieceList.push(piece);
   setPieceScale(piece,0.05); return piece;
 }
+/* v1.4 : les pièces TERMINÉES (non éditées) sont dessinées en instances : un appel de dessin par type pour les panneaux et un pour
+   les cadres, quel que soit le nombre de pièces (avant : 1 à 2 appels par pièce, +241 appels pour 160 pièces). Une pièce en
+   construction (transparente, qui grandit) ou éditée garde son propre objet. */
+const PINST={}, PINST_MAX=700, _pcol=new THREE.Color();
+for(const t of ['wall','floor','ramp','cone']){ const pm=(t==='ramp'?MAT.pieceRamp:MAT.piece).clone(); if(t==='cone') pm.side=THREE.DoubleSide;
+  const panel=new THREE.InstancedMesh(GEO[t],pm,PINST_MAX), frame=new THREE.InstancedMesh(GEO[t+'F'],MAT.frame,PINST_MAX);
+  panel.setColorAt(0,_pcol.setRGB(1,1,1));
+  for(const m of [panel,frame]){ m.count=0; m.visible=false; m.frustumCulled=false; m.castShadow=m.receiveShadow=true; m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); scene.add(m); }
+  PINST[t]={panel,frame,items:[]}; }
+function pinstAdd(p){ const P=PINST[p.type]; if(P.items.length>=PINST_MAX){ p.noInst=true; return; }
+  const i=P.items.length; P.items.push(p); p.inst=i; p.mesh.scale.set(1,1,1); p.mesh.children[0].scale.set(1,1,1); p.mesh.updateMatrixWorld(true);
+  P.panel.setMatrixAt(i,p.panel.matrixWorld); P.frame.setMatrixAt(i,p.panel.matrixWorld); P.panel.count=P.frame.count=i+1; P.panel.visible=P.frame.visible=true;
+  P.panel.instanceMatrix.needsUpdate=P.frame.instanceMatrix.needsUpdate=true; p._ck=-1; pinstColor(p); scene.remove(p.mesh); }
+function pinstColor(p){ const k=0.55+0.45*p.hp/p.maxHp, ck=Math.round(k*200)+p.flash*1000; if(ck===p._ck) return; p._ck=ck; const P=PINST[p.type];
+  P.panel.setColorAt(p.inst,_pcol.setRGB(k+p.flash*0.5,k+p.flash*0.35,k+p.flash*0.2)); P.panel.instanceColor.needsUpdate=true; }
+const _pmat=new THREE.Matrix4();
+function pinstRemove(p){ const P=PINST[p.type], i=p.inst, last=P.items.length-1; if(i===null||i===undefined) return;
+  if(i!==last){ const q=P.items[last]; P.items[i]=q; q.inst=i; P.panel.getMatrixAt(last,_pmat); P.panel.setMatrixAt(i,_pmat); P.frame.setMatrixAt(i,_pmat); P.panel.getColorAt(last,_pcol); P.panel.setColorAt(i,_pcol); }
+  P.items.pop(); p.inst=null; P.panel.count=P.frame.count=P.items.length; P.panel.visible=P.frame.visible=P.items.length>0;
+  P.panel.instanceMatrix.needsUpdate=P.frame.instanceMatrix.needsUpdate=true; P.panel.instanceColor.needsUpdate=true; }
+function pinstClear(){ for(const t in PINST){ const P=PINST[t]; for(const q of P.items) q.inst=null; P.items.length=0; P.panel.count=P.frame.count=0; P.panel.visible=P.frame.visible=false; } }
 function setPieceScale(p,s){ if(p.type==='wall') p.mesh.scale.set(1,s,1); else if(p.type==='floor') p.mesh.scale.set(s,1,s); else if(p.type==='cone') p.mesh.scale.setScalar(s); else p.mesh.children[0].scale.setScalar(s); }
 function damagePiece(p,amt){ if(!p.alive) return; p.hp-=amt; p.flash=1; if(p.hp<=0) destroyPiece(p); }
-function destroyPiece(p){
-  if(!p.alive) return; p.alive=false; scene.remove(p.mesh); p.mat.dispose();
+function destroyPiece(p,quiet){
+  if(!p.alive) return; p.alive=false; if(p.inst!==null) pinstRemove(p); scene.remove(p.mesh); p.mat.dispose();
   for(const so of p.solids) removeSolid(so); p.solids=[]; if(p.edited){ scene.remove(p.panel); p.panel.geometry.dispose(); } if(p.ramp){ const i=ramps.indexOf(p.ramp); if(i>=0) ramps.splice(i,1); }
   pieces.delete(p.key); const i=pieceList.indexOf(p); if(i>=0) pieceList.splice(i,1);
+  if(quiet) return;
   for(let k=0;k<14;k++) spawnParticle(p.center.x+rnd(-1.5,1.5),p.center.y+rnd(-1.5,1.5),p.center.z+rnd(-1.5,1.5),rnd(-4,4),rnd(1,6),rnd(-4,4),k%3?0xc7743f:0x6b3a1e,rnd(0.6,1.1),1.6);
   sfxBreak(p.center.distanceTo(camera.position));
 }
@@ -1466,7 +1507,7 @@ function tryBuild(c,type,dir){
   if(pieces.has(pl.key)) return false;
   const why=placementProblem(pl);
   if(why){ if(c===player&&performance.now()-buildMsgT>900){ buildMsgT=performance.now(); showMsg(why==='joueur'?'QUELQU\'UN EST DANS LE PASSAGE':'IMPOSSIBLE ICI', why==='joueur'?'recule un peu pour poser':'la pièce serait sous le sable',0.9); } return false; }
-  createPiece(pl,c); c.banco-=10; c.buildCD=c===player?0.09:1.2; c.built++;
+  createPiece(pl,c); if(!(c===player&&matchMode==='train')) c.banco-=10; c.buildCD=c===player?0.05:1.2; c.built++;
   sfxBuild(c.pos.distanceTo(camera.position)); return true;
 }
 const ghosts={}; for(const k of ['wall','floor','ramp','cone']){ ghosts[k]=makePieceObj(k,MAT.ghost,MAT.ghost).obj; }
@@ -1479,6 +1520,7 @@ function tileBoxes(p){ const out=[];
   else { for(let r=0;r<2;r++) for(let c=0;c<2;c++){ if(!p.tiles[r*2+c]) continue; out.push([p.x0+c*2,p.lvl-0.25,p.z0+r*2,p.x0+(c+1)*2,p.lvl,p.z0+(r+1)*2]); } }
   return out; }
 function applyTiles(p){
+  if(p.inst!==null){ pinstRemove(p); scene.add(p.mesh); }
   for(const so of p.solids) removeSolid(so); p.solids=[]; if(p.panel.parent) p.panel.parent.remove(p.panel); if(p.edited) p.panel.geometry.dispose();
   const mg=new Merger();
   for(const b of tileBoxes(p)){ mg.add(boxGeo(b[3]-b[0],b[4]-b[1],b[5]-b[2]),M4((b[0]+b[3])/2,(b[1]+b[4])/2,(b[2]+b[5])/2)); p.solids.push(addSolid(b[0],b[1],b[2],b[3],b[4],b[5],{piece:p})); }
@@ -1492,11 +1534,12 @@ function startEdit(){
   if(!player||!player.alive||player.phase!=='ground') return;
   const o=editOrigin(); const h=rayCast(o,camFwd,7,player,true);
   let p=(h.type==='piece'&&h.obj.tiles&&h.obj.owner===player)?h.obj:null;
-  if(!p){ let bd=1e9; for(const q of pieceList){ if(!q.tiles||q.owner!==player||!q.alive) continue; _m.subVectors(q.center,player.pos); const d=_m.length(); if(d>5.5) continue; _m.y=0; _m.normalize(); const f=_m.x*-Math.sin(camYaw)+_m.z*-Math.cos(camYaw); if(f<0.35) continue; if(d<bd){ bd=d; p=q; } } }
+  // v1.4 : sinon, la pièce à soi la plus proche devant (même vue en biais) : score = distance, pénalisée quand elle est sur le côté
+  if(!p){ let bd=1e9; for(const q of pieceList){ if(!q.tiles||q.owner!==player||!q.alive) continue; _m.subVectors(q.center,player.pos); const d=_m.length(); if(d>5.5) continue; _m.y=0; _m.normalize(); const f=_m.x*-Math.sin(camYaw)+_m.z*-Math.cos(camYaw); if(f<0.1) continue; const sc=d*(1.5-f); if(sc<bd){ bd=sc; p=q; } } }
   if(!p){ showMsg('VISE TON MUR OU TON SOL','pour l\'éditer',1.1); return; }
-  if(buildMode) toggleBuild(false); editing={p,sel:p.tiles.map(t=>!t),paint:null,hover:-1}; refreshBuildUI(); tone(880,0.05,0.1,'triangle');
+  const wb=buildMode; if(buildMode) toggleBuild(false); editing={p,sel:p.tiles.map(t=>!t),paint:null,hover:-1,held:false,wasBuild:wb}; refreshBuildUI(); tone(880,0.05,0.1,'triangle');
 }
-function cancelEdit(){ editing=null; refreshBuildUI(); }
+function cancelEdit(){ const wb=editing&&editing.wasBuild; editing=null; if(wb&&player&&player.alive) buildMode=true; refreshBuildUI(); } // v1.4 : on revient en construction si on y était
 function confirmEdit(){ if(!editing) return; const p=editing.p; const keep=editing.sel.map(x=>!x);
   if(!keep.some(Boolean)){ showMsg('GARDE AU MOINS UNE CASE','',1); return; }
   if(p.alive && keep.some((k,i)=>k!==p.tiles[i])){ p.tiles=keep; applyTiles(p); sfxBuild(0); }
@@ -1509,8 +1552,8 @@ function hoverTile(){ const p=editing.p, o=editOrigin(), d=camFwd; let u,w,n,t;
 function updateEdit(){
   const p=editing.p; if(!p.alive||p.center.distanceTo(player.pos)>10||!player.alive){ cancelEdit(); return; }
   const hv=hoverTile(); editing.hover=hv;
-  if(firing){ if(editing.paint===null&&hv>=0){ editing.paint=!editing.sel[hv]; tone(editing.paint?660:520,0.04,0.08,'triangle'); } if(hv>=0&&editing.paint!==null&&editing.sel[hv]!==editing.paint){ editing.sel[hv]=editing.paint; tone(editing.paint?660:520,0.04,0.08,'triangle'); } }
-  else editing.paint=null;
+  if(firing){ if(editing.paint===null&&hv>=0){ editing.paint=!editing.sel[hv]; tone(editing.paint?660:520,0.04,0.08,'triangle'); } if(hv>=0&&editing.paint!==null&&editing.sel[hv]!==editing.paint){ editing.sel[hv]=editing.paint; tone(editing.paint?660:520,0.04,0.08,'triangle'); } if(editing.paint!==null) editing.held=true; }
+  else { editing.paint=null; if(editing.held&&SET.editRelease){ editing.held=false; confirmEdit(); if(!editing) return; } } // v1.4 : valider en relâchant
   const n=p.type==='wall'?3:2;
   for(let i=0;i<9;i++){ const m=editTiles[i]; if(i>=n*n){ m.visible=false; continue; } m.visible=true; const r=Math.floor(i/n), c=i%n;
     if(p.type==='wall'){ const t=4/3, y=p.lvl+(r+0.5)*t; if(p.axis==='z'){ m.position.set(p.x0+(c+0.5)*t,y,p.plane); m.scale.set(t-0.08,t-0.08,0.42); } else { m.position.set(p.plane,y,p.z0+(c+0.5)*t); m.scale.set(0.42,t-0.08,t-0.08); } }
@@ -2519,7 +2562,8 @@ addEventListener('keydown',e=>{ if(e.target&&e.target.tagName==='INPUT') return;
   keys[e.code]=true;
   if(state!=='play'&&state!=='bus') return;
   if(e.code==='Space'){ e.preventDefault(); if(player.phase==='bus') jumpFromBus(player); else jumpPressed=true; }
-  if(e.code==='KeyB'||e.code==='KeyG') toggleBuild();
+  if(e.code==='KeyB') toggleBuild();
+  { const PK={KeyQ:'wall',KeyZ:'floor',KeyV:'ramp',KeyG:'cone',F1:'wall',F2:'ramp',F3:'floor',F4:'cone'}[e.code]; if(PK){ e.preventDefault(); if(!e.repeat) pieceDown(PK,false); } } // v1.4
   const dg=['Digit1','Digit2','Digit3','Digit4','Digit5','Digit6'].indexOf(e.code);
   if(dg>=0){ if(buildMode){ if(dg<4) setBuildType(['wall','ramp','floor','cone'][dg]); } else selectSlot(dg); }
   if(e.code==='KeyE') interact();
@@ -2538,7 +2582,7 @@ canvas.addEventListener('mousedown',e=>{ if(e.sourceCapabilities&&e.sourceCapabi
   if(e.button===0){ if(player.phase==='bus') jumpFromBus(player); else firing=true; } if(e.button===2) ads=true; });
 addEventListener('mouseup',e=>{ if(e.button===0) firing=false; if(e.button===2) ads=false; });
 canvas.addEventListener('contextmenu',e=>e.preventDefault());
-function aimSens(){ return SET.sens*(ads?(isScoped()?SET.scopeSens:SET.adsSens):1); }
+function aimSens(){ return SET.sens*(editing?SET.editSens:buildMode?SET.buildSens:ads?(isScoped()?SET.scopeSens:SET.adsSens):1); }
 const invY=()=>SET.invertY?-1:1;
 addEventListener('mousemove',e=>{ if(state!=='play'&&state!=='bus') return; if(IS_TOUCH&&!document.pointerLockElement) return; const s=0.0024*aimSens(); camYaw-=e.movementX*s; camPitch=clamp(camPitch-e.movementY*s*invY(),-1.25,1.15); });
 addEventListener('wheel',e=>{ if(state!=='play') return; const dirn=e.deltaY>0?1:-1; if(buildMode){ const o=['wall','ramp','floor','cone']; let i=o.indexOf(buildType); setBuildType(o[(i+dirn+4)%4]); return; } const o=[0,1,2,3,4,5].filter(i=>i===0||player.slots[i-1]); let i=o.indexOf(player.sel); selectSlot(o[(i+dirn+o.length)%o.length]); },{passive:true});
@@ -2548,12 +2592,18 @@ function crouchPress(){ const p=player; if(!p||!p.alive||p.phase!=='ground'||p.s
   if(!p.crouch&&sp>4.6&&p.grounded){ p.slideT=1.0; p.crouch=true; p.sprint=false; sprintOn=false; p.slideDir.set(p.vel.x,0,p.vel.z).normalize(); sfxSlide(); addShake(0.025); return; }
   if(p.crouch){ if(canStand(p)) p.crouch=false; } else p.crouch=true; }
 function setBuildType(t){ buildType=t; refreshBuildUI(); }
-function toggleBuild(force){ const on = force===undefined ? !buildMode : force; if(on&&editing) confirmEdit(); buildMode=on; refreshBuildUI(); }
+// v1.4 : appui sur une pièce (bouton tactile ou touche) : passe en construction avec cette pièce ; si « poser au toucher »,
+// la pièce est posée tout de suite et tant que le doigt reste appuyé, une nouvelle pièce est posée dès que la case visée change
+let pieceHeld=null;
+function pieceDown(t,place){ const p=player; if(!p||!p.alive||p.phase!=='ground'||state!=='play') return; if(editing) confirmEdit(); setBuildType(t); if(!buildMode) toggleBuild(true);
+  if(place){ pieceHeld=t; p.buildCD=Math.min(p.buildCD,0); tryBuild(p,t,dirFromYaw(camYaw)); } }
+function pieceUp(t){ if(pieceHeld===t) pieceHeld=null; }
+function toggleBuild(force){ const on = force===undefined ? !buildMode : force; if(on&&editing) confirmEdit(); buildMode=on; if(!on) pieceHeld=null; refreshBuildUI(); }
 function refreshBuildUI(){ const ed=!!editing;
-  $('buildBar').classList.toggle('hidden',!buildMode||IS_TOUCH); $('pick').classList.toggle('hidden',!buildMode); $('bBuild').classList.toggle('on',buildMode);
+  $('buildBar').classList.toggle('hidden',!buildMode||IS_TOUCH); $('bBuild').classList.toggle('on',buildMode);
   $('bFire').classList.toggle('bmode',buildMode||ed); const fl=ed?'CASE':buildMode?'POSER':'TIRER'; if($('bFire').dataset.l!==fl){ $('bFire').dataset.l=fl; $('bFire').innerHTML=ico(ed?'cell':buildMode?'place':'fire')+'<small>'+fl+'</small>'; }
   $('bEdit').classList.toggle('on',ed); $('bEdit').innerHTML=ed?ico('check')+'<small>VALIDER</small>':ico('pencil')+'<small>ÉDITER</small>'; $('bEditReset').classList.toggle('hidden',!ed); $('editBar').classList.toggle('hidden',!ed); $('bAim').classList.toggle('hidden',ed||buildMode);
-  document.querySelectorAll('#buildBar div,#pick button').forEach(d=>d.classList.toggle('on',d.dataset.p===buildType)); $('cross').classList.toggle('build',buildMode||ed);
+  document.querySelectorAll('#buildBar div,#pick button').forEach(d=>d.classList.toggle('on',buildMode&&d.dataset.p===buildType)); $('cross').classList.toggle('build',buildMode||ed);
   if(!buildMode) for(const k in ghosts) ghosts[k].visible=false; if(!ed) for(const m of editTiles) m.visible=false; }
 // tactile
 const roles=new Map();
@@ -2569,7 +2619,9 @@ tbtn('bEdit',()=>startEdit());
 tbtn('bEditReset',()=>resetEdit());
 tbtn('bAim',()=>{ ads=!ads; $('bAim').classList.toggle('on',ads); });
 { const tk=$('take'); const f=e=>{ e.preventDefault(); e.stopPropagation(); interact(); }; tk.addEventListener('touchstart',f,{passive:false}); tk.addEventListener('click',f); }
-document.querySelectorAll('#pick button').forEach(b=>{ b.addEventListener('touchstart',e=>{ e.preventDefault(); e.stopPropagation(); setBuildType(b.dataset.p); },{passive:false}); b.addEventListener('click',()=>setBuildType(b.dataset.p)); });
+document.querySelectorAll('#pick button').forEach(b=>{ const t=b.dataset.p;
+  b.addEventListener('touchstart',e=>{ e.preventDefault(); e.stopPropagation(); for(const tc of e.changedTouches) roles.set(tc.identifier,{role:'pick',p:t,el:b,x:tc.clientX,y:tc.clientY}); b.classList.add('act'); pieceDown(t,SET.tapBuild); },{passive:false});
+  b.addEventListener('click',()=>{ if(!IS_TOUCH) pieceDown(t,false); }); });
 document.querySelectorAll('.slot').forEach(s=>{ const f=e=>{ e.preventDefault(); e.stopPropagation(); selectSlot(+s.dataset.s); }; s.addEventListener('touchstart',f,{passive:false}); s.addEventListener('click',f); });
 for(const [id,k] of [['mKil','kilishi'],['mThe','the']]){ const el=$(id); const f=e=>{ e.preventDefault(); e.stopPropagation(); useItem(player,k); }; el.addEventListener('touchstart',f,{passive:false}); el.addEventListener('click',f); }
 $('bJumpBus').addEventListener('click',()=>jumpFromBus(player));
@@ -2581,10 +2633,11 @@ addEventListener('touchstart',e=>{ if(actx&&actx.state!=='running'&&!paused&&!do
     else roles.set(t.identifier,{role:'look',x:t.clientX,y:t.clientY}); } },{passive:false});
 addEventListener('touchmove',e=>{ if(state==='menu'||uiBlock()) return; e.preventDefault(); for(const t of e.changedTouches){ const r=roles.get(t.identifier); if(!r) continue;
     if(r.role==='joy'){ let dx=t.clientX-joy.ox, dy=t.clientY-joy.oy; const d=Math.hypot(dx,dy), mx=55; if(d>mx){ dx*=mx/d; dy*=mx/d; } joy.x=dx/mx; joy.y=dy/mx; joyEl.firstElementChild.style.transform=`translate(${dx}px,${dy}px)`; }
-    else if(r.role==='look'||r.role==='bFire'){ const s=0.0055*aimSens(); camYaw-=(t.clientX-r.x)*s; camPitch=clamp(camPitch-(t.clientY-r.y)*s*invY(),-1.25,1.15); r.x=t.clientX; r.y=t.clientY; } } },{passive:false});
+    else if(r.role==='look'||r.role==='bFire'||r.role==='pick'){ const s=0.0055*aimSens(); camYaw-=(t.clientX-r.x)*s; camPitch=clamp(camPitch-(t.clientY-r.y)*s*invY(),-1.25,1.15); r.x=t.clientX; r.y=t.clientY; } } },{passive:false});
 function touchEnd(e){ for(const t of e.changedTouches){ const r=roles.get(t.identifier); if(!r) continue; roles.delete(t.identifier);
     if(r.role==='joy'){ joy.id=null; joy.x=joy.y=0; joyEl.style.opacity=SET.joyFixed?0.6:0; joyEl.firstElementChild.style.transform=''; }
     else if(r.role==='bFire'){ firing=false; }
+    else if(r.role==='pick'){ pieceUp(r.p); r.el.classList.remove('act'); }
     if(r.role&&r.role.startsWith('b')){ const el=$(r.role); if(el) el.classList.remove('act'); } } }
 addEventListener('touchend',touchEnd); addEventListener('touchcancel',touchEnd);
 
@@ -2625,7 +2678,7 @@ function updateCompass(){ const hd=((-camYaw*180/Math.PI)%360+360)%360, r=Math.r
 let hintT=0;
 function updateClimbHint(dt){ hintT-=dt; if(hintT>0) return; hintT=0.15; const p=player; let h='';
   if(p.alive&&p.phase==='ground'&&!buildMode&&!editing&&!p.mantle){ const W=wallAhead(p,-Math.sin(p.yaw),-Math.cos(p.yaw));
-    if(W){ const rise=W.top-p.pos.y; if(rise>STEP&&rise<=MANTLE_MAX+1.2&&canMantle(p,W)) h=(IS_TOUCH?ico('climb')+'SAUT':'<span class="key">Espace</span>')+(rise<=MANTLE_MAX?' se hisser':' sauter puis se hisser'); } }
+    if(W){ const rise=W.top-p.pos.y; if(rise>STEP&&rise<=MANTLE_MAX+1.2&&canMantle(p,W)) h=(IS_TOUCH?ico('climb')+'SAUT :':'<span class="key">Espace</span>')+(rise<=MANTLE_MAX?' se hisser':' attraper le rebord'); } }
   setTxt('hint',h); $('hint').classList.toggle('hidden',!h); }
 // silhouettes des armes (emplacements, fil des éliminations), rendues une fois depuis les vrais modèles 3D : vue de côté, canon à droite
 const WICON={};
@@ -2647,12 +2700,13 @@ function makeWeaponIcons(){
   renderer.setRenderTarget(prevRT); renderer.setClearColor(prevC,prevA); rt.dispose(); sc.overrideMaterial.dispose(); }
 function updateHUD(dt){
   const p=player;
+  { const pv=IS_TOUCH&&p.alive&&p.phase==='ground'&&!editing&&!paused; if(pv!==cache.pick){ cache.pick=pv; $('pick').classList.toggle('hidden',!pv); if(!pv) pieceHeld=null; } } // v1.4 : pièces toujours à l'écran au sol
   setTxt('aliveChip',ico('users')+'<b>'+aliveCount+'</b><small>en vie</small>'); setTxt('killChip',ico('elim')+'<b>'+p.kills+'</b><small>élim.</small>');
   let st; if(matchMode==='train') st=ico('target')+'Entraînement libre'; else if(storm.state==='wait') st=ico('wind')+'Harmattan dans <b>'+fmt(storm.timer)+'</b>'; else if(storm.state==='shrink') st=ico('wind')+'L\'harmattan avance <b>'+fmt(storm.timer)+'</b>'; else st=ico('wind')+'Tempête finale';
   setTxt('stormChip',st); $('stormChip').classList.toggle('danger',!!p.inStorm);
   $('shBar').firstElementChild.style.width=(p.shield/75*100)+'%'; setTxt('shNum',Math.ceil(p.shield));
   $('hpBar').firstElementChild.style.width=Math.max(0,p.hp)+'%'; setTxt('hpNum',Math.max(0,Math.ceil(p.hp))); $('hpBar').classList.toggle('low',p.hp<30);
-  setTxt('nBanco',p.banco); setTxt('nKil',p.kilishi); setTxt('nThe',p.the);
+  setTxt('nBanco',matchMode==='train'?'∞':p.banco); setTxt('nKil',p.kilishi); setTxt('nThe',p.the);
   $('mKil').classList.toggle('zero',p.kilishi<=0); $('mThe').classList.toggle('zero',p.the<=0);
   SLOT_EL.forEach(s=>{ const i=+s.dataset.s; const t=i===0?'daba':p.slots[i-1]; s.classList.toggle('on',!buildMode&&p.sel===i); s.classList.toggle('off',!t);
     const nm=t?WEAP[t].sn:'', W=t&&WEAP[t], rl=p.reloadT>0&&p.cur===t, low=W&&W.mag&&p.mag[t]<=Math.max(1,W.mag*0.25),
@@ -2720,7 +2774,7 @@ function updatePlayer(dt){
   else if(buildMode){ const pl=computePlacement(p,buildType,dirFromYaw(camYaw)); for(const k in ghosts) ghosts[k].visible=false; const gh=ghosts[buildType]; placeMesh(gh,pl); gh.visible=true;
     const why=pieces.has(pl.key)?'pris':p.banco<10?'banco':placementProblem(pl,p); const bad=!!why;
     if(gh._bad!==bad){ gh._bad=bad; gh.traverse(o=>{ if(o.isMesh) o.material=bad?MAT.ghostBad:MAT.ghost; }); }
-    if(firing) tryBuild(p,buildType,dirFromYaw(camYaw)); }
+    if(firing||pieceHeld) tryBuild(p,buildType,dirFromYaw(camYaw)); }
   else if(firing) playerFire();
   if(p.crouch!==cache.crouch){ cache.crouch=p.crouch; $('bCrouch').classList.toggle('on',p.crouch); }
   tryPickups(p);
@@ -2761,7 +2815,9 @@ function update(dt){
   for(const b of bots) if(b.alive) updateBot(b,dt);
   for(const c of chars) (c.model.real?(c.model.mx?animRealAnim:animReal):animChar)(c,dt);
   updateItems(dt); updateChests(dt); updateDebris(dt);
-  for(const p of pieceList){ if(p.anim<1){ p.anim=Math.min(1,p.anim+dt/0.16); setPieceScale(p,1-Math.pow(1-p.anim,3)); }
+  for(const p of pieceList){ if(p.inst!==null){ if(p.flash>0) p.flash=Math.max(0,p.flash-dt*6); pinstColor(p); continue; }
+    if(!p.edited&&!p.noInst&&p.build>=1&&p.anim>=1){ pinstAdd(p); if(p.inst!==null) continue; }
+    if(p.anim<1){ p.anim=Math.min(1,p.anim+dt/0.16); setPieceScale(p,1-Math.pow(1-p.anim,3)); }
     if(p.build<1){ const db=dt/p.buildTime; p.build=Math.min(1,p.build+db); p.hp=Math.min(p.maxHp,p.hp+p.maxHp*0.9*db); p.mat.opacity=0.3+0.7*Math.pow(p.build,1.6); if(p.build>=1){ p.mat.transparent=false; p.mat.opacity=1; p.mat.needsUpdate=true; } }
     if(p.flash>0) p.flash=Math.max(0,p.flash-dt*6); const k=0.55+0.45*p.hp/p.maxHp, bl=1-p.build;
     p.mat.color.setRGB(lerp(k,0.62,bl),lerp(k,0.85,bl),lerp(k,1,bl)); p.mat.emissive.setRGB(p.flash*0.5+bl*0.06,p.flash*0.35+bl*0.18,p.flash*0.2+bl*0.34); }
@@ -2780,7 +2836,7 @@ function update(dt){
 function updateStormVisualMenu(){ stormMesh.visible=false; stormInner.visible=false; }
 let last=performance.now();
 let fpsC=0, fpsT2=0, cpuAcc=0, gpuAcc=0;
-function loop(now){ requestAnimationFrame(loop); const dt=Math.min(0.05,(now-last)/1000); last=now;
+function loop(now){ requestAnimationFrame(loop); if(SET.fpsCap>0&&now-last<1000/SET.fpsCap-2) return; /* v1.4 : limite d'images */ const dt=Math.min(0.05,(now-last)/1000); last=now;
   const t0=performance.now(); if((!paused||state==='menu')&&!window.__freeze) update(dt); /* __freeze : tests pas à pas */ const t1=performance.now(); if(state==='menu'&&lobby) lobby.render(); else renderer.render(scene,camera); const t2=performance.now();
   if((state==='play'||state==='bus')&&!paused) adaptRes(dt);
   cpuAcc+=t1-t0; gpuAcc+=t2-t1; fpsC++; fpsT2+=dt;
@@ -2798,10 +2854,10 @@ Persos : avatar Ready Player Me, personnage Adobe Fuse / Mixamo<br>
 Animations : « Universal Animation Library » 1 et 2 par Quaternius — licence CC0 (domaine public)<br>
 Moteur 3D : three.js · Jeu : Fada Royale`;
 const HELP_HTML = IS_TOUCH
-  ? 'Joystick à gauche pour bouger · glisse à droite pour viser · TIRER (glisse dessus pour viser) · VISER : viser / lunette · ACCR. : s\'accroupir, en courant = glissade · SPRINT (ou joystick à fond) · SAUT face à un rebord : s\'y hisser · BÂTIR : construire (MUR, RAMPE, SOL, TOIT ; regarde en haut pour poser au-dessus) · ÉDITER : modifier ton mur · touche le kilishi ou le thé pour te soigner · près d\'une porte, touche OUVRIR LA PORTE.'
-  : '<b>ZQSD / WASD</b> bouger · <b>Souris</b> viser · <b>Clic</b> tirer · <b>Clic droit</b> viser de près · <b>Espace</b> sauter (face à un rebord : s\'y hisser) · <b>Maj</b> sprinter · <b>C</b> s\'accroupir (en courant = glissade) · <b>B</b> construire, puis <b>1 2 3 4</b> = mur, rampe, sol, toit (regarde en haut pour poser au-dessus) · <b>F</b> éditer / valider, <b>X</b> réinitialiser · <b>1 à 6</b> = daba + 5 armes · <b>E</b> prendre une arme, ouvrir / fermer une porte · <b>R</b> recharger · <b>H</b> kilishi · <b>T</b> thé';
+  ? 'Joystick à gauche pour bouger · glisse à droite pour viser · TIRER (glisse dessus pour viser) · VISER : viser / lunette · ACCR. : s\'accroupir, en courant = glissade · SPRINT (ou joystick à fond) · SAUT face à un rebord : s\'y hisser · MUR, RAMPE, SOL, TOIT (en haut à droite) : touche une pièce pour la poser, garde le doigt pour en poser à la chaîne en avançant (mur puis rampe, mur puis rampe… pour monter) ; regarde en haut pour poser au-dessus · touche ton arme pour quitter la construction · ÉDITER : modifier ton mur (relâche pour valider) · touche le kilishi ou le thé pour te soigner · près d\'une porte, touche OUVRIR LA PORTE.'
+  : '<b>ZQSD / WASD</b> bouger · <b>Souris</b> viser · <b>Clic</b> tirer · <b>Clic droit</b> viser de près · <b>Espace</b> sauter (face à un rebord : s\'y hisser) · <b>Maj</b> sprinter · <b>C</b> s\'accroupir (en courant = glissade) · pièces : <b>Q</b> mur, <b>V</b> rampe, <b>Z</b> sol, <b>G</b> toit (ou <b>F1 à F4</b> ; en AZERTY, Q et Z sont les touches A et W), <b>clic gardé</b> = pose en continu · <b>B</b> construction / arme (puis <b>1 2 3 4</b>) · <b>F</b> éditer / valider (relâcher le clic valide aussi), <b>X</b> réinitialiser · <b>1 à 6</b> = daba + 5 armes · <b>E</b> prendre une arme, ouvrir / fermer une porte · <b>R</b> recharger · <b>H</b> kilishi · <b>T</b> thé';
 document.body.classList.toggle('touch',IS_TOUCH);
-$('editBar').innerHTML = IS_TOUCH ? ico('pencil')+' ÉDITION · vise une case puis CASE · VALIDER pour finir' : ico('pencil')+' ÉDITION · vise une case puis clic · <b>F</b> valider · <b>X</b> réinitialiser';
+$('editBar').innerHTML = IS_TOUCH ? ico('pencil')+' ÉDITION · garde CASE et glisse sur les cases, relâche pour valider' : ico('pencil')+' ÉDITION · clic gardé sur les cases, relâche pour valider · <b>F</b> valider · <b>X</b> réinitialiser';
 /* =====================================================================
    PARAMÈTRES & ÉDITEUR DE HUD
    ===================================================================== */
@@ -2811,7 +2867,11 @@ const f2=v=>(+v).toFixed(2)+'×';
 const TABS={
   ctrl:[['html',HELP_HTML],['range','sens','Sensibilité caméra',0.3,2.5,0.05,f2],['range','adsSens','Sensibilité en visée',0.2,1.2,0.05,f2],['range','scopeSens','Sensibilité lunette (sniper)',0.1,0.8,0.05,f2],
     ['toggle','invertY',"Inverser l'axe vertical"],['toggle','aimAssist','Aide à la visée'],['toggle','vibra','Vibrations quand tu es touché'],['toggle','joyFixed','Joystick fixe (sinon il apparaît où tu poses le doigt)'],['toggle','autoSprint','Sprint auto quand le joystick est poussé à fond']],
-  gfx:[['quality'],['range','res','Résolution',50,100,5,v=>v+' %'],['range','fov','Champ de vision',55,95,1,v=>v+'°'],['range','viewDist','Distance de vue',180,450,10,v=>v+' m'],['toggle','showFps','Afficher les FPS'],['toggle','showStats','Stats techniques (CPU, draw calls, triangles)'],
+  build:[['toggle','tapBuild','Toucher une pièce la pose tout de suite (doigt gardé : pose en continu). Sinon : toucher une pièce la choisit, POSER la pose'],
+    ['toggle','editRelease',"Valider l'édition en relâchant le doigt (ou le clic)"],
+    ['range','buildSens','Sensibilité de la caméra en construction',0.5,2,0.05,f2],['range','editSens','Sensibilité de la caméra en édition',0.5,2,0.05,f2],
+    ['hint','Pour monter vite : avance et pose mur puis rampe, mur puis rampe. Le mur se place tout seul au bout de la rampe de devant. À l’Entraînement, le banco est illimité et le menu pause permet d’effacer tes constructions.']],
+  gfx:[['quality'],['range','res','Résolution',50,100,5,v=>v+' %'],['range','fov','Champ de vision',55,95,1,v=>v+'°'],['range','viewDist','Distance de vue',180,450,10,v=>v+' m'],['seg','fpsCap','Limite d’images par seconde (30 : moins de chauffe et de batterie)',[[30,'30'],[60,'60'],[0,'Aucune']]],['toggle','showFps','Afficher les FPS'],['toggle','showStats','Stats techniques (CPU, draw calls, triangles)'],
     ['hint','Basse : pas d’ombres, résolution ×1, 230 m de vue, effets réduits (téléphones modestes). Moyenne : ombres simples, ×1,5, 300 m. Haute : ombres douces, ×2, 400 m. Si ça rame encore : résolution 70 %.']],
   snd:[['range','vol','Volume général',0,100,1,v=>v+' %'],['range','sfx','Effets (tirs, construction)',0,100,1,v=>v+' %'],['range','amb',"Vent de l'harmattan",0,100,1,v=>v+' %']],
   hud:[['button',ico('layout')+'Personnaliser la disposition du HUD',()=>openHudEditor()],['hint','Déplace chaque bouton avec le doigt, change sa taille, puis Enregistrer.'],
@@ -2828,6 +2888,8 @@ function renderTab(t){ curTab=t; document.querySelectorAll('.stabs button').forE
       inp.addEventListener('change',()=>{ SET[key]=inp.checked; applySettings(key); saveSet(); }); }
     else if(type==='quality'){ d.className='srow col'; d.innerHTML='<div class="lab"><span>Profil graphique</span></div><div class="seg"><button data-q="low">Basse</button><button data-q="medium">Moyenne</button><button data-q="high">Haute</button></div>';
       d.querySelectorAll('button').forEach(b=>{ b.classList.toggle('on',b.dataset.q===quality); b.addEventListener('click',()=>{ setQuality(b.dataset.q); renderTab(curTab); }); }); }
+    else if(type==='seg'){ d.className='srow col'; d.innerHTML=`<div class="lab"><span>${label}</span></div><div class="seg">`+row[3].map(([v,t])=>`<button data-v="${v}">${t}</button>`).join('')+'</div>';
+      d.querySelectorAll('button').forEach(b=>{ b.classList.toggle('on',+b.dataset.v===SET[key]); b.addEventListener('click',()=>{ SET[key]=+b.dataset.v; saveSet(); applySettings(key); renderTab(curTab); }); }); }
     else if(type==='button'){ d.innerHTML=`<button class="sbtn ${row[3]||''}">${key}</button>`; d.firstElementChild.addEventListener('click',label); }
     else if(type==='hint'){ d.className='shint'; d.textContent=key; }
     else if(type==='html'){ d.className='shint'; d.innerHTML=key; }
@@ -2840,13 +2902,14 @@ function applySettings(key){
   applyLayout(SET.layout);
 }
 function openSettings(){ settingsOpen=true; const inGame=state==='play'||state==='bus'; paused=inGame; firing=false; for(const k in keys) keys[k]=false; joy.x=joy.y=0; joy.id=null; roles.clear();
-  syncAudio(); renderTab(curTab); $('settings').classList.remove('hidden'); $('sResume').textContent=inGame?'REPRENDRE':'FERMER'; $('sQuit').classList.toggle('hidden',!inGame);
+  syncAudio(); renderTab(curTab); $('settings').classList.remove('hidden'); $('sResume').textContent=inGame?'REPRENDRE':'FERMER'; $('sQuit').classList.toggle('hidden',!inGame); $('sClear').classList.toggle('hidden',!(inGame&&matchMode==='train'));
   try{ document.exitPointerLock&&document.exitPointerLock(); }catch(e){} }
 function closeSettings(){ settingsOpen=false; paused=false; syncAudio(); $('settings').classList.add('hidden');
   if(!IS_TOUCH&&(state==='play'||state==='bus')){ try{ const p=canvas.requestPointerLock(); if(p&&p.catch) p.catch(()=>{}); }catch(e){} } }
 document.querySelectorAll('.stabs button').forEach(b=>b.addEventListener('click',()=>renderTab(b.dataset.t)));
 $('sClose').addEventListener('click',()=>closeSettings()); $('sResume').addEventListener('click',()=>closeSettings());
 $('sQuit').addEventListener('click',()=>{ closeSettings(); goMenu(); });
+$('sClear').addEventListener('click',()=>{ let n=0; for(const q of [...pieceList]) if(q.owner===player){ destroyPiece(q,true); n++; } closeSettings(); showMsg('CONSTRUCTIONS EFFACÉES',n+' pièce'+(n>1?'s':''),1.4); }); // v1.4
 { const g=$('gear'); const f=e=>{ e.preventDefault(); e.stopPropagation(); if(!hudEditing) openSettings(); }; g.addEventListener('touchstart',f,{passive:false}); g.addEventListener('click',f); }
 document.addEventListener('pointerlockchange',()=>{ if(!document.pointerLockElement&&(state==='play'||state==='bus')&&!settingsOpen&&!hudEditing&&!endShown&&!IS_TOUCH&&player&&player.alive) openSettings(); });
 // --- disposition du HUD ---
@@ -2893,7 +2956,7 @@ addEventListener('beforeunload',e=>{ if((state==='play'||state==='bus')&&player&
 function goMenu(){ state='menu'; if(lobby) lobby.show(); $('end').classList.add('hidden'); $('hud').classList.add('hidden'); $('touch').classList.add('hidden'); try{ document.exitPointerLock&&document.exitPointerLock(); }catch(e){} for(const c of chars) c.model.g.visible=false; bus.g.visible=false; resize(); }
 function clearMatch(){
   for(const p of [...pieceList]){ p.alive=false; scene.remove(p.mesh); p.mat.dispose(); for(const so of p.solids) removeSolid(so); if(p.edited){ scene.remove(p.panel); p.panel.geometry.dispose(); } }
-  editing=null;
+  editing=null; pinstClear();
   pieceList.length=0; pieces.clear(); ramps.length=0;
   for(const it of items) scene.remove(it.g); items.length=0;
   for(const ch of chests) scene.remove(ch.g); chests.length=0;
@@ -2922,7 +2985,7 @@ function startMatch(mode){
   resize(); showMsg('FADA ROYALE',chars.length+' joueurs · que le meilleur gagne',2.2);
 }
 /* ---------- mode Entraînement : toutes les armes, banco illimité, mannequins, pas de tempête ---------- */
-const TRAIN_SPOT=[60,-40], DUMMIES=8;
+const TRAIN_SPOT=[62,-42], DUMMIES=8; // v1.4 : au milieu d’une case de construction (avant : sur un coin, le 1er mur était refusé)
 function setupTraining(){
   bus.active=false; bus.g.visible=false; $('busUI').classList.add('hidden');
   storm.state='done'; storm.phase=PHASES.length; storm.r=9999; storm.cx=0; storm.cz=0; stormMesh.visible=stormInner.visible=false;
@@ -2953,8 +3016,14 @@ function showEnd(win){
 }
 // v1.3 : derrière le fondu de lancement, on prépare les programmes GPU et on envoie les textures des armes, accessoires
 // et objets (sinon la première apparition d'une arme en partie provoquait un gel, visible en test par une image noire)
+const _t4=new THREE.Matrix4(), WARM_MATS=[]; // matières gardées : les libérer supprimerait aussi les shaders préparés
 function warmGPU(){ try{ const tmp=new THREE.Group(); for(const k in ASSETS.w) tmp.add(ASSETS.w[k].scene.clone()); for(const k in PROP3D) tmp.add(PROP3D[k].clone()); for(const k in OBJ3D) tmp.add(OBJ3D[k].clone());
-    tmp.position.copy(camera.position); scene.add(tmp); renderer.compile(scene,camera);
+    // v1.4 : pièces de construction (en cours de construction : transparentes ; fantômes vert et rouge), pour la 1re pose
+    const wmats=WARM_MATS; if(!wmats.length) for(const t of ['wall','floor','ramp','cone']){ const m=(t==='ramp'?MAT.pieceRamp:MAT.piece).clone(); m.transparent=true; m.opacity=0.5; if(t==='cone'){ m.side=THREE.DoubleSide; m.forceSinglePass=true; } wmats.push(m); } wmats.forEach((m,i)=>{ const t=['wall','floor','ramp','cone'][i]; tmp.add(makePieceObj(t,m,MAT.frame).obj); tmp.add(makePieceObj(t,MAT.ghost,MAT.ghost).obj); tmp.add(makePieceObj(t,MAT.ghostBad,MAT.ghostBad).obj); });
+    tmp.position.copy(camera.position); scene.add(tmp); for(const t in PINST){ PINST[t].panel.visible=PINST[t].frame.visible=true; } renderer.compile(scene,camera);
+    // une image dessinée (sous l'écran de transition) prépare aussi les variantes d'ombre (profondeur), que compile() ne fait pas
+    { const P0=PINST.wall; const hid=P0.items.length===0; if(hid){ P0.panel.count=P0.frame.count=1; P0.panel.setMatrixAt(0,_t4.makeTranslation(camera.position.x,camera.position.y-400,camera.position.z)); } renderer.render(scene,camera); if(hid){ P0.panel.count=P0.frame.count=0; } }
+    for(const t in PINST){ const P=PINST[t]; P.panel.visible=P.frame.visible=P.items.length>0; }
     tmp.traverse(o=>{ if(o.isMesh) [].concat(o.material).forEach(m=>{ for(const t of ['map','normalMap']) if(m[t]) renderer.initTexture(m[t]); }); });
     scene.remove(tmp); }catch(e){ console.warn('préparation GPU',e); } }
 function beforeLaunch(){ // pendant le clic : plein écran sur téléphone, souris verrouillée sur ordinateur
@@ -3002,7 +3071,7 @@ requestAnimationFrame(loop);
 loadAssets().then(()=>{ try{ makeWeaponIcons(); }catch(e){} initLobby(); goMenu(); try{ lobby.precompile(); lobby.warm(); lobby.render(); }catch(e){} requestAnimationFrame(()=>$('loading').remove()); }); // une image rendue derrière l'écran : ombres comprises
 
 // accès de débogage
-window.FR={get lobby(){return lobby;}, PROFILE, Profile, get matchMode(){return matchMode;}, get camPitch(){return camPitch;}, get sprintOn(){return sprintOn;}, setSprint:v=>{sprintOn=v;}, placementProblem, computePlacement, dirFromYaw, get camYaw(){return camYaw;}, SET, openSettings, closeSettings, openHudEditor, renderTab, get paused(){return paused;}, THREE, ASSETS, selectSlot, swapTake, giveWeapon, get nearItem(){return nearItem;}, setAds:v=>{ads=v;}, startEdit, confirmEdit, resetEdit, rayCast, crouchPress, get editing(){return editing;}, get state(){return state;}, get player(){return player;}, bots, chars, items, chests, pieces, housesInfo, doors:DOORS, setDoor, interact, hasLOS, findCover, storm, bus, startMatch, update, jumpFromBus:()=>jumpFromBus(player), tryBuild, setBuildType, toggleBuild, setFiring:v=>{firing=v;}, setCam:(y,p)=>{camYaw=y;camPitch=p;}, keys, renderer, scene, camera, get aliveCount(){return aliveCount;}, solids, terrainH};
+window.FR={get lobby(){return lobby;}, PROFILE, Profile, get matchMode(){return matchMode;}, get camPitch(){return camPitch;}, get sprintOn(){return sprintOn;}, setSprint:v=>{sprintOn=v;}, placementProblem, computePlacement, dirFromYaw, get camYaw(){return camYaw;}, SET, openSettings, closeSettings, openHudEditor, renderTab, get paused(){return paused;}, THREE, ASSETS, selectSlot, swapTake, giveWeapon, get nearItem(){return nearItem;}, setAds:v=>{ads=v;}, startEdit, confirmEdit, resetEdit, rayCast, crouchPress, get editing(){return editing;}, get state(){return state;}, get player(){return player;}, bots, chars, items, chests, pieces, housesInfo, doors:DOORS, setDoor, interact, hasLOS, findCover, storm, bus, startMatch, update, jumpFromBus:()=>jumpFromBus(player), tryBuild, setBuildType, toggleBuild, warmGPU, pieceDown, pieceUp, get buildMode(){return buildMode;}, get pieceHeld(){return pieceHeld;}, pieceList, PINST, setFiring:v=>{firing=v;}, setCam:(y,p)=>{camYaw=y;camPitch=p;}, keys, renderer, scene, camera, get aliveCount(){return aliveCount;}, solids, terrainH};
 </script>
 </body>
 </html>

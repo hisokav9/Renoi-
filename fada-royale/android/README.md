@@ -9,7 +9,7 @@ L'application est une WebView plein écran qui affiche le jeu web. Les fichiers 
 
 ## Installer sur le téléphone
 
-1. Copier `FadaRoyale-1.3.apk` sur le téléphone (ou l'ouvrir depuis le téléchargement).
+1. Copier `FadaRoyale-1.4.apk` sur le téléphone (ou l'ouvrir depuis le téléchargement).
 2. L'ouvrir. Android demande d'autoriser « l'installation d'applis inconnues » pour l'application qui l'ouvre (Fichiers, Chrome…) : accepter.
 3. Play Protect peut afficher un avertissement (application qui ne vient pas du Play Store) : « Installer quand même ».
 

@@ -36,12 +36,12 @@ const [,, base, threeDir, outDir, mode='desktop'] = process.argv;
     // armes
     FR.giveWeapon(p,'sniper'); FR.giveWeapon(p,'pompe'); FR.selectSlot(2); out.cur=p.cur; FR.setAds(true); run(10); out.scoped=!document.getElementById('scope').classList.contains('hidden'); FR.setAds(false); run(5);
     // construction : mur devant, rampe, sol, toit
-    FR.toggleBuild(true); const before=FR.pieces.size; const b0=p.banco;
+    FR.toggleBuild(true); const before=FR.pieces.size; const b0=p.banco; const yaw0=FR.camYaw;
     for (const t of ['wall','ramp','floor','cone']) { FR.setBuildType(t); FR.setFiring(true); run(4); FR.setFiring(false); run(3); FR.setCam(FR.camYaw+1.5708, -0.1); }
     out.built=(FR.pieces.size-before)+' pièces, banco '+b0+'→'+p.banco;
     FR.toggleBuild(false); run(60);
-    // édition d'un mur
-    FR.setCam(0,-0.05); FR.toggleBuild(true); FR.setBuildType('wall'); FR.setFiring(true); run(3); FR.setFiring(false); run(60); FR.toggleBuild(false);
+    // édition d'un mur : on revient face au premier mur (v1.4 : face à une rampe, le mur irait au bout de la rampe, hors de portée d'édition)
+    FR.setCam(yaw0,-0.05); FR.toggleBuild(true); FR.setBuildType('wall'); FR.setFiring(true); run(3); FR.setFiring(false); run(60); FR.toggleBuild(false);
     FR.startEdit(); out.editing=!!FR.editing; if(FR.editing){ FR.editing.sel[4]=true; FR.editing.sel[7]=true; FR.confirmEdit(); }
     out.afterEdit=!!FR.editing;
     run(30);

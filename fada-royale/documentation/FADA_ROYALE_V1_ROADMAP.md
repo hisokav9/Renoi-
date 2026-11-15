@@ -1,4 +1,4 @@
-# Fada Royale — Feuille de route (mise à jour v1.3)
+# Fada Royale — Feuille de route (mise à jour v1.4)
 
 Classée par priorité. Chaque point dit pourquoi il compte et ce qu'il demande. Les points réglés sont indiqués avec leur version.
 
@@ -12,7 +12,7 @@ Classée par priorité. Chaque point dit pourquoi il compte et ce qu'il demande.
 
 4. **IA** : monter à l'étage des maisons (v1.1 : ils entrent par la porte mais restent au rez-de-chaussée), se hisser sur les rebords comme le joueur (v1.3 : le joueur seulement), utilisation des rampes et des escaliers de toit, ~~se mettre à couvert derrière les murets~~ (fait en v1.3 : pour recharger, se soigner ou quand ils sont touchés ; reste : tirer en sortant de l'abri, fermer les portes derrière eux), niveaux de difficulté (facile / normal / difficile) choisis dans le lobby, variété de comportements (prudent, agressif).
 5. **Combat** : ~~animations de rechargement par arme~~ (fait en v1.1), recul visuel de l'arme plus marqué, impacts sur les constructions, sons enregistrés au lieu de sons synthétisés.
-6. **Construction** : aperçu fantôme plus lisible au soleil, rotation des rampes au doigt, édition des toits (cônes), sons de pose par matériau.
+6. **Construction** : v1.4 : pièces toujours à l'écran, pose au toucher et en continu, mur au bout de la rampe pour monter, édition au relâchement, pièces en instances. Reste : visée de la grille au regard (comme les jeux du genre, au lieu de « case du joueur + direction »), virages à 90° en montant (enchaînement mur / sol / rampe en tournant), rotation des rampes, édition des rampes et des toits, modes d'entraînement à la construction (duel en boîte, parcours chronométré), touches modifiables et manette, aperçu fantôme plus lisible au soleil, sons de pose par matériau.
 7. **Animation de victoire** dans le lobby après un TOP 1 (aucun clip disponible : en ajouter un depuis une bibliothèque CC0).
 8. ~~**Transitions d'armes**~~ : rangement puis sortie animés en v1.1.
 8 bis. **Maisons** : vraies fenêtres (ouvertures qui laissent passer la lumière et les balles), ~~portes qui s'ouvrent et se ferment~~ (fait en v1.3), meubles qui servent de couvert, portes qu'on peut casser.

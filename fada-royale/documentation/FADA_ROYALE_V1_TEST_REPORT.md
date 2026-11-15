@@ -1,5 +1,53 @@
 # Fada Royale — Rapport de tests
 
+# v1.4
+
+Mêmes conditions que la v1.3 (Chromium sans écran, rendu logiciel SwiftShader, réseau externe coupé, boucle figée). Le nouveau test simule un Pixel 7 en paysage et appuie sur les vrais boutons tactiles. Pas de test sur un vrai téléphone.
+
+## Construction en solo (`tests/build.cjs`, nouveau)
+
+| Vérification | Résultat |
+|---|---|
+| Barre de pièces | Visible au sol, 4 boutons, dans l'écran, ne chevauche aucun autre bouton |
+| Un appui sur MUR | Passe en construction et pose 1 mur |
+| Montée mur + rampe en courant (appuis alternés, 10 s) | +4,1 / +10,4 / +16,7 / … / **+60,7 m**, 0 seconde sans monter, 16 rampes et 16 murs |
+| Même montée sur la **v1.3** (mode construction, POSER gardé, rampe et mur en alternance) | **+0,2 m en 10 s** : bloqué par le mur posé devant la rampe. Même schéma sur la v1.4 : +58 m |
+| Doigt gardé sur RAMPE en avançant 3 s | 7 rampes, +15,9 m ; la pose s'arrête quand on relâche |
+| Puis doigt gardé sur SOL 2 s | 4 sols : le perso finit sa rampe puis avance sur un pont à hauteur constante (+22,8 m) |
+| Boîte autour de soi (un appui MUR par direction + TOIT) | 4 murs sur les 4 côtés de sa case, toit au-dessus |
+| Édition (ÉDITER, CASE gardé, relâché) | Ouverte, validée au relâchement, une case retirée, retour en construction |
+| « Poser au toucher » désactivé | L'appui choisit la pièce et passe en construction, 0 pièce posée |
+| Clavier | V : construction + rampe ; Q : mur |
+| Entraînement | Banco affiché ∞ ; « Effacer mes constructions » visible dans le menu pause : 49 pièces → 0 |
+| Appels de dessin (même vue, Basse) | 34 sans pièce, **40 avec 160 pièces terminées** |
+| Invite de rebord | Ne chevauche plus les barres de vie |
+
+**Autres mesures**
+- Appels de dessin, autre vue (tour de pièces devant le joueur, Basse) : 98 sans pièce ; 160 pièces : **339 avant** les instances, **99 après** ; 235 pièces : 99.
+- Programmes GPU créés en partie à la première pose (pièces transparentes) puis quand les pièces passent en instances : 0 (après la préparation GPU de l'écran de transition).
+
+**Problèmes trouvés et corrigés pendant les tests**
+- **Premier mur refusé à l'Entraînement** : le joueur apparaissait sur un coin de case, pile sur la ligne du mur. Départ déplacé au milieu d'une case, et un mur qui tomberait dans le perso passe à la ligne suivante.
+- **Test de pose en continu sur SOL** : au ras du sol, les sols tombent sous le sable (grille de 4 m) et sont refusés, comme avant. Le test pose donc d'abord des rampes, puis un pont de sols en hauteur.
+- **ÉDITER ne trouvait pas un mur vu en biais** (« VISE TON MUR OU TON SOL ») : relevé par `flows.cjs` selon l'endroit d'atterrissage. Corrigé (la pièce la plus proche devant, même de biais).
+- **Shaders des pièces préparés puis supprimés** : la préparation GPU libérait ses matières de test, ce qui effaçait aussi les shaders (5 programmes recompilés à la première pose). Corrigé.
+- `flows.cjs` : l'étape d'édition posait un mur face à une éventuelle rampe ; avec la v1.4 ce mur va au bout de la rampe, hors de portée. Le test revient face au premier mur.
+
+## Non-régression
+
+| Test | Résultat v1.4 |
+|---|---|
+| `sim.cjs` | 3 parties complètes (fin à 302, 309 et 249 s) : 0 erreur, 0 NaN |
+| `flows.cjs` ordinateur et téléphone | Tout passe : tir, lunette, construction (3 ou 4 pièces selon l'atterrissage), édition, kilishi (75 PV), pause, fin, rejouer, retour. Sur ordinateur, une capture a dépassé 30 s quand trois tests tournaient en même temps ; relancé seul : passe |
+| `houses.cjs` | Identique à la v1.3 (porte, escalier, pas de grimpe, rebord en sautant, caméra 0°, muret, 12 bots sur 12 entrent) |
+| `animtest.cjs` Boss | 14 situations, aucun NaN, quaternions normés ; rotation cumulée de −19° à +42° ; buste ≤ 18° par image ; bras ≤ 36° |
+| `lobbytest.cjs` ordinateur | Tout passe |
+| `fixes2.cjs`, `ddatest.cjs`, `decals.cjs` | TOP 1 à 100 PV ; 0 différence sur 3 000 rayons ; 10 impacts pour 10 balles |
+| `hud.cjs` | Ordinateur et téléphone : aucune erreur ; barre de pièces en haut à droite |
+| `cover.cjs` | 8 bots sur 10 se cachent (11/12 et 9/10 en v1.3 : même variation d'un lancement à l'autre) |
+
+---
+
 # v1.3
 
 Mêmes conditions que la v1.2 (Chromium sans écran, rendu logiciel SwiftShader, réseau externe coupé, boucle figée pour les tests image par image). Pas de test sur un vrai téléphone.
