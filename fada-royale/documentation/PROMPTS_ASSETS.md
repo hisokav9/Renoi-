@@ -2,6 +2,8 @@
 
 **État (v1.2)** : armes (sauf revolver), kilishi, verre de thé, théière, textures (sol, banco, enduit, wax) et illustration de chargement sont **dans le jeu**. Il reste : le revolver barillet fermé, la daba en houe (facultatif), et de vrais persos 3D (voir section 3).
 
+**Décor réaliste** (maisons, arbres, animaux, rochers, sols, ciel, carte) : voir `PROMPTS_DECOR.md`, avec la vue du ciel de la carte dans `guides/`.
+
 Ce qui aiderait vraiment le jeu, par ordre d'importance. Les prompts sont en anglais (les générateurs 3D et d'images les comprennent mieux) ; l'explication est en français.
 
 Quand tu as un résultat, envoie-moi le fichier (GLB pour la 3D, PNG pour les images) : je l'intègre, je le règle (taille, prise en main, chargeur qui tombe…) et je vérifie qu'il ne ralentit pas le jeu.

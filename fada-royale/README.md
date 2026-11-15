@@ -54,6 +54,7 @@ Options dans l'adresse :
 
 - `documentation/FADA_ROYALE_V1_CHANGELOG.md` commence par la v1.5 (mur dans le vide, idées de l'autre version), puis la v1.4 (construction rapide), puis la v1.3 (caméra, se hisser, portes, couvert des bots, fluidité), la v1.2, la v1.1 et la v1.0.
 - `documentation/PROMPTS_ASSETS.md` : prompts pour générer les modèles 3D et images qui manquent (armes sans problème de licence, accessoires, persos, textures).
+- `documentation/PROMPTS_DECOR.md` : prompts pour un décor réaliste (kits de maisons, arbres, animaux, rochers, sols, ciel, carte illustrée, bannières des villes) ; `documentation/guides/` : vue du ciel de la vraie carte, avec et sans noms.
 
 - `documentation/FADA_ROYALE_V1_AUDIT.md` : structure du projet, diagnostic du bug du buste qui tournait à 360° (cause démontrée), risques, plan de tests.
 - `documentation/FADA_ROYALE_V1_CHANGELOG.md` : chaque modification (problème, cause, fichiers, correction, test, résultat, ce qui reste).
