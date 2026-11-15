@@ -1,4 +1,4 @@
-# Fada Royale — v1.2
+# Fada Royale — v1.3
 
 Battle royale du Sahel en 3D (three.js), jouable dans le navigateur sur PC et téléphone.
 20 joueurs (toi + 19 bots), taxi-brousse volant, harmattan qui se resserre, construction en banco, carte du Niger de 480 m de côté.
@@ -23,8 +23,9 @@ Options dans l'adresse :
 
 ## Ce qu'il y a dedans
 
-- **Nouveau en v1.2** : armes créées pour le jeu (fusil d'assaut, mitraillette, pompe, sniper, mitrailleuse, daba ; chargeurs réels au rechargement), persos Touareg, Garde du W et Commerçante construits sur les corps 3D animés, textures de sol, banco, enduit et wax tirées des images du jeu, service à thé dans le lobby, illustration sur l'écran de chargement.
-- **v1.1** : maisons ouvertes (on entre par la porte, butin et coffres à l'intérieur, étage avec escalier dans les maisons hautes), escalade (se hisser sur un rebord, grimper aux murs), rechargement propre à chaque arme (chargeur, barillet, bande, cartouche par cartouche), culasse et pompe animées, revolver à une main hors combat, kilishi et thé animés, parapente qui s'ouvre au-dessus de la tête, personnage qui se tourne vers où il va, HUD refait (icônes dessinées pour le jeu, silhouettes des armes, boussole), polices incluses (plus besoin d'Internet).
+- **Nouveau en v1.3** : le perso se tourne avec la caméra même à l'arrêt ; plus de grimpe le long des murs, on se hisse seulement sur un rebord à portée de main (muret, mur, toit) ; portes de maisons qui s'ouvrent et se ferment (E ou bouton OUVRIR LA PORTE), ouvertes aussi par les bots ; bots qui se mettent à couvert pour recharger ou se soigner ; plus d'à-coup à la première sortie d'une arme, moins d'appels de dessin en Basse.
+- **v1.2** : armes créées pour le jeu (fusil d'assaut, mitraillette, pompe, sniper, mitrailleuse, daba ; chargeurs réels au rechargement), persos Touareg, Garde du W et Commerçante construits sur les corps 3D animés, textures de sol, banco, enduit et wax tirées des images du jeu, service à thé dans le lobby, illustration sur l'écran de chargement.
+- **v1.1** : maisons ouvertes (on entre par la porte, butin et coffres à l'intérieur, étage avec escalier dans les maisons hautes), escalade (se hisser sur un rebord, grimper aux murs ; remplacée en v1.3 par « se hisser » seulement), rechargement propre à chaque arme (chargeur, barillet, bande, cartouche par cartouche), culasse et pompe animées, revolver à une main hors combat, kilishi et thé animés, parapente qui s'ouvre au-dessus de la tête, personnage qui se tourne vers où il va, HUD refait (icônes dessinées pour le jeu, silhouettes des armes, boussole), polices incluses (plus besoin d'Internet).
 
 - **Lobby 3D** : perso en vedette sur une estrade sahélienne, modes de jeu (Battle Royale, Entraînement), personnages, boutique locale (tenues, planeurs, cadres), missions du jour et de la semaine, profil avec statistiques réelles. Tout est enregistré sur l'appareil ; les cauris se gagnent en jouant, aucun achat réel.
 - **Carte** : Niamey et le pont Kennedy, Agadez (fort et Grande Mosquée), Zinder, Maradi, Dosso, Kouré, Ténéré, Arlit (mine d'uranium), Ayorou, Tahoua, Diffa et le lac Tchad, Parc du W, Tillabéri, massif de l'Aïr, fleuve Niger.
@@ -49,7 +50,7 @@ Options dans l'adresse :
 
 ## Documentation
 
-- `documentation/FADA_ROYALE_V1_CHANGELOG.md` commence par la v1.1 (maisons, escalade, armes, animations, HUD), puis la v1.0.
+- `documentation/FADA_ROYALE_V1_CHANGELOG.md` commence par la v1.3 (caméra, se hisser, portes, couvert des bots, fluidité), puis la v1.2, la v1.1 et la v1.0.
 - `documentation/PROMPTS_ASSETS.md` : prompts pour générer les modèles 3D et images qui manquent (armes sans problème de licence, accessoires, persos, textures).
 
 - `documentation/FADA_ROYALE_V1_AUDIT.md` : structure du projet, diagnostic du bug du buste qui tournait à 360° (cause démontrée), risques, plan de tests.

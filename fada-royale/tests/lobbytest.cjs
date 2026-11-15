@@ -19,7 +19,7 @@ const [,, base, outDir, mode='desktop'] = process.argv;
   await click('.lb-tabs [data-cat="weapons"]'); await click('.lb-card[data-item="weapon_sniper"]'); await shot('5-boutique-armes');
   await click('#lbNav [data-p="missions"]'); await shot('6-missions');
   await click('#lbNav [data-p="events"]'); await shot('7-evenements');
-  await click('#lbNav [data-p="profile"]'); await page.fill('#lbPseudo', 'Samir'); await page.press('#lbPseudo', 'Enter'); await shot('8-profil');
+  await click('#lbNav [data-p="profile"]'); await page.fill('#lbPseudo', 'Testeur'); await page.press('#lbPseudo', 'Enter'); await shot('8-profil');
   console.log('pseudo:', await page.evaluate(() => window.FR.PROFILE.name + ' / stockage: ' + JSON.parse(localStorage.getItem('fr_profile')).name));
   await click('#lbPClose'); await click('#play'); await shot('9-modes');
   await page.click('.lb-mcard[data-mode="duo"]', { force: true }); const tst = await page.textContent('#lbToast'); console.log('mode indisponible ->', tst);

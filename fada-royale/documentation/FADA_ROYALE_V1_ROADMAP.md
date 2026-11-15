@@ -1,21 +1,21 @@
-# Fada Royale — Feuille de route (mise à jour v1.2)
+# Fada Royale — Feuille de route (mise à jour v1.3)
 
-Classée par priorité. Chaque point dit pourquoi il compte et ce qu'il demande. Les points réglés en v1.1 sont indiqués.
+Classée par priorité. Chaque point dit pourquoi il compte et ce qu'il demande. Les points réglés sont indiqués avec leur version.
 
 ## Priorité 1 — à faire avant une diffusion publique
 
-1. **Mesurer sur de vrais téléphones Android** (entrée de gamme, milieu de gamme). Ouvrir le jeu avec `?stats=1`, noter FPS, temps de rendu, appels de dessin, triangles en Basse / Moyenne / Haute, au lobby, à l'atterrissage et en fin de partie. Les tests actuels utilisent un rendu logiciel : ils valident la logique, pas la vitesse réelle.
+1. **Mesurer sur de vrais téléphones Android** (entrée de gamme, milieu de gamme). Ouvrir le jeu avec `?stats=1`, noter FPS, temps de rendu, appels de dessin, triangles en Basse / Moyenne / Haute, au lobby, à l'atterrissage et en fin de partie. Les tests actuels utilisent un rendu logiciel : ils valident la logique, pas la vitesse réelle. (v1.3 : à-coup de la première arme supprimé, Basse ramenée à 75–105 appels de dessin à l'endroit mesuré ; à confirmer sur téléphone.)
 2. **Licences des modèles 3D** : réglé en v1.2 pour le fusil, la mitraillette, le pompe, le sniper, la mitrailleuse et la daba (modèles créés pour le jeu). **Reste le revolver** (Colt, auteur non crédité) : il faut une image du revolver barillet fermé (prompt dans `PROMPTS_ASSETS.md`). Anciennement : MP5 et fusil à pompe sous CC BY-NC (pas d'usage commercial) ; sniper, Minimi et Colt sans auteur crédité. À remplacer par des modèles CC0 / CC BY ou faits maison avant tout usage commercial ou lien avec Renoi Studio. Les prompts de génération sont prêts dans `PROMPTS_ASSETS.md` (avec pièces séparées pour animer le vrai chargeur).
 3. **Poids des persos** : la Guerrière fait ≈ 21 000 triangles, le Boss ≈ 12 000 ; 20 persos proches = jusqu'à 290 000 triangles même en Basse. Préparer des versions allégées (LOD de maillage : ≈ 3 000 à 5 000 triangles) avec un outil comme gltf-transform `simplify`, chargées pour les bots lointains.
 
 ## Priorité 2 — qualité de jeu
 
-4. **IA** : monter à l'étage des maisons et grimper (v1.1 : ils entrent par la porte mais restent au rez-de-chaussée), utilisation des rampes et des escaliers de toit, se mettre à couvert derrière les murets, niveaux de difficulté (facile / normal / difficile) choisis dans le lobby, variété de comportements (prudent, agressif).
+4. **IA** : monter à l'étage des maisons (v1.1 : ils entrent par la porte mais restent au rez-de-chaussée), se hisser sur les rebords comme le joueur (v1.3 : le joueur seulement), utilisation des rampes et des escaliers de toit, ~~se mettre à couvert derrière les murets~~ (fait en v1.3 : pour recharger, se soigner ou quand ils sont touchés ; reste : tirer en sortant de l'abri, fermer les portes derrière eux), niveaux de difficulté (facile / normal / difficile) choisis dans le lobby, variété de comportements (prudent, agressif).
 5. **Combat** : ~~animations de rechargement par arme~~ (fait en v1.1), recul visuel de l'arme plus marqué, impacts sur les constructions, sons enregistrés au lieu de sons synthétisés.
 6. **Construction** : aperçu fantôme plus lisible au soleil, rotation des rampes au doigt, édition des toits (cônes), sons de pose par matériau.
 7. **Animation de victoire** dans le lobby après un TOP 1 (aucun clip disponible : en ajouter un depuis une bibliothèque CC0).
 8. ~~**Transitions d'armes**~~ : rangement puis sortie animés en v1.1.
-8 bis. **Maisons** : vraies fenêtres (ouvertures qui laissent passer la lumière et les balles), portes qui s'ouvrent et se ferment, meubles qui servent de couvert.
+8 bis. **Maisons** : vraies fenêtres (ouvertures qui laissent passer la lumière et les balles), ~~portes qui s'ouvrent et se ferment~~ (fait en v1.3), meubles qui servent de couvert, portes qu'on peut casser.
 
 ## Priorité 3 — contenu et lobby
 

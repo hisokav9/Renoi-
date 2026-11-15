@@ -1,5 +1,72 @@
 # Fada Royale — Journal des modifications
 
+# v1.3
+
+Base : v1.2 (commit `b1d9df5`, APK 1.2). Demandes : « quand je tourne la caméra, que le personnage tourne avec », « l'escalade doit se faire toujours au bord des murs des maisons, il ne faut pas qu'il grimpe », plus les problèmes que j'avais listés et que tu as validés (« vas-y attaque ça ») : à-coup à la première sortie d'une arme, trop d'appels de dessin en Basse, portes, rebords de toit, bots qui ne se cachent pas.
+Mesures : scripts de `tests/` (nouveau : `cover.cjs` ; `houses.cjs` complété), détail dans `FADA_ROYALE_V1_TEST_REPORT.md`.
+
+## 1. Le perso se tourne avec la caméra
+
+| | |
+|---|---|
+| **Problème** | À l'arrêt, le perso gardait son orientation quand on tournait la caméra : on voyait son flanc ou son visage. |
+| **Fichier** | `index.html` : `updatePlayer()` (orientation), `animRealAnim()` |
+| **Correction** | À l'arrêt, le perso suit l'angle de la caméra (rotation amortie, environ 0,3 s pour un demi-tour). En combat il reste face à la visée, en déplacement il court vers où il va (comme en v1.1). Quand il pivote sur place, les jambes font quelques pas au lieu de glisser. |
+| **Test** | `houses.cjs` 3d : caméra tournée de 92° à l'arrêt, écart restant après 1 s : 0°. |
+
+## 2. Se hisser seulement sur un rebord (plus de grimpe)
+
+| | |
+|---|---|
+| **Problème** | Depuis la v1.1, le perso grimpait le long des façades jusqu'au toit. |
+| **Fichier** | `index.html` : bloc « se hisser sur un rebord » (`wallAhead()`, `canMantle()`, `startMantle()`, `updateMantle()`, `tryMantle()`, `mantleHands()`), invite `updateClimbHint()`, aide ; supprimés : `updateClimb()`, `CLIMB_UP`, `CLIMB_LAT`, état `climb` |
+| **Correction** | Le perso saisit le **bord** d'un muret, d'un mur ou d'un toit quand ses mains l'atteignent, puis se hisse dessus. Au sol : saut face à un rebord de 0,6 à 2,35 m. En l'air (saut, chute) : en allant vers le mur, dès que le rebord est à portée de main (2,35 m au-dessus des pieds), donc jusqu'à environ 3,6 m en sautant. Plus haut, rien ne se passe : il faut l'escalier. L'invite affiche « se hisser » ou « sauter puis se hisser ». |
+| **Test** | `houses.cjs` 3 (mur de maison de 5,9 m : il ne grimpe plus, reste au sol), 3c (rebord à 2,53 m saisi en sautant), 4 (muret franchi). |
+| **Limite** | Les bots ne se hissent pas (ils contournent ou passent par les escaliers et les portes). |
+
+## 3. Plus d'à-coup à la première sortie d'une arme
+
+| | |
+|---|---|
+| **Problème** | La première fois qu'une arme, un objet (kilishi, thé) ou une texture apparaissait, le téléphone devait préparer ses shaders et ses textures pendant la partie : image figée (écran noir constaté avec le pompe). |
+| **Fichier** | `index.html` : `warmGPU()` (nouveau), passée au lobby comme `precompile` ; `src/lobby/lobby.js` l'appelle au lancement d'une partie, pendant l'écran de transition |
+| **Correction** | Toutes les armes, pièces et objets sont préparés une fois hors écran pendant l'écran de transition (shaders compilés, textures envoyées à la carte graphique), avant que la partie s'affiche. |
+| **Test** | Nombre de programmes GPU compilés à la première sortie de chacune des 6 armes : 0 (tous préparés avant). |
+
+## 4. Moins d'appels de dessin en Basse
+
+| | |
+|---|---|
+| **Fichier** | `index.html` : `Q` (nouveaux réglages `chestVis`, `itemVis`, `giraffe`), `updateChests()`, `updateItems()`, `updateGiraffes()`, `updateTracers()`, `CHEST_GEO`, `buildBus()` |
+| **Correction** | Coffres, butin au sol et girafes ne sont plus dessinés au-delà d'une distance qui dépend de la qualité (Basse : 65 m, 60 m, 90 m ; Moyenne : 100, 90, 140 ; Haute : 150, 110, 220). Traçantes cachées quand elles sont éteintes (elles étaient dessinées vides). Coffre en un seul objet (corps et couvercle fusionnés). Taxi-brousse fusionné en 3 objets. |
+| **Mesure** | Même endroit, 10 bots proches, 4 directions de caméra, Basse : 166 à 323 appels avant, 75 à 105 après. |
+
+## 5. Portes et toits
+
+| | |
+|---|---|
+| **Fichier** | `index.html` : `buildHouseShell()` (battant), `buildDoors()`, `doorMatrix()`, `resetDoors()`, `setDoor()`, `updateDoors()`, `doorNear()`, `interact()`, `botOpen()`, `addHouse()` (rebords de toit), HUD `#take`, icône `i-door` |
+| **Correction** | Les portes des 100 maisons ouvertes sont de vrais battants : fermées au début de la partie, elles bloquent le passage et les balles. Touche **E** ou bouton **OUVRIR LA PORTE** quand on est devant (l'arme au sol reste prioritaire). Ouverture animée (0,3 s) avec un petit bruit de porte (synthétisé). Une porte ne se referme pas sur quelqu'un (« LA PORTE EST BLOQUÉE »). Les bots ouvrent les portes pour entrer et sortir. Toutes les portes sont dessinées en un seul appel. Les parapets des toits (0,5 m) ont maintenant une collision : ils arrêtent les balles et servent d'abri sur le toit (on les enjambe toujours), et c'est sur eux que les mains se posent quand on se hisse sur un toit. |
+| **Test** | `houses.cjs` 1 (porte fermée au départ, elle bloque, s'ouvre avec E, on entre), 5 (12 bots sur 12 entrent par la porte). |
+| **Limite** | Les bots laissent les portes ouvertes derrière eux. |
+
+## 6. Bots qui se mettent à couvert
+
+| | |
+|---|---|
+| **Fichier** | `index.html` : `findCover()`, `pathBlocked()` (nouveaux), `botThink()`, `updateBot()`, `hasLOS()`, `Char.reset()` |
+| **Correction** | Quand un bot recharge, se soigne, ou vient d'être touché avec peu de vie, il cherche un obstacle à moins de 16 m qui le cache de sa cible (muret, mur, rocher…) : derrière l'obstacle ou au ras de ses coins, sur le même niveau, pas dans une autre maison, avec un chemin libre (il contourne l'obstacle par le coin le plus court). Il y court en visant sa cible, s'accroupit derrière un abri bas, puis ressort au bout de 2,5 à 4,5 s quand il n'en a plus besoin. S'il est coincé plus d'une seconde, il abandonne cet abri et en cherche un autre. Sans abri autour, il ne recherche pas avant 1,2 s (économie de calcul). |
+| **Ligne de vue** | Elle vise maintenant le torse (1,2 m debout, 0,75 m accroupi) : derrière un muret, un perso accroupi n'est plus repéré, même si le haut de sa tête dépasse. Ça vaut aussi pour toi. |
+| **Bug trouvé** | La recherche d'obstacles réutilisait la liste de la grille de collisions pendant que les tests de place et de chemin la réécrivaient : la plupart des abris étaient sautés sans raison. La liste est maintenant copiée. |
+| **Test** | `cover.cjs` : bot qui recharge face au joueur à 3 m d'un muret : 11 sur 12 puis 9 sur 10 (deux lancements) se cachent en 0,1 à 2,5 s et restent cachés au moins 60 % du temps restant. Ceux qui restent à découvert n'ont pas trouvé d'abri à portée. Au premier essai, avant les corrections : 4 sur 10. |
+
+## 7. Divers
+
+- Version 1.3 : titre, logo du lobby, nouveautés du lobby, `AndroidManifest.xml` (versionCode 13).
+- Test du lobby : pseudo de test neutre (« Testeur »).
+
+---
+
 # v1.2
 
 Base : v1.1 (APK 1.1). Matière fournie : 7 armes, 6 pièces détachables, kilishi, verre de thé, théière, matériau banco, 3 persos « 2.5D », 5 images (illustration, rue de village, motif wax, sable, enduit). Demande : « les personnages sont pas terribles, est-ce que tu peux arranger ça ».

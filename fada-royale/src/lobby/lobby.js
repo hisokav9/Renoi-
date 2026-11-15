@@ -255,7 +255,7 @@ export function createLobby(ctx) {
     <button data-p="profile">${ico('profile')}<span>Profil</span></button>
   </nav>
   <div class="lb-home" id="lbHome">
-    <div class="lb-logo"><div class="lb-flag"><i></i><i></i><i></i></div><h1>FADA<br>ROYALE</h1><p><b>v1.2</b>Le battle royale du Sahel</p></div>
+    <div class="lb-logo"><div class="lb-flag"><i></i><i></i><i></i></div><h1>FADA<br>ROYALE</h1><p><b>v1.3</b>Le battle royale du Sahel</p></div>
     <div class="lb-who"><small>Ton personnage</small><b id="lbCharName">—</b><span class="lb-hint">${ctx.IS_TOUCH ? 'Glisse pour le tourner · pince pour zoomer' : 'Glisse pour le tourner · molette pour zoomer'}</span></div>
     <div class="lb-playbox"><button class="lb-mode" id="lbModeBtn"><small>Mode</small><b id="lbModeName">Battle Royale · Solo</b>${ico('chev')}</button>
       <button class="lb-play" id="play">JOUER</button></div>
@@ -363,13 +363,19 @@ export function createLobby(ctx) {
   // --- événements
   function htmlEvents() {
     return `<div class="lb-ev"><b>Aucun événement en cours</b><p>Les événements (défis à durée limitée, récompenses spéciales) arriveront dans une prochaine version. Rien n’est simulé ici.</p></div>
+      <h3>Nouveautés de la v1.3</h3><ul class="lb-list">
+      <li><b>Caméra :</b> ton perso se tourne avec la caméra, même à l’arrêt.</li>
+      <li><b>Se hisser :</b> plus de grimpe le long des murs. Saute face à un muret, un mur ou un toit : si le bord est à portée de main, tu t’y hisses.</li>
+      <li><b>Portes :</b> les portes des maisons s’ouvrent et se ferment (bouton OUVRIR LA PORTE, ou E). Les bots les ouvrent aussi.</li>
+      <li><b>Bots plus malins :</b> ils se mettent à couvert pour recharger ou se soigner, et s’accroupissent derrière les murets.</li>
+      <li><b>Plus fluide :</b> plus d’à-coup à la première sortie d’une arme, moins d’objets à dessiner en qualité Basse.</li></ul>
       <h3>Nouveautés de la v1.2</h3><ul class="lb-list">
       <li><b>Nouvelles armes</b> créées pour le jeu : fusil d’assaut, mitraillette, pompe, sniper, mitrailleuse et daba, avec leurs vrais chargeurs au rechargement.</li>
       <li><b>Nouveaux persos :</b> le Touareg (chèche indigo), le Garde du W (chapeau de brousse), la Commerçante (foulard et tenue en wax).</li>
       <li><b>Décors :</b> sol en sable et cailloux, murs en banco et en enduit, motif wax, service à thé dans le lobby, nouvel écran de chargement.</li></ul>
       <h3>Nouveautés de la v1.1</h3><ul class="lb-list">
       <li><b>Maisons ouvertes :</b> entre par la porte, fouille l’intérieur et l’étage des grandes maisons.</li>
-      <li><b>Escalade :</b> saute face à un mur pour te hisser ou grimper jusqu’au toit.</li>
+      <li><b>Escalade :</b> saute face à un mur pour te hisser (remplacée en v1.3 : on se hisse seulement sur un rebord à portée).</li>
       <li><b>Armes :</b> rechargement propre à chaque arme, culasse du sniper, pompe, revolver à une main.</li>
       <li><b>Kilishi et thé</b> animés, parapente qui s’ouvre au-dessus de la tête, déplacements plus naturels.</li>
       <li><b>Nouveau HUD :</b> icônes, silhouettes des armes, boussole.</li></ul>

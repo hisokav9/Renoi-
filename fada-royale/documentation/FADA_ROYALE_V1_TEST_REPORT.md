@@ -1,5 +1,49 @@
 # Fada Royale — Rapport de tests
 
+# v1.3
+
+Mêmes conditions que la v1.2 (Chromium sans écran, rendu logiciel SwiftShader, réseau externe coupé, boucle figée pour les tests image par image). Pas de test sur un vrai téléphone.
+
+## Nouveautés
+
+| Test | Résultat v1.3 |
+|---|---|
+| `houses.cjs` 1 : porte | Fermée au départ, elle bloque le joueur ; ouverte avec E (`interact`), le joueur entre (sol 2,72 m) |
+| `houses.cjs` 3 : mur de maison | Mur de 5,9 m : le perso ne grimpe plus, il reste au sol |
+| `houses.cjs` 3c : se hisser en sautant | Rebord à 2,53 m au-dessus du sol : saisi en sautant, le perso finit dessus |
+| `houses.cjs` 3d : caméra | Caméra tournée de 92° à l'arrêt : le perso s'aligne, écart restant après 1 s : 0° |
+| `houses.cjs` 4 : muret | Franchi (sol 1,2 m → haut du muret 2,3 m) |
+| `houses.cjs` 5 : bots et portes | 12 bots sur 12 ouvrent la porte et entrent (3,7 à 5,3 s, départ derrière la maison) |
+| `cover.cjs` (nouveau) | Bot qui recharge (4 s) face au joueur à 14 m, à 3 m d'un muret, vu du joueur au départ. Deux lancements : **11 sur 12**, puis **9 sur 10** après les dernières retouches (le nombre d'essais varie : un essai ne compte que si le joueur voit le bot au départ). Premier lancement : 11 sur 12 se cachent (après 0,1 à 1,7 s) et restent cachés au moins 60 % du temps restant (10 d'entre eux : 100 %). Le 12e n'a pas trouvé d'abri à portée et reste à découvert. Abris choisis : 6 hauts, 4 bas (accroupi) ; un bot sans abri choisi s'est retrouvé caché en se déplaçant |
+| Préparation GPU | Programmes GPU compilés à la première sortie de chacune des 6 armes (fusil, pompe, sniper, mitraillette, mitrailleuse, daba) : 0 (107 après le lobby, 124 en partie, tous créés avant) |
+| Appels de dessin, Basse | Même endroit (Agadez), 10 bots de 8 à 110 m, 4 directions : 75, 86, 80 et 105 appels (166 à 323 mesurés au même endroit avant les changements) |
+
+**Problèmes trouvés et corrigés pendant les tests**
+- **Abris ignorés** : au premier essai, 4 bots sur 10 seulement se cachaient. En cherchant pourquoi : `findCover` parcourait la liste renvoyée par la grille de collisions, et les tests de place et de chemin appelés dans la boucle réécrivaient cette même liste. Corrigé (copie de la liste) : 7 sur 11.
+- **Bots accroupis comptés comme visibles** : la ligne de vue visait 1,2 m même sur un perso accroupi (sa tête). Elle vise maintenant le torse : 8 sur 10.
+- **Bots coincés au coin d'un enclos** : le chemin vérifié était la ligne droite, alors que le bot contourne l'obstacle par un coin. Le chemin réel est vérifié, et un bot qui ne se rapproche plus pendant 1 s change d'abri : 11 sur 11, puis 11 sur 12 avec le test plus strict (rester caché).
+- **Mesure des à-coups** : chronométrer le rendu image par image ne marche pas en rendu logiciel. Après environ 65 images, chaque image passe de 3 ms à 430 ms, avec n'importe quelle arme et même sans changer d'arme. C'est le rendu logiciel qui rattrape son retard, pas le jeu. La vérification se fait donc en comptant les shaders compilés (ligne « Préparation GPU »).
+
+## Non-régression
+
+| Test | Résultat v1.3 |
+|---|---|
+| `animtest.cjs` Boss | 14 situations, aucun NaN, quaternions normés ; rotation cumulée de la poitrine de −15° à +25° ; buste ≤ 18° par image ; bras ≤ 37° |
+| `animtest.cjs` Guerrière | Rotation cumulée de −10° à +42° (42° = coups de daba) ; buste ≤ 20° par image ; bras ≤ 39° ; aucun NaN |
+| `sim.cjs` | 3 parties complètes : 0 erreur, 0 NaN, fin à 216 s pour la dernière (1 survivant) |
+| `flows.cjs` ordinateur et téléphone | Tir, lunette, construction (3 pièces), édition, kilishi (75 PV), pause, fin de partie, rejouer, retour : tout passe. Sur ordinateur, une capture a dépassé 30 s quand trois tests tournaient en même temps ; relancé seul : passe |
+| `lobbytest.cjs` ordinateur | Tout passe (persos, pseudo, mode refusé, partie, +118 XP / +11 cauris, entraînement, quitter) |
+| `fixes2.cjs` | TOP 1 : 100 PV avant et après |
+| `ddatest.cjs` | 3 000 rayons, 0 différence (2 523 boîtes, portes et parapets compris) |
+| `decals.cjs` | 10 impacts pour 10 balles, lumière du coup de feu active en Moyenne |
+| `housestats.cjs` | 100 maisons ouvertes (23 à étage), hauteur sous plafond ≥ 3,65 m, marche la plus haute 0,51 m |
+| `reloads.cjs` | Planches de rechargement refaites ; pompe : cartouches une par une, tir qui interrompt le rechargement |
+| `hud.cjs` | Ordinateur et téléphone : aucune erreur |
+| `probe.cjs` | Lobby : images de 2 à 5 ms. Lancement : une image longue pendant l'écran de transition (création de la partie et préparation GPU), puis 2 à 138 ms en rendu logiciel |
+| `profiles.cjs` | Basse 61 appels, Moyenne 145, Haute 162 à l'endroit d'atterrissage de ce lancement (mesure variable d'un lancement à l'autre, voir v1.2) |
+
+---
+
 # v1.2
 
 Mêmes conditions que la v1.1 (Chromium sans écran, rendu logiciel SwiftShader, réseau externe coupé, boucle figée pour les tests image par image). Pas de test sur un vrai téléphone.
@@ -127,7 +171,7 @@ Les deux formats : atterrissage, tir (cadence respectée), changement d'arme, lu
 |---|---|
 | Le lobby s'affiche, perso 3D visible | Oui (captures) |
 | Sélection et équipement d'un perso | Guerrière équipée et enregistrée |
-| Pseudo conservé | « Samir » dans le profil et dans le stockage local |
+| Pseudo conservé | « Testeur » dans le profil et dans le stockage local |
 | Boutique (tenues, planeurs, armes), missions, événements, profil | Affichés, aperçus 3D sur l'estrade |
 | Mode indisponible | Refusé : « Duo : en développement, pas encore jouable. » |
 | JOUER → partie | Lancée avec le bon perso et le bon pseudo, HUD affiché, lobby masqué |

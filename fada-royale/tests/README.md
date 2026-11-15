@@ -29,7 +29,8 @@ Les scripts v1.1 figent la boucle du jeu (`window.__freeze = true`) et avancent 
 | `tris.cjs` | Répartition des triangles par catégorie (persos, décor, terrain, végétation…) | `node tests/tris.cjs URL br` |
 | `profiles.cjs` | Appels de dessin et triangles des profils Basse / Moyenne / Haute, dans la même partie au même endroit | `node tests/profiles.cjs URL` |
 | `probe.cjs` | Durée de chaque image dans le lobby et au lancement (repère les saccades) | `node tests/probe.cjs URL` |
-| `houses.cjs` | **v1.1** : entrer par la porte, escalier intérieur jusqu'à l'étage, escalade d'un mur jusqu'au toit, se hisser sur un muret, bots qui vont chercher du butin dans une maison (départ derrière) ; captures | `node tests/houses.cjs URL /tmp/out` |
+| `houses.cjs` | **v1.1, revu en v1.3** : porte fermée au départ qui bloque puis s'ouvre avec E, escalier intérieur jusqu'à l'étage, mur de maison trop haut (pas de grimpe), rebord saisi en sautant, perso qui suit la caméra à l'arrêt, se hisser sur un muret, bots qui ouvrent la porte pour chercher du butin dans une maison (départ derrière) ; captures | `node tests/houses.cjs URL /tmp/out` |
+| `cover.cjs` | **v1.3** : un bot qui recharge face au joueur, près d'un muret, va-t-il se cacher (le joueur ne voit plus son torse) et y rester ? Hasard fixé, 12 essais | `node tests/cover.cjs URL` |
 | `housestats.cjs` | **v1.1** : toutes les maisons ouvertes : nombre, étages, hauteur sous plafond, dénivelé devant la porte, hauteur des marches | `node tests/housestats.cjs URL` |
 | `reloads.cjs` | **v1.1** : planches d'images des rechargements de chaque arme, culasse du sniper, kilishi, thé, changement d'arme ; cartouches du pompe une par une et tir qui interrompt | `node tests/reloads.cjs URL /tmp/out boss` puis `python3 tests/planche.py /tmp/out boss` |
 | `hud.cjs` | **v1.1** : captures du HUD en partie sur ordinateur et téléphone (Pixel 7 paysage) | `node tests/hud.cjs URL /tmp/out` |
