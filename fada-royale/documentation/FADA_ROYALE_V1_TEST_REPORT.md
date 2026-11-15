@@ -45,6 +45,7 @@ Mêmes conditions que la v1.3 (Chromium sans écran, rendu logiciel SwiftShader,
 | `fixes2.cjs`, `ddatest.cjs`, `decals.cjs` | TOP 1 à 100 PV ; 0 différence sur 3 000 rayons ; 10 impacts pour 10 balles |
 | `hud.cjs` | Ordinateur et téléphone : aucune erreur ; barre de pièces en haut à droite |
 | `cover.cjs` | 8 bots sur 10 se cachent (11/12 et 9/10 en v1.3 : même variation d'un lancement à l'autre) |
+| APK 1.4 | Signature v2 vérifiée, même certificat que la 1.0 à 1.3 (`3DB2BF18…`), version 1.4 (code 14), 4,4 Mo ; jeu extrait de l'APK et servi comme dans l'application, hors ligne : 37 fichiers servis, 0 introuvable, 0 erreur JavaScript, partie lancée |
 
 ---
 
