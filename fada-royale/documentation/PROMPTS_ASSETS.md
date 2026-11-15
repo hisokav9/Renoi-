@@ -26,6 +26,21 @@ Le MP5 et le fusil à pompe actuels sont sous licence CC BY-NC (interdits en usa
 | Mitrailleuse | `Low-poly game-ready light machine gun, generic belt-fed design, olive and black finish, folding bipod, carry handle, ammunition box as a separate part, 1.0 m long, PBR textures, no logos, no text` |
 | Daba (outil de récolte) | `Low-poly game-ready Sahelian daba hoe, hand-forged iron blade, curved wooden handle with leather wrap, traditional Niger farming tool, 0.9 m long, PBR textures` |
 
+### Étape 2 : passer les images en 3D
+
+Les images des 7 armes sont faites (merci). Une image n'est pas encore un modèle 3D : il faut la convertir avec un outil « image to 3D » (Tripo, Meshy, Hunyuan3D…). Plusieurs ont une offre gratuite (vérifier sur leur site).
+
+- Je fournis les images **découpées sur fond transparent**, chaque arme séparée de sa pièce détachable (chargeur, garde-main, culasse, caisse de munitions). Convertir **chaque fichier séparément**.
+- Réglages : une seule image, textures oui (PBR si proposé), 5 000 à 10 000 faces pour une arme, 1 000 à 3 000 pour une pièce (« low poly » si l'option existe), export **GLB**.
+- Garder les noms : `fusil-arme.glb`, `fusil-piece1.glb`, etc.
+
+**Deux images à refaire avant la conversion :**
+
+| Image | Problème | Prompt |
+|---|---|---|
+| Revolver | Le barillet est dessiné **ouvert** : en 3D, l'arme resterait ouverte en permanence. Il faut le revolver fermé, et le barillet seul à part (pour l'animation de rechargement). | Revolver : `Low-poly game-ready six-shot revolver, same design as the reference, cylinder CLOSED inside the frame, steel frame with worn bluing, wooden grip, side view, plain light grey background, no logos, no text` · Barillet seul : `Low-poly game prop, a single six-shot revolver cylinder with its crane arm, worn blued steel, three-quarter view, plain light grey background` |
+| Daba | L'image montre un **couperet** (lame dans l'axe du manche). Une daba est une **houe** : lame plate fixée en travers du manche. Le couperet peut rester si tu préfères (un coupe-coupe marche aussi pour récolter). | `Low-poly game-ready Sahelian daba hoe, short curved wooden handle with leather wrap, wide flat hand-forged iron blade fixed PERPENDICULAR to the handle like a hoe, side view, plain light grey background, PBR textures` |
+
 ## 2. Accessoires des animations (kilishi, thé)
 
 Aujourd'hui ce sont des formes simples dessinées par le code. Format : GLB, moins de 600 triangles, texture 512×512.
