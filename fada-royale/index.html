@@ -1967,9 +1967,25 @@ const GUNS=['revolver','mitraillette','fusil','pompe','mitrailleuse','sniper'];
 const RAR_COL=[0x9aa0a6,0x63c74d,0x3d8bff,0xb65cff,0xffb300], RAR_CSS=['#9aa0a6','#63c74d','#3d8bff','#b65cff','#ffb300'];
 function randGun(boost=0){ const w=[24-boost*8,22-boost*4,22,16+boost*2,9+boost*4,7+boost*4]; let r=Math.random()*w.reduce((a,b)=>a+b); for(let i=0;i<6;i++){ r-=w[i]; if(r<=0) return GUNS[i]; } return 'fusil'; }
 function setSel(c,i){ c.sel=i; c.cur = i===0 ? 'daba' : (c.slots[i-1]||'daba'); }
-// changement d'arme animé : rangement de l'ancienne puis sortie de la nouvelle, durée selon la catégorie (GRIP.draw)
-function beginSwitch(c,from){ if(from===c.cur) return; const G=GRIP[c.cur]; c.switchFrom=from; c.switchDur=G?G.draw:0.3; c.switchT=c.switchDur;
-  c.fireCD=Math.max(c.fireCD,c.switchDur*0.85); c.reloadT=0; c.reloadShells=0; c.boltT=0; c.pumpT=0; }
+/* v1.7 : changement d'arme en deux étapes : 1) l'arme affichée (swFrom) est rangée (dans le dos, à la hanche) ; 2) la nouvelle (cur)
+   sort de son étui jusqu'à la position de tir. Durées par catégorie [rangement, sortie] (s). Une nouvelle demande pendant le changement
+   repart de la pose où l'on est : on ressort l'arme qu'on rangeait, ou on range celle qu'on sortait. switchT = temps restant. */
+const SWITCH_T={pistol:[0.12,0.2],long:[0.16,0.26],sniper:[0.18,0.32],lmg:[0.24,0.4],melee:[0.12,0.18]};
+const swTimes=w=>SWITCH_T[w==='daba'?'melee':(GRIP[w]&&GRIP[w].sw)||'long'];
+// étape intermédiaire (3) : transition du bras, la main vide va d'un étui à l'autre (dos ↔ hanche), 0,14 s
+const stowOf=w=>w==='daba'?'melee':(GRIP[w]&&GRIP[w].cls)||'long', SW_ARM=0.14, armT=c=>c.swFrom&&stowOf(c.swFrom)!==stowOf(c.cur)?SW_ARM:0;
+function swRemain(c){ const tin=swTimes(c.cur)[1]; c.switchT=c.swPh===1?(1-c.swU)*swTimes(c.swFrom)[0]+armT(c)+tin:c.swPh===3?(1-c.swU)*SW_ARM+tin:c.swPh===2?(1-c.swU)*tin:0; }
+function beginSwitch(c,from){ // from : arme en main avant la demande ; c.cur : arme demandée
+  if(c.swPh===3){ if(c.cur===c.swFrom){ c.swPh=2; c.swU=0; } } // la main allait vers un autre étui : la nouvelle arme sort de là où elle va
+  else if(c.swPh===1){ if(c.cur===c.swFrom){ c.swPh=2; c.swU=1-c.swU; } }
+  else if(c.swPh===2){ if(c.cur!==from){ c.swPh=1; c.swFrom=from; c.swU=1-c.swU; } }
+  else { if(from===c.cur) return; c.swPh=1; c.swFrom=from; c.swU=0; }
+  c.switchDur=swTimes(c.swFrom||c.cur)[0]+armT(c)+swTimes(c.cur)[1]; swRemain(c); c.reloadT=0; c.reloadShells=0; c.boltT=0; c.pumpT=0; c.meleeAt=0; }
+function updateSwitch(c,dt){ if(!c.swPh) return;
+  if(c.swPh===1){ c.swU+=dt/swTimes(c.swFrom)[0]; if(c.swU>=1){ c.swPh=armT(c)?3:2; c.swU=0; } }
+  else if(c.swPh===3){ c.swU+=dt/SW_ARM; if(c.swU>=1){ c.swPh=2; c.swU=0; } }
+  else { c.swU+=dt/swTimes(c.cur)[1]; if(c.swU>=1){ c.swPh=0; c.swU=0; c.swFrom=null; } }
+  swRemain(c); }
 function giveWeapon(c,type){
   if(c.slots.includes(type)){ if(c.ammo>=300) return false; c.ammo=Math.min(300,c.ammo+20); return true; }
   let e=c.slots.indexOf(null); if(!c.isPlayer&&e>=2) e=-1;
@@ -1992,7 +2008,7 @@ class Char{
     { const t=this.isPlayer?'revolver':pick(['revolver','revolver','mitraillette','fusil','fusil','pompe']); this.slots[0]=t; this.mag[t]=WEAP[t].mag; setSel(this,1); }
     this.banco=this.isPlayer?60:rint(30,70); this.kilishi=this.isPlayer?1:rint(0,1); this.the=0; this.kills=0;
     this.fireCD=0; this.buildCD=0; this.noiseT=0; this.reloadT=0; this.useT=0; this.useKind=null; this.useMax=1; this.mantle=null; this.jumpHeld=false; this.swingT=0; this.anim=0; this.onRamp=null; this.lastHitBy=null;
-    this.boltT=0; this.pumpT=0; this.switchDur=0; this.switchFrom=null; this.reloadDur=0; this.reloadShells=0; this.reloadDone=0; this.combatT=0;
+    this.boltT=0; this.pumpT=0; this.switchDur=0; this.switchFrom=null; this.swPh=0; this.swU=0; this.swFrom=null; this.raiseT=0; this.meleeAt=0; this.reloadDur=0; this.reloadShells=0; this.reloadDone=0; this.combatT=0;
     this.dmgDealt=0; this.built=0; this.chestsOpened=0; this.harvested=0; this.recorded=false; this.dummy=false; this.respawnT=0; this.deathT=0; this.hurtT=0; this.moving=false; this.model.g.visible=false; this.model.g.rotation.set(0,0,0); this.model.g.scale.setScalar(1); this.model.glider.visible=false;
     this.target=null; this.moveTarget=null; this.thinkT=Math.random()*0.3; this.reactT=0; this.burst=0; this.strafe=Math.random()<0.5?1:-1; this.strafeT=0; this.stuck=0; this.lastPos=V(); this.seeT=0; this.blocker=null; this.canSee=false; this.wantJump=false; this.jumpAt=0; this.landTarget=null; this.rank=0; this.calmT=0; this.killer=null; this.inStorm=false; this.stormAcc=0; this.detourT=0;
     this.crouch=false; this.slideT=0; this.slideDir=V(); this.ck=0; this.landT=0; this.sprint=false; this.sprintCD=0; if(this.model.an) this.model.an=newAnState(); this.recoil=0; this.switchT=0; this.aimPitch=0; this.height=1.75; this.model.st={}; }
@@ -2005,7 +2021,7 @@ function finishReload(c){ const w=WEAP[c.cur]; const need=w.mag-c.mag[c.cur]; co
 function useItem(c,kind){ if(!c||!c.alive||c.phase==='bus'||c.useT>0||c.reloadT>0) return; if(kind==='kilishi'&&(c.kilishi<=0||c.hp>=100)) return; if(kind==='the'&&(c.the<=0||c.shield>=75)) return; c.useKind=kind; c.useT=c.useMax=kind==='kilishi'?2.0:1.6; }
 function finishUse(c){ if(c.useKind==='kilishi'){ c.kilishi--; c.hp=Math.min(100,c.hp+25); } else { c.the--; c.shield=Math.min(75,c.shield+25); } if(c.isPlayer) sfxPick(); c.useKind=null; }
 function updateTimers(c,dt){
-  c.fireCD-=dt; c.buildCD-=dt; c.hurtT-=dt; c.swingT-=dt; if(c.noiseT>0) c.noiseT-=dt;
+  c.fireCD-=dt; c.buildCD-=dt; c.hurtT-=dt; c.swingT-=dt; if(c.noiseT>0) c.noiseT-=dt; updateSwitch(c,dt); if(c.raiseT>0) c.raiseT-=dt;
   if(c.meleeAt>0){ c.meleeAt-=dt; if(c.meleeAt<=0&&c.isPlayer) meleeHit(c); }
   if(c.reloadT>0){ c.reloadT-=dt;
     if(c.cur==='pompe'&&c.reloadShells){ // une cartouche glissée toutes les 0,42 s
@@ -2064,7 +2080,7 @@ let bloom=0;
 function playerFire(){
   const p=player, w=WEAP[p.cur];
   if(p.reloadT>0&&p.cur==='pompe'&&p.mag.pompe>0){ p.reloadT=0; p.reloadShells=0; } // au pompe, on peut tirer pendant le rechargement balle par balle
-  if(p.fireCD>0||p.reloadT>0||p.switchT>0) return;
+  if(p.fireCD>0||p.reloadT>0||p.raiseT>0||(p.switchT>0&&!(p.swPh===2&&p.swU>0.85))) return; // v1.7 : on peut tirer à la fin de la sortie de l'arme
   if(p.useT>0){ p.useT=0; p.useKind=null; }
   updateCamVectors();
   const piv=_t.set(p.pos.x,p.pos.y+1.55,p.pos.z);
@@ -2385,7 +2401,7 @@ function animChar(c,dt){
   m.mount.rotation.x=sm(st,'mx',mX,k); m.mount.rotation.z=sm(st,'mz',mZ,k); m.mount.position.z=mPz;
   const bmode=c===player&&buildMode&&c.phase==='ground'; ensureWeapon(m,c.cur); for(const kk in m.w) m.w[kk].visible=showW&&!bmode&&kk===c.cur; if(m.bp) m.bp.visible=bmode;
   if(c===player&&isScoped()) g.visible=false;
-  c.recoil=Math.max(0,(c.recoil||0)-dt*10); if(c.switchT>0) c.switchT-=dt;
+  c.recoil=Math.max(0,(c.recoil||0)-dt*10);
 }
 
 /* ---------- animation par clips (persos réalistes) ----------
@@ -2399,18 +2415,20 @@ const AW={}; for(const k of FULL_KEYS) AW[k]=0;
    hands : 1 = revolver tenu à une main hors combat (deux mains pour viser / tirer), 2 = toujours à deux mains
    draw : durée du changement d'arme (rangement puis sortie) ; holster : pose de l'arme rangée [rx,ry,rz,dx,dy,dz] */
 const GRIP={
-  revolver:    {cls:'pistol',hands:1,draw:0.32,holster:[-1.35,0.15,0.05,0.1,-0.3,0.12]},
-  mitraillette:{cls:'long',hands:2,draw:0.42,holster:[-1.05,0.55,0.25,0.04,-0.12,0.08]},
-  fusil:       {cls:'long',hands:2,draw:0.48,holster:[-1.0,0.7,0.35,0.02,-0.1,0.1]},
-  pompe:       {cls:'long',hands:2,draw:0.5, holster:[-1.0,0.7,0.35,0.02,-0.1,0.1]},
-  mitrailleuse:{cls:'long',hands:2,draw:0.7, holster:[-0.9,0.8,0.4,0.0,-0.14,0.12]},
-  sniper:      {cls:'long',hands:2,draw:0.55,holster:[-1.0,0.75,0.35,0.02,-0.1,0.1]},
+  revolver:    {sw:'pistol',cls:'pistol',hands:1,draw:0.32,holster:[-1.35,0.15,0.05,0.1,-0.3,0.12]},
+  mitraillette:{sw:'long',cls:'long',hands:2,draw:0.42,holster:[-1.05,0.55,0.25,0.04,-0.12,0.08]},
+  fusil:       {sw:'long',cls:'long',hands:2,draw:0.48,holster:[-1.0,0.7,0.35,0.02,-0.1,0.1]},
+  pompe:       {sw:'long',cls:'long',hands:2,draw:0.5, holster:[-1.0,0.7,0.35,0.02,-0.1,0.1]},
+  mitrailleuse:{sw:'lmg',cls:'long',hands:2,draw:0.7, holster:[-0.9,0.8,0.4,0.0,-0.14,0.12]},
+  sniper:      {sw:'sniper',cls:'long',hands:2,draw:0.55,holster:[-1.0,0.75,0.35,0.02,-0.1,0.1]},
 };
 /* v1.7 : poses de prise par catégorie, à partir de l'articulation de l'épaule droite (repère du perso : droite +x, haut +y, avant −z).
    o : décalage du pivot par rapport à l'épaule ; r : [lever, tourner vers la gauche] ajoutés à la visée ; k : part de l'inclinaison de la
    visée suivie ; tw : torsion du buste (épaule droite en arrière : le tireur se met de profil, la main gauche atteint le garde-main) ;
    h : position de l'arme sous le pivot (armes longues : la crosse est mise au pivot, h ne fait qu'ajuster).
    low = arme basse (exploration), combat = tir à la hanche / épaule, ads = visée, sprint = arme en travers */
+// v1.7 : étuis (même repère que HOLD) : armes longues dans le dos derrière l'épaule droite (canon en haut), revolver et daba à la hanche
+const STOW={ long:{o:[0.02,0.08,0.16],r:[1.3,-0.25],h:[0,0,0]}, pistol:{o:[0.1,-0.45,0.08],r:[-1.5,0],h:[0,0,-0.05]}, melee:{o:[0.1,-0.42,0.05],r:[-1.4,-0.2],h:[0,0,-0.12],hr:1.2} };
 const HOLD={
   long:{ low:{o:[0.07,-0.08,-0.06],r:[-0.24,0.06],k:0.55,tw:0.4,h:[0,0,0]}, combat:{o:[0.08,-0.05,-0.08],r:[0,0],k:0.9,tw:0.5,h:[0,0,0]},
          ads:{o:[0.05,0.02,-0.07],r:[0,0],k:1,tw:0.55,h:[0,0,0]}, sprint:{o:[0.02,-0.12,-0.2],r:[0.3,0.85],k:0.1,tw:0.1,h:[0,0,0]} },
@@ -2517,7 +2535,7 @@ function sfxMech(kind,dist){ if(!actx) return; const v=1/(1+dist/6); if(v<0.08) 
 /* v1.7 : daba (arme de mêlée) tenue par la main droite (IK sur le manche), lame en avant. Coup : le bras se lève au-dessus de l'épaule
    droite (daba en arrière), puis frappe vers l'avant et le bas : à l'impact le manche est à l'horizontale et la lame tombe sur la cible.
    Clés [u (0→1 sur la durée du coup), levée du bras (rad), angle de la daba par rapport au bras, rotation vers l'intérieur] */
-const DABA_K=[[0,-1.15,1.25,-0.22],[0.35,2.4,0.9,0.05],[0.55,-0.45,0.45,0.18],[0.72,-0.95,0.25,0.15],[1,-1.15,1.25,-0.22]], DABA_HIT=0.55, _dk=[0,0,0];
+const DABA_K=[[0,-1.15,1.25,-0.22],[0.36,1.95,1.0,0.05],[0.6,-0.45,0.45,0.18],[0.76,-0.9,0.3,0.15],[1,-1.15,1.25,-0.22]], DABA_HIT=0.6, _dk=[0,0,0];
 function dabaKey(u,out){ let i=0; while(i<DABA_K.length-2&&u>=DABA_K[i+1][0]) i++; const a=DABA_K[i], b=DABA_K[i+1], e=smooth(0,1,(u-a[0])/(b[0]-a[0]));
   out[0]=lerp(a[1],b[1],e); out[1]=lerp(a[2],b[2],e); out[2]=lerp(a[3],b[3],e); return out; }
 function armReach(m,g){ const L=(n,o)=>{ m.bones[n].getWorldPosition(o); return g.worldToLocal(o); };
@@ -2603,9 +2621,9 @@ function animRealAnim(c,dt){
   addRot(B.Hips,_UP,an.legYaw); addRot(B.Spine,_UP,-an.legYaw*0.45); addRot(B.Spine1,_UP,-an.legYaw*0.3); addRot(B.Spine2,_UP,-an.legYaw*0.25);
   const pitch=clamp(c.isPlayer?camPitch:(c.aimPitch||0),-1.1,1.1); an.pitch=lerp(an.pitch,pitch,1-Math.exp(-14*dt)); const pS=an.pitch;
   const bm=c===player&&buildMode&&c.phase==='ground', using=c.useT>0&&!!c.useKind;
-  // changement d'arme : l'ancienne arme pendant la 1re moitié (rangement), la nouvelle pendant la 2e (sortie)
-  let sw=0, wType=c.cur;
-  if(c.switchT>0&&c.switchDur>0){ sw=clamp(1-c.switchT/c.switchDur,0,1); if(sw<0.5&&c.switchFrom) wType=c.switchFrom; }
+  // v1.7 : changement d'arme : swK = 0 en position prête, 1 à l'étui ; étape 1 : l'ancienne arme y va, étape 2 : la nouvelle en sort
+  let sw=0, wType=c.cur, swK=0;
+  if(c.swPh){ sw=1; wType=c.swPh===1&&c.swFrom?c.swFrom:c.cur; swK=c.swPh===1?smooth(0,1,c.swU):c.swPh===3?1:1-smooth(0,1,c.swU); }
   const climbing=!!c.mantle, gun=wType!=='daba', Gp=GRIP[wType], showW=!sky&&!using&&!bm&&!climbing;
   _ax.set(1,0,0).applyQuaternion(g.quaternion);
   const pk=sliding||air?0.5:1; addRot(B.Spine1,_ax,pS*0.1*pk); addRot(B.Spine2,_ax,pS*0.16*pk); addRot(B.Neck,_ax,pS*0.2); addRot(B.Head,_ax,pS*(gun?0.2:0.3));
@@ -2621,9 +2639,9 @@ function animRealAnim(c,dt){
   // v1.7 : pose de l'arme (table HOLD) : arme basse en exploration, épaulée en combat, remontée à hauteur d'œil en visée, en travers au sprint
   const inCombat=c.isPlayer?((c.combatT||0)>0||ads):!!(c.target&&c.canSee);
   const isAds=gun&&c.isPlayer&&ads&&!bm, Hc=HOLD[(Gp&&Gp.cls)||'long'];
-  const oneHand=gun&&Gp&&Gp.hands===1&&!inCombat&&c.reloadT<=0&&sw===0;
-  const busy=c.reloadT>0||c.boltT>0||c.pumpT>0||sw>0;
-  const P=!gun?null:isAds?Hc.ads:an.sprintW>0.5&&!busy?Hc.sprint:(inCombat||busy)?Hc.combat:Hc.low;
+  const oneHand=gun&&Gp&&Gp.hands===1&&!inCombat&&c.reloadT<=0&&sw===0&&!sliding;
+  const busy=c.reloadT>0||c.boltT>0||c.pumpT>0;
+  const P=!gun?null:isAds?Hc.ads:sliding||an.ws>0.3?Hc.combat:an.sprintW>0.5&&!busy?Hc.sprint:(inCombat||busy)?Hc.combat:Hc.low; // v1.7 : en glissade, arme devant soi
   // torsion du buste (de profil pour épauler), la tête reste face à la visée
   const twT=gun&&P&&showW?P.tw:0; an.tw=lerp(an.tw||0,twT,1-Math.exp(-9*dt));
   if(c.cur==='daba'&&c.swingT>0&&showW){ const u=1-c.swingT/WEAP.daba.rate, bend=0.3*Math.sin(clamp((u-0.32)/0.5,0,1)*Math.PI)-0.12*Math.sin(clamp(u/0.35,0,1)*Math.PI);
@@ -2632,22 +2650,32 @@ function animRealAnim(c,dt){
   g.updateMatrixWorld(true);
   // --- arme portée ---
   const wo=ensureWeapon(m,wType); const lod=!c.isPlayer&&dc>Q.gunLod&&gun;
-  for(const kk in m.w) m.w[kk].visible=showW&&kk===wType&&!lod; gunLow(m,wType,showW&&lod); m.bp.visible=bm;
+  const armMove=c.swPh===3; for(const kk in m.w) m.w[kk].visible=showW&&kk===wType&&!lod&&!armMove; gunLow(m,wType,showW&&lod&&!armMove); m.bp.visible=bm;
   const far=!c.isPlayer&&dc>Q.detail; if(m.far!==far){ m.far=far; for(const o of m.detail) o.visible=!far; }
   // v1.7 : le pivot suit l'articulation de l'épaule droite (balancement, accroupi, torsion) ; armes longues : crosse au pivot
   B.RightArm.getWorldPosition(_sR); g.worldToLocal(_sR); B.LeftArm.getWorldPosition(_sL); g.worldToLocal(_sL);
-  let pX=pS*0.9, pY=0, hx=-0.05, hy=-0.13, hz=-0.22, wL=gun?1:0, wR=gun?1:0;
-  if(P){ const fk0=1-Math.exp(-16*dt);
-    m.pivot.position.set(sm(m.st,'pvx',_sR.x+P.o[0],fk0),sm(m.st,'pvy',_sR.y+P.o[1],fk0),sm(m.st,'pvz',_sR.z+P.o[2],fk0));
+  let pX=pS*0.9, pY=0, hx=-0.05, hy=-0.13, hz=-0.22, wL=gun?1:0, wR=gun?1:0, pvx=_sR.x, pvy=_sR.y, pvz=_sR.z, pvk=1-Math.exp(-16*dt);
+  if(P){ pvx+=P.o[0]; pvy+=P.o[1]; pvz+=P.o[2];
     pX=pS*P.k+P.r[0]; pY=P.r[1]; const Aw=ASSETS.w[wType];
     if(Gp.cls==='long'&&Aw&&Aw.butt!==undefined){ hx=P.h[0]; hy=P.h[1]-Aw.buttY; hz=P.h[2]-Aw.butt; } else { hx=P.h[0]; hy=P.h[1]; hz=P.h[2]; } }
   if(oneHand) wL=0;
   const isDaba=wType==='daba'&&!!m.w.daba&&showW; let dabaHR=0;
   if(isDaba){ if(!m.reachR) armReach(m,g); const u=c.swingT>0?clamp(1-c.swingT/WEAP.daba.rate,0,1):0; dabaKey(u,_dk);
     const bob=c.swingT>0?0:Math.sin(an.phase*Math.PI*2)*0.07*clamp(s/4,0,1)+pS*0.15;
-    m.pivot.position.set(sm(m.st,'pvx',_sR.x+0.06,0.5),sm(m.st,'pvy',_sR.y-0.03,0.5),sm(m.st,'pvz',_sR.z-0.02,0.5));
-    pX=_dk[0]+bob; pY=_dk[2]; dabaHR=_dk[1]; hx=0; hy=0; hz=-m.reachR*0.86; wR=1; wL=0;
-    if(c.swingT>0){ m.st.px=pX; m.st.py=pY; m.st.hrx=dabaHR; m.st.hpx=0; m.st.hpy=0; m.st.hpz=hz; } } // pendant le coup : pas de lissage (geste rapide)
+    pvx+=0.06; pvy-=0.03; pvz-=0.02; pvk=0.5; pX=_dk[0]+bob; pY=_dk[2]; dabaHR=_dk[1]; hx=0; hy=0; hz=-m.reachR*0.86; wR=1; wL=0; }
+  // v1.7 : arme basse contre un obstacle (le canon ne traverse plus les murs) : rayon devant l'épaule, de la longueur de l'arme
+  if(c.isPlayer&&gun&&showW&&!swK){ const Aw=ASSETS.w[wType], len=Aw&&Aw.butt!==undefined?Aw.butt-Aw.muzzle:0.6; g.localToWorld(_rg.copy(_sR)); _lb.set(-Math.sin(c.yaw),0,-Math.cos(c.yaw));
+    const h=rayCast(_rg,_lb,len+0.35,c,true), near=h.type&&h.type!=='char'?clamp(1-(h.t-0.3)/len,0,1):0; an.wallK=lerp(an.wallK||0,near,1-Math.exp(-10*dt));
+    if(an.wallK>0.01){ pX-=1.05*an.wallK; pY+=0.25*an.wallK; } }
+  // v1.7 : changement d'arme : de la position prête à l'étui (dans le dos, à la hanche), puis de l'étui à la position prête
+  let fast=isDaba&&c.swingT>0; // pendant le coup de daba : pas de lissage (geste rapide)
+  if(swK>0&&(gun||isDaba)){ const St=STOW[isDaba?'melee':(Gp&&Gp.cls)||'long'];
+    pvx=lerp(pvx,_sR.x+St.o[0],swK); pvy=lerp(pvy,_sR.y+St.o[1],swK); pvz=lerp(pvz,_sR.z+St.o[2],swK); pX=lerp(pX,St.r[0],swK); pY=lerp(pY,St.r[1],swK);
+    hx=lerp(hx,St.h[0],swK); hy=lerp(hy,St.h[1],swK); hz=lerp(hz,St.h[2],swK); dabaHR=lerp(dabaHR,St.hr||0,swK);
+    wR=1; wL=gun&&Gp&&Gp.hands===2?(c.swPh===1?1-smooth(0,0.35,c.swU):smooth(0.6,1,c.swU)):0; }
+  if(fast){ m.st.px=pX; m.st.py=pY; m.st.hrx=dabaHR; m.st.hpx=hx; m.st.hpy=hy; m.st.hpz=hz; pvk=1; }
+  const fkS=swK>0?1-Math.exp(-30*dt):0; if(fkS) pvk=Math.max(pvk,fkS); // changement d'arme : lissage rapide (pas de coupure : la pose suit la courbe sans saut)
+  m.pivot.position.set(sm(m.st,'pvx',pvx,pvk),sm(m.st,'pvy',pvy,pvk),sm(m.st,'pvz',pvz,pvk));
   hz+=(c.recoil||0)*0.08;
   // chorégraphie en cours : rechargement, culasse ou pompe après un tir
   const S_=_samp; for(let k=0;k<6;k++) S_.g[k]=0; S_.LA=S_.LB=(Gp&&Gp.hands===1)?'cup':'fore'; S_.RA=S_.RB='grip'; S_.e=0; S_.p=S_.pR=null;
@@ -2659,12 +2687,10 @@ function animRealAnim(c,dt){
     if(ch) sampleChoreo(ch,chU,S_);
     if(chId) wL=1; } // rechargement, culasse, pompe : toujours à deux mains
   if(using){ const U=USE[c.useKind]; if(U){ sampleChoreo(U,useU,S_); ch=U; chU=useU; chId='u'+c.useKind; wR=1; wL=U.wL; } }
-  // changement d'arme : pose « rangée » propre à la catégorie (hanche pour le revolver, épaule pour les armes longues)
-  if(sw>0&&Gp){ const k=sw<0.5?smooth(0,0.5,sw):1-smooth(0.5,1,sw); for(let i=0;i<6;i++) S_.g[i]+=Gp.holster[i]*k; wL=Gp.hands===2?Math.max(0,1-k*2.2):0; }
   const fk=1-Math.exp(-14*dt);
-  m.pivot.rotation.x=sm(m.st,'px',pX,fk); m.pivot.rotation.y=sm(m.st,'py',pY,1-Math.exp(-10*dt));
-  m.hold.position.set(sm(m.st,'hpx',hx,fk)+S_.g[3],sm(m.st,'hpy',hy,fk)+S_.g[4],sm(m.st,'hpz',hz-(c.recoil||0)*0.08,fk)+(c.recoil||0)*0.08+S_.g[5]); // recul : sans lissage
-  m.hold.rotation.set(sm(m.st,'hrx',S_.g[0]+dabaHR,fk),sm(m.st,'hry',S_.g[1],fk),sm(m.st,'hrz',S_.g[2],fk));
+  const fkW=fkS||fk; m.pivot.rotation.x=sm(m.st,'px',pX,fkW); m.pivot.rotation.y=sm(m.st,'py',pY,fkS||1-Math.exp(-10*dt));
+  m.hold.position.set(sm(m.st,'hpx',hx,fkW)+S_.g[3],sm(m.st,'hpy',hy,fkW)+S_.g[4],sm(m.st,'hpz',hz-(c.recoil||0)*0.08,fkW)+(c.recoil||0)*0.08+S_.g[5]); // recul : sans lissage
+  m.hold.rotation.set(sm(m.st,'hrx',S_.g[0]+dabaHR,fkW),sm(m.st,'hry',S_.g[1],fkW),sm(m.st,'hrz',S_.g[2],fkW));
   g.updateMatrixWorld(true);
   // v1.7 : la poignée doit rester à portée de la main droite (bras courts de la Guerrière) : sinon l'arme recule vers l'épaule
   if(gun&&showW&&!using){ if(!m.reachR) armReach(m,g); anchorLocal(m,g,wo,wType,'grip',_rg); const ex=_rg.distanceTo(_sR)-m.reachR*0.96;
@@ -2686,18 +2712,25 @@ function animRealAnim(c,dt){
     // v1.7 : main gauche sur le garde-main aussi loin que le bras le permet (sinon elle glisse vers la poignée au lieu de flotter)
     if(gun&&!using&&S_.LA===S_.LB&&(S_.LA==='fore'||S_.LA==='foreB'||S_.LA==='cup')){ const lim=m.reachL*0.97;
       if(_lL.distanceTo(_sL)>lim){ anchorLocal(m,g,wo,wType,'grip',_la); for(let t=0.1;t<=1.001;t+=0.1){ _lb.lerpVectors(_lL,_la,t); if(_lb.distanceTo(_sL)<=lim||t>0.95){ _lL.copy(_lb); break; } } }
-      const ex2=_lL.distanceTo(_sL)-lim; if(ex2>0.002){ const k2=Math.min(0.15,ex2); _lb.subVectors(_sL,_lL).normalize(); m.pivot.position.addScaledVector(_lb,k2); g.updateMatrixWorld(true);
+      // si même la poignée est hors de portée : l'arme se rapproche de la main gauche (au plus 15 cm ; pas pendant un changement d'arme, main gauche lâchée)
+      const ex2=_lL.distanceTo(_sL)-lim; if(ex2>0.002&&!swK&&wL>0.5){ const k2=Math.min(0.15,ex2); _lb.subVectors(_sL,_lL).normalize(); m.pivot.position.addScaledVector(_lb,k2); g.updateMatrixWorld(true);
         _lL.addScaledVector(_lb,k2); anchorLocal(m,g,wo,wType,S_.RA,_la); anchorLocal(m,g,wo,wType,S_.RB,_lb); _lR.lerpVectors(_la,_lb,S_.e); } } }
   else { wL=wR=0; }
+  // v1.7 : transition du bras : la main droite part de l'ancien étui (mémorisé) et rejoint la poignée de la nouvelle arme à son étui
+  if(have&&c.swPh===1){ if(!an.swA) an.swA=V(); an.swA.copy(_lR); }
+  if(have&&armMove&&an.swA) _lR.lerpVectors(an.swA,_lR,smooth(0,1,c.swU));
   if(have){ if(!an.tRl){ an.tRl=V(); an.tLl=V(); } an.tRl.copy(_lR); an.tLl.copy(_lL); }
   an.ikWR=lerp(an.ikWR||0,wR,1-Math.exp(-(wR>an.ikWR?18:12)*dt)); an.ikWL=lerp(an.ikWL||0,wL,1-Math.exp(-(wL>an.ikWL?18:12)*dt));
   if(an.tRl&&(an.ikWR>0.001||an.ikWL>0.001)){ g.localToWorld(_tR.copy(an.tRl)); g.localToWorld(_tL.copy(an.tLl));
-    _pR.set(0.7,-1,0.45).applyQuaternion(g.quaternion); _pL.set(-0.7,-1,0.45).applyQuaternion(g.quaternion); ikArmW(m,'Right',_tR,_pR,an.ikWR); ikArmW(m,'Left',_tL,_pL,an.ikWL); }
+    // v1.7 : main haute (coup de daba, arme dans le dos) : le coude passe sur le côté au lieu de basculer ; transition large et lissée dans le temps
+    const kp=1-Math.exp(-10*dt); an.kR=lerp(an.kR||0,smooth(-0.3,0.45,an.tRl.y-_sR.y),kp); an.kL=lerp(an.kL||0,smooth(-0.3,0.45,an.tLl.y-_sL.y),kp); const kR=an.kR, kL=an.kL;
+    _pR.set(lerp(0.7,1,kR),lerp(-1,0.15,kR),lerp(0.45,0.55,kR)).applyQuaternion(g.quaternion); _pL.set(lerp(-0.7,-1,kL),lerp(-1,0.15,kL),lerp(0.45,0.55,kL)).applyQuaternion(g.quaternion);
+    ikArmW(m,'Right',_tR,_pR,an.ikWR); ikArmW(m,'Left',_tL,_pL,an.ikWL); }
   // --- accessoires dans les mains ---
   if(m.props) for(const k in m.props) m.props[k].visible=false;
   if(S_.p&&an.ikWL>0.5) showProp(m,g,S_.p,an.tLl,c,useU);
   if(S_.pR&&an.ikWR>0.5) showProp(m,g,S_.pR,an.tRl,c,useU,headX);
-  c.recoil=Math.max(0,(c.recoil||0)-dt*10); if(c.switchT>0) c.switchT-=dt;
+  c.recoil=Math.max(0,(c.recoil||0)-dt*10);
 }
 const _samp={g:[0,0,0,0,0,0],LA:'fore',LB:'fore',RA:'grip',RB:'grip',e:0,p:null,pR:null}, _la=V(), _lb=V(), _hw=V();
 // point d'appui d'une main, dans le repère du perso
@@ -2778,7 +2811,7 @@ function animReal(c,dt){
   _pR.set(0.7,-1,0.45).applyQuaternion(g.quaternion); _pL.set(-0.7,-1,0.45).applyQuaternion(g.quaternion);
   ikArm(m,'Right',_tR,_pR); ikArm(m,'Left',_tL,_pL);
   for(const u of m.dups){ _qa.copy(u.prRestI).multiply(u.pr.quaternion); u.d.quaternion.copy(u.dRest).multiply(_qa); if(u.hips) u.d.position.copy(u.dPos).add(_i1.subVectors(u.pr.position,u.prPos)); }
-  c.recoil=Math.max(0,(c.recoil||0)-dt*10); if(c.switchT>0) c.switchT-=dt;
+  c.recoil=Math.max(0,(c.recoil||0)-dt*10);
 }
 
 /* =====================================================================
@@ -3001,7 +3034,7 @@ function updatePlayer(dt){
     let dx=wx, dz=wz; if(l<0.3){ dx=-Math.sin(p.yaw); dz=-Math.cos(p.yaw); } else { dx/=l; dz/=l; }
     if(tryMantle(p,dx,dz,jumpEdge)){ p.moving=false; return; } }
   // sprint : Maj (clavier), bouton SPRINT, ou joystick poussé à fond (option) — seulement en avançant, sans viser ni tirer
-  if(firing&&!buildMode&&!editing) p.sprintCD=0.45; p.sprintCD-=dt;
+  if(firing&&!buildMode&&!editing){ if(p.sprint&&p.cur!=='daba') p.raiseT=Math.max(p.raiseT||0,0.16); p.sprintCD=0.45; } p.sprintCD-=dt; // v1.7 : sortie du sprint vers le tir
   const joyMag=Math.hypot(joy.x,joy.y), fwd=combat?iz>0.55:faceCam?iz>0.3:l>0.55; // face caméra : on sprinte vers l'avant (diagonales comprises)
   const wantSprint=(keys.ShiftLeft||keys.ShiftRight||sprintOn||(SET.autoSprint&&IS_TOUCH&&joy.id!==null&&joyMag>0.93&&(faceCam?-joy.y>0.45:true)))&&fwd;
   p.sprint=wantSprint&&p.grounded&&!p.crouch&&!ads&&p.sprintCD<=0&&!editing&&p.useT<=0;
@@ -3319,7 +3352,7 @@ requestAnimationFrame(loop);
 loadAssets().then(()=>{ try{ makeWeaponIcons(); }catch(e){} initLobby(); goMenu(); try{ lobby.precompile(); lobby.warm(); lobby.render(); }catch(e){} requestAnimationFrame(()=>$('loading').remove()); setTimeout(()=>{ try{ loadSols(); loadAmbient(); loadPackTrees(); loadPackRocks(); }catch(e){ console.warn('décor',e); } },800); }); // une image rendue derrière l'écran : ombres comprises ; v1.6 : sols, animaux, arbres et rochers du pack chargés 0,8 s après l'affichage du lobby
 
 // accès de débogage
-window.FR={get lobby(){return lobby;}, PROFILE, Profile, get matchMode(){return matchMode;}, get camPitch(){return camPitch;}, get sprintOn(){return sprintOn;}, setSprint:v=>{sprintOn=v;}, placementProblem, computePlacement, dirFromYaw, get camYaw(){return camYaw;}, SET, openSettings, closeSettings, openHudEditor, renderTab, get paused(){return paused;}, THREE, ASSETS, selectSlot, swapTake, giveWeapon, get nearItem(){return nearItem;}, setAds:v=>{ads=v;}, startEdit, confirmEdit, resetEdit, rayCast, crouchPress, get editing(){return editing;}, get state(){return state;}, get player(){return player;}, bots, chars, items, chests, pieces, housesInfo, doors:DOORS, setDoor, interact, hasLOS, findCover, storm, bus, startMatch, update, jumpFromBus:()=>jumpFromBus(player), tryBuild, setBuildType, toggleBuild, warmGPU, AMB, get TERRAIN(){return TERRAIN;}, get TERRAIN_MAT0(){return TERRAIN_MAT0;}, setQuality, warmGPU, qBox, boxGrounded, boxTouch, checkIntegrity, destroyPiece, pieceDown, pieceUp, get buildMode(){return buildMode;}, get pieceHeld(){return pieceHeld;}, pieceList, PINST, setFiring:v=>{firing=v;}, setCam:(y,p)=>{camYaw=y;camPitch=p;}, keys, renderer, scene, camera, get aliveCount(){return aliveCount;}, solids, terrainH};
+window.FR={get lobby(){return lobby;}, PROFILE, Profile, get matchMode(){return matchMode;}, get camPitch(){return camPitch;}, get sprintOn(){return sprintOn;}, setSprint:v=>{sprintOn=v;}, placementProblem, computePlacement, dirFromYaw, get camYaw(){return camYaw;}, SET, openSettings, closeSettings, openHudEditor, renderTab, get paused(){return paused;}, THREE, ASSETS, selectSlot, swapTake, giveWeapon, beginSwitch, get nearItem(){return nearItem;}, setAds:v=>{ads=v;}, startEdit, confirmEdit, resetEdit, rayCast, crouchPress, get editing(){return editing;}, get state(){return state;}, get player(){return player;}, bots, chars, items, chests, pieces, housesInfo, doors:DOORS, setDoor, interact, hasLOS, findCover, storm, bus, startMatch, update, jumpFromBus:()=>jumpFromBus(player), tryBuild, setBuildType, toggleBuild, warmGPU, AMB, get TERRAIN(){return TERRAIN;}, get TERRAIN_MAT0(){return TERRAIN_MAT0;}, setQuality, warmGPU, qBox, boxGrounded, boxTouch, checkIntegrity, destroyPiece, pieceDown, pieceUp, get buildMode(){return buildMode;}, get pieceHeld(){return pieceHeld;}, pieceList, PINST, setFiring:v=>{firing=v;}, setCam:(y,p)=>{camYaw=y;camPitch=p;}, keys, renderer, scene, camera, get aliveCount(){return aliveCount;}, solids, terrainH};
 </script>
 </body>
 </html>
