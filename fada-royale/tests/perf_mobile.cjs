@@ -15,6 +15,15 @@ const { chromium, devices } = require('playwright'); const [,, base, thr = '4'] 
   await page.goto(base + '?touch=1'); await page.waitForFunction(() => window.FR && window.FR.state === 'menu', null, { timeout: 120000 });
   const cdp = await ctx.newCDPSession(page); await cdp.send('Emulation.setCPUThrottlingRate', { rate: +thr });
   const res = {};
+  // 0. lancement : première partie (les persos des bots sont créés à ce moment-là), page neuve pour chaque nombre de bots
+  res.lancement = {};
+  for (const n of [19, 29, 39, 59]) { const c2 = await browser.newContext(o); await c2.addInitScript(() => localStorage.setItem('fr_q', 'low')); const p2 = await c2.newPage(); p2.on('pageerror', e => errs.push(e.message));
+    await p2.route(u => !u.toString().startsWith('http://127.0.0.1') && !u.toString().startsWith('http://localhost'), r => r.abort());
+    await p2.goto(base + '?touch=1'); await p2.waitForFunction(() => window.FR && window.FR.state === 'menu', null, { timeout: 120000 });
+    const s2 = await c2.newCDPSession(p2); await s2.send('Emulation.setCPUThrottlingRate', { rate: +thr });
+    res.lancement[n] = await p2.evaluate(n => { const FR = window.FR; FR.SET.botCount = n; window.__freeze = true; const t0 = performance.now(); FR.startMatch('br'); const t1 = performance.now(); FR.goMenu(); const t2 = performance.now(); FR.startMatch('br'); const t3 = performance.now(); FR.goMenu(); return { premiere: Math.round(t1 - t0), suivante: Math.round(t3 - t2) }; }, n);
+    await c2.close(); }
+  console.log('lancement (ms, persos créés à la 1re partie)', JSON.stringify(res.lancement));
   res.armes = await page.evaluate(() => { const FR = window.FR, p = FR.player; FR.startMatch('train'); window.__freeze = true; window.__keepAmmo = false; const out = {};
     for (const w of ['revolver', 'mitraillette', 'fusil', 'tactique', 'pompe', 'pompet', 'mitrailleuse', 'sniper']) { p.slots = [w, null, null, null, null]; p.srar = [FR.WEAP[w].rar, 0, 0, 0, 0]; p.mag = { [w]: FR.WEAP[w].mag }; FR.selectSlot(1); for (let i = 0; i < 25; i++) FR.update(1 / 30);
       FR.setCam(0, -0.02); FR.setFiring(true); const t0 = performance.now(); for (let i = 0; i < 90; i++) FR.update(1 / 30); out[w] = +((performance.now() - t0) / 90).toFixed(2); FR.setFiring(false); }

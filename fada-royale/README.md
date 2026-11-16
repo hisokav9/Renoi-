@@ -1,7 +1,7 @@
 # Fada Royale — v2.0
 
 Battle royale du Sahel en 3D (three.js), jouable dans le navigateur sur PC et téléphone.
-20 à 60 joueurs (toi + 19 à 59 bots, réglable), taxi-brousse volant, harmattan qui se resserre en 18 min, construction en banco, carte du Niger de 680 m de côté et 21 lieux.
+20 à 60 joueurs (toi + 19 à 59 bots, réglable), taxi-brousse volant, harmattan qui se resserre en 19 min, construction en banco, carte du Niger de 680 m de côté et 21 lieux.
 
 ## Version Android (APK)
 

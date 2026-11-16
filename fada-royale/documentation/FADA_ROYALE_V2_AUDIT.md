@@ -72,7 +72,7 @@ Les 5 catégories et ce qui existe dans le jeu :
 | Graphismes | 5 profils, réglages séparés, anticrénelage au redémarrage, limite d'images selon l'écran | `graphismes.cjs` |
 | HUD | Opacité, masquage, dispositions Classique / Compacte / Construction / Personnalisée | `graphismes.cjs` |
 | Carte | 680 m de côté, 8 nouveaux lieux (21 au total) | `bots.cjs`, `combat.cjs` |
-| Durée de partie | Tempête de 18 min (7 phases), réglages dans `src/core/match.js` | `partie.cjs` : voir le rapport de tests |
+| Durée de partie | Tempête de 19 min (7 phases), réglages dans `src/core/match.js` | `partie.cjs` : voir le rapport de tests |
 | Bots | 19 à 59 réglables, 3 niveaux + mélangés, IA (zone, pillage, fin de partie, profils) | `bots.cjs`, `partie.cjs`, `combat.cjs` |
 
 Détail des chiffres et des tests : `FADA_ROYALE_V1_TEST_REPORT.md` (section v2.0).

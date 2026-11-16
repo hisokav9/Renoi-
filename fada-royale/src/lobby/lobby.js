@@ -34,7 +34,7 @@ export const FRAMES = [
   { id: 'or', name: 'Or du Sahel', col: '#f2b84b', price: 150 },
 ];
 export const MODES = [
-  { id: 'br', name: 'Battle Royale', sub: 'Solo', desc: 'Toi contre 19 à 59 bots (Paramètres › Partie). Carte de 680 m et 21 lieux, taxi-brousse, harmattan qui se resserre en 18 min, construction en banco. Le dernier debout gagne.', ok: true },
+  { id: 'br', name: 'Battle Royale', sub: 'Solo', desc: 'Toi contre 19 à 59 bots (Paramètres › Partie). Carte de 680 m et 21 lieux, taxi-brousse, harmattan qui se resserre en 19 min, construction en banco. Le dernier debout gagne.', ok: true },
   { id: 'train', name: 'Entraînement', sub: 'Libre', desc: 'Toutes les armes, banco illimité, mannequins de tir, pas de tempête ni d’adversaire. Pour s’exercer à construire et à viser.', ok: true },
   { id: 'duo', name: 'Duo', sub: '2 joueurs', desc: 'Jouer à deux contre les autres équipes.', ok: false },
   { id: 'squad', name: 'Escouade', sub: '4 joueurs', desc: 'Équipes de quatre.', ok: false },

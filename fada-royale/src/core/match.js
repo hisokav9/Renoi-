@@ -9,7 +9,7 @@ export const MAP = 340;
 /* Tempête : rayon de départ (couvre toute la carte), décalage max. du 1er cercle depuis le centre, puis les phases :
    wait = attente avant que la zone se resserre (s), shrink = durée du resserrement (s), r = rayon de la zone suivante (m),
    dps = dégâts par seconde hors de la zone.
-   v1.0 : 5 phases, tempête finie en ≈ 5 min. v2.0 : 7 phases, tempête finie en 18 min (+ ≈ 1 min de taxi-brousse et de
+   v1.0 : 5 phases, tempête finie en ≈ 5 min. v2.0 : 7 phases, tempête finie en 19 min (+ ≈ 1 min de taxi-brousse et de
    descente). Mesuré (tests/partie.cjs, 49 bots) : les derniers survivants se trouvent pendant les phases 4 à 6, une partie dure
    15 à 20 minutes. */
 export const STORM = {
@@ -18,8 +18,8 @@ export const STORM = {
   phases: [
     { wait: 150, shrink: 90, r: 250, dps: 1 },
     { wait: 140, shrink: 80, r: 160, dps: 2 },
-    { wait: 120, shrink: 70, r: 95, dps: 3 },
-    { wait: 100, shrink: 60, r: 52, dps: 5 },
+    { wait: 145, shrink: 70, r: 95, dps: 3 },
+    { wait: 125, shrink: 60, r: 52, dps: 5 },
     { wait: 70, shrink: 50, r: 24, dps: 7 },
     { wait: 50, shrink: 40, r: 9, dps: 9 },
     { wait: 30, shrink: 35, r: 0, dps: 12 },
