@@ -8,6 +8,7 @@
 // 6. saut pendant un changement d'arme
 // 7. bot éloigné (non dessiné) qui change d'arme : son changement se termine (avant v1.7 il restait bloqué et ne tirait plus)
 // 8. arme basse face à un mur
+// 9. daba (« sabre ») : 4 coups sur un mannequin, dégâts au moment de l'impact (≈ 0,27 s après l'appui)
 // Usage : node tests/changement.cjs http://localhost:8000/index.html
 const { chromium } = require('playwright'); const [,, base] = process.argv;
 (async () => {
@@ -58,10 +59,19 @@ const { chromium } = require('playwright'); const [,, base] = process.argv;
     const from = b.cur; b.sel = 2; b.cur = 'fusil'; FR.beginSwitch(b, from); step(30, () => { b.pos.set(p.pos.x + 400, b.pos.y, p.pos.z); });
     out.botEloigne = { changementRestant: +b.switchT.toFixed(2) }; // le changement est décompté dans la logique (updateTimers), plus dans l'animation
     // 8. arme basse face à un mur
+// 9. daba (« sabre ») : 4 coups sur un mannequin, dégâts au moment de l'impact (≈ 0,27 s après l'appui)
     reset(); FR.selectSlot(slot('fusil')); step(20); p.combatT = 5; step(15); const pivFree = m.pivot.rotation.x;
     const wall = FR.solids.find(s => !s.piece && s.maxY - s.minY > 2.5 && s.maxX - s.minX > 3 && s.maxZ - s.minZ < 1.2) ;
     let lowered = null; if (wall) { const z = wall.maxZ + 0.6, x = (wall.minX + wall.maxX) / 2; p.pos.set(x, FR.terrainH(x, z), z); p.yaw = 0; FR.setCam(0, -0.05); step(25, () => { p.combatT = 5; }); lowered = +(pivFree - m.pivot.rotation.x).toFixed(2); }
     out.armeBasseContreMur = { mur: !!wall, abaissement: lowered };
+    // 9. daba : plusieurs coups sur un mannequin, dégâts au moment où la lame frappe (pas à l'appui)
+    reset(); FR.selectSlot(0); step(20); const dm = FR.bots.find(x => x.dummy) || FR.bots[0]; dm.alive = true; dm.phase = 'ground'; dm.hp = 100; dm.shield = 0;
+    FR.setCam(0, -0.12); step(3); const cam = FR.camera, dir = new FR.THREE.Vector3(); cam.getWorldDirection(dir); dir.y = 0; dir.normalize();
+    const along = (p.pos.x - cam.position.x) * dir.x + (p.pos.z - cam.position.z) * dir.z + 1.4; // sous le réticule, 1,4 m devant le perso
+    const tx = cam.position.x + dir.x * along, tz = cam.position.z + dir.z * along; const place = () => dm.pos.set(tx, FR.terrainH(tx, tz), tz); place(); step(2); const hits = [];
+    for (let k = 0; k < 4; k++) { const hp0 = dm.hp + dm.shield; FR.setFiring(true); FR.update(1 / 30); FR.setFiring(false); let f = 1, at = -1;
+      for (; f < 18; f++) { FR.update(1 / 30); if (at < 0 && dm.hp + dm.shield < hp0) at = f; place(); } hits.push(at < 0 ? 'raté' : +((at) / 30).toFixed(2)); dm.hp = Math.max(dm.hp, 60); }
+    out.dabaCoups = { degatsApres_s: hits.join(' '), coupsQuiTouchent: hits.filter(h => h !== 'raté').length };
     return out; });
   for (const k in res) console.log(k.padEnd(22), JSON.stringify(res[k]));
   const pb = [];
@@ -73,4 +83,5 @@ const { chromium } = require('playwright'); const [,, base] = process.argv;
   if (!res.sautPendantChangement.termine || res.sautPendantChangement.affichee !== 'revolver') pb.push('saut pendant le changement');
   if (res.botEloigne.changementRestant > 0) pb.push('bot éloigné bloqué');
   if (res.armeBasseContreMur.mur && !(res.armeBasseContreMur.abaissement > 0.3)) pb.push('arme pas abaissée contre le mur');
+  if (res.dabaCoups.coupsQuiTouchent < 4 || res.dabaCoups.degatsApres_s.split(' ').some(v => +v < 0.2 || +v > 0.4)) pb.push('coups de daba');
   console.log(pb.length ? 'À REVOIR : ' + pb.join(' ; ') : 'tout est bon'); console.log(errs.join('\n') || 'aucune erreur'); await browser.close(); })();

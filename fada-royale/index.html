@@ -89,6 +89,8 @@ body.touch #zone.pic{top:3%}body.touch #zone.pic .zimg{width:min(400px,42vw)}bod
 .bar em{position:absolute;top:0;bottom:0;width:2px;background:rgba(0,0,0,.45)}
 #row{display:flex;gap:6px;align-items:flex-end}
 #slots{display:flex;gap:6px;pointer-events:auto}
+#bSwap{pointer-events:auto;width:46px;height:58px;margin-left:6px;border-radius:9px;background:linear-gradient(180deg,rgba(44,31,18,.74),rgba(14,10,6,.8));border:1px solid var(--line);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:#fff7ea}
+#bSwap .ic{width:22px;height:22px;stroke-width:2.2}#bSwap small{font:800 8px Rubik}
 .slot{position:relative;width:80px;height:58px;border-radius:9px;background:linear-gradient(180deg,rgba(44,31,18,.74),rgba(14,10,6,.8));border:1px solid var(--line);border-bottom:3px solid rgba(255,255,255,.22);display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding:0 4px 4px;color:#fff7ea;text-shadow:0 1px 2px #000;transition:transform .12s,background .12s}
 .slot img{position:absolute;left:7px;top:7px;width:calc(100% - 14px);height:26px;object-fit:contain;filter:drop-shadow(0 1px 1px rgba(0,0,0,.6))}
 .slot img[src=""],.slot.off img{display:none}
@@ -268,6 +270,7 @@ body.editing-hud #joy{opacity:.7!important}
 <symbol id="i-sprint" viewBox="0 0 24 24"><path d="M4.5 6l6 6-6 6M12.5 6l6 6-6 6"/></symbol>
 <symbol id="i-scope" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 4v5M12 15v5M4 12h5M15 12h5"/></symbol>
 <symbol id="i-pencil" viewBox="0 0 24 24"><path d="M4 20l1.1-4.4L16.2 4.5a2 2 0 0 1 2.8 0l.5.5a2 2 0 0 1 0 2.8L8.4 18.9z"/><path d="M14.4 6.3l3.3 3.3"/></symbol>
+<symbol id="i-swap" viewBox="0 0 24 24"><path d="M4 8h13l-3.5-3.5M20 16H7l3.5 3.5"/></symbol>
 <symbol id="i-undo" viewBox="0 0 24 24"><path d="M8.5 5.5L4 10l4.5 4.5"/><path d="M4 10h10a5.5 5.5 0 0 1 0 11h-3"/></symbol>
 <symbol id="i-check" viewBox="0 0 24 24"><path d="M4.5 12.8l4.8 4.8L19.5 6.8"/></symbol>
 <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
@@ -331,6 +334,7 @@ body.editing-hud #joy{opacity:.7!important}
         <div class="slot off" data-s="4"><kbd>5</kbd><img alt="" src=""><b></b><span></span></div>
         <div class="slot off" data-s="5"><kbd>6</kbd><img alt="" src=""><b></b><span></span></div>
       </div>
+      <div id="bSwap" title="Arme précédente"><svg class="ic"><use href="#i-swap"/></svg><small>ÉCHANGE</small></div>
     </div>
   </div>
   <div id="mats">
@@ -386,6 +390,7 @@ import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 import {createLobby} from './src/lobby/lobby.js';
 import * as Profile from './src/core/profile.js';
 import {WEAPONS as WMODELS, fitWeapon, fitPiece} from './src/core/weapons.js';
+import {GRIP, HOLD, STOW, SWITCH_T, SW_ARM, swTimes, stowOf, DABA_K, DABA_HIT, dabaKey} from './src/core/weapon-handling.js'; // v1.7 : prise et changement d'arme
 
 /* =====================================================================
    FADA ROYALE — battle royale 100 % Niger (voir FADA_ROYALE_AUDIT.md pour la carte du code)
@@ -1998,10 +2003,8 @@ function setSel(c,i){ c.sel=i; c.cur = i===0 ? 'daba' : (c.slots[i-1]||'daba'); 
 /* v1.7 : changement d'arme en deux étapes : 1) l'arme affichée (swFrom) est rangée (dans le dos, à la hanche) ; 2) la nouvelle (cur)
    sort de son étui jusqu'à la position de tir. Durées par catégorie [rangement, sortie] (s). Une nouvelle demande pendant le changement
    repart de la pose où l'on est : on ressort l'arme qu'on rangeait, ou on range celle qu'on sortait. switchT = temps restant. */
-const SWITCH_T={pistol:[0.12,0.2],long:[0.16,0.26],sniper:[0.18,0.32],lmg:[0.24,0.4],melee:[0.12,0.18]};
-const swTimes=w=>SWITCH_T[w==='daba'?'melee':(GRIP[w]&&GRIP[w].sw)||'long'];
 // étape intermédiaire (3) : transition du bras, la main vide va d'un étui à l'autre (dos ↔ hanche), 0,14 s
-const stowOf=w=>w==='daba'?'melee':(GRIP[w]&&GRIP[w].cls)||'long', SW_ARM=0.14, armT=c=>c.swFrom&&stowOf(c.swFrom)!==stowOf(c.cur)?SW_ARM:0;
+const armT=c=>c.swFrom&&stowOf(c.swFrom)!==stowOf(c.cur)?SW_ARM:0;
 function swRemain(c){ const tin=swTimes(c.cur)[1]; c.switchT=c.swPh===1?(1-c.swU)*swTimes(c.swFrom)[0]+armT(c)+tin:c.swPh===3?(1-c.swU)*SW_ARM+tin:c.swPh===2?(1-c.swU)*tin:0; }
 function beginSwitch(c,from){ // from : arme en main avant la demande ; c.cur : arme demandée
   if(c.swPh===3){ if(c.cur===c.swFrom){ c.swPh=2; c.swU=0; } } // la main allait vers un autre étui : la nouvelle arme sort de là où elle va
@@ -2099,7 +2102,7 @@ function killChar(t,att,wname){
 function checkEnd(){ if(endShown) return; if(player.alive && aliveCount<=1){ won=true; endShown=true; setTimeout(()=>showEnd(true),900); for(let k=0;k<120;k++) spawnParticle(player.pos.x+rnd(-3,3),player.pos.y+rnd(3,6),player.pos.z+rnd(-3,3),rnd(-4,4),rnd(2,8),rnd(-4,4),[0xe05206,0xffffff,0x0db02b][k%3],rnd(1.5,3),1.4,5); } }
 
 /* ---------- tir du joueur ---------- */
-let camYaw=0, camPitch=-0.1, camDist=4, ads=false, camPivY=null, shake=0;
+let camYaw=0, camPitch=-0.1, camDist=4, ads=false, camPivY=null, shake=0, camSide=0.72, camColT=-1;
 function addShake(a){ shake=Math.min(0.12,shake+a); }
 const camFwd=V(), camRight=V(), _o=V(), _d=V(), _t=V(), _m=V();
 function updateCamVectors(){ const cp=Math.cos(camPitch); camFwd.set(-Math.sin(camYaw)*cp,Math.sin(camPitch),-Math.cos(camYaw)*cp); camRight.set(Math.cos(camYaw),0,-Math.sin(camYaw)); }
@@ -2437,32 +2440,9 @@ function animChar(c,dt){
    glissade (départ → boucle → sortie), mort ; gestes du haut du corps par-dessus (coup reçu, manger/boire, coup de daba).
    Puis retouches procédurales : jambes tournées vers la direction du déplacement, buste qui suit la visée, mains sur l'arme (IK). */
 const _ax=V(), _aqq=new THREE.Quaternion(), _apq=new THREE.Quaternion(), _UP=V(0,1,0), _chest=V();
-function addRot(bone,axisW,ang){ if(!bone||Math.abs(ang)<1e-4) return; bone.parent.getWorldQuaternion(_apq); _aqq.setFromAxisAngle(axisW,ang); bone.quaternion.premultiply(_apq.clone().invert().multiply(_aqq).multiply(_apq)); }
+const _apqi=new THREE.Quaternion(); // v1.7 : quaternion de travail réutilisé (avant : un nouveau à chaque appel)
+function addRot(bone,axisW,ang){ if(!bone||Math.abs(ang)<1e-4) return; bone.parent.getWorldQuaternion(_apq); _aqq.setFromAxisAngle(axisW,ang); bone.quaternion.premultiply(_apqi.copy(_apq).invert().multiply(_aqq).multiply(_apq)); }
 const AW={}; for(const k of FULL_KEYS) AW[k]=0;
-/* ---------- prises et animations des armes (v1.1) ----------
-   hands : 1 = revolver tenu à une main hors combat (deux mains pour viser / tirer), 2 = toujours à deux mains
-   draw : durée du changement d'arme (rangement puis sortie) ; holster : pose de l'arme rangée [rx,ry,rz,dx,dy,dz] */
-const GRIP={
-  revolver:    {sw:'pistol',cls:'pistol',hands:1,draw:0.32,holster:[-1.35,0.15,0.05,0.1,-0.3,0.12]},
-  mitraillette:{sw:'long',cls:'long',hands:2,draw:0.42,holster:[-1.05,0.55,0.25,0.04,-0.12,0.08]},
-  fusil:       {sw:'long',cls:'long',hands:2,draw:0.48,holster:[-1.0,0.7,0.35,0.02,-0.1,0.1]},
-  pompe:       {sw:'long',cls:'long',hands:2,draw:0.5, holster:[-1.0,0.7,0.35,0.02,-0.1,0.1]},
-  mitrailleuse:{sw:'lmg',cls:'long',hands:2,draw:0.7, holster:[-0.9,0.8,0.4,0.0,-0.14,0.12]},
-  sniper:      {sw:'sniper',cls:'long',hands:2,draw:0.55,holster:[-1.0,0.75,0.35,0.02,-0.1,0.1]},
-};
-/* v1.7 : poses de prise par catégorie, à partir de l'articulation de l'épaule droite (repère du perso : droite +x, haut +y, avant −z).
-   o : décalage du pivot par rapport à l'épaule ; r : [lever, tourner vers la gauche] ajoutés à la visée ; k : part de l'inclinaison de la
-   visée suivie ; tw : torsion du buste (épaule droite en arrière : le tireur se met de profil, la main gauche atteint le garde-main) ;
-   h : position de l'arme sous le pivot (armes longues : la crosse est mise au pivot, h ne fait qu'ajuster).
-   low = arme basse (exploration), combat = tir à la hanche / épaule, ads = visée, sprint = arme en travers */
-// v1.7 : étuis (même repère que HOLD) : armes longues dans le dos derrière l'épaule droite (canon en haut), revolver et daba à la hanche
-const STOW={ long:{o:[0.02,0.08,0.16],r:[1.3,-0.25],h:[0,0,0]}, pistol:{o:[0.1,-0.45,0.08],r:[-1.5,0],h:[0,0,-0.05]}, melee:{o:[0.1,-0.42,0.05],r:[-1.4,-0.2],h:[0,0,-0.12],hr:1.2} };
-const HOLD={
-  long:{ low:{o:[0.07,-0.08,-0.06],r:[-0.24,0.06],k:0.55,tw:0.4,h:[0,0,0]}, combat:{o:[0.08,-0.05,-0.08],r:[0,0],k:0.9,tw:0.5,h:[0,0,0]},
-         ads:{o:[0.05,0.02,-0.07],r:[0,0],k:1,tw:0.55,h:[0,0,0]}, sprint:{o:[0.02,-0.12,-0.2],r:[0.3,0.85],k:0.1,tw:0.1,h:[0,0,0]} },
-  pistol:{ low:{o:[0,-0.045,-0.07],r:[-1.0,0.1],k:0.2,tw:0,h:[0.08,-0.24,-0.1]}, combat:{o:[0.04,-0.07,-0.06],r:[0,0],k:0.9,tw:0.3,h:[0,0,-0.4]},
-         ads:{o:[0.02,0.0,-0.06],r:[0,0],k:1,tw:0.35,h:[0,0,-0.42]}, sprint:{o:[0,-0.045,-0.07],r:[-1.0,0.1],k:0.2,tw:0,h:[0.08,-0.24,-0.1]} },
-};
 // points d'appui des mains sur chaque arme (repère de l'arme : canon vers −z, haut +y ; mesurés sur les modèles 3D)
 const ANCH={
   daba:        {grip:[0,-0.01,0.04]},
@@ -2560,12 +2540,7 @@ function sfxMech(kind,dist){ if(!actx) return; const v=1/(1+dist/6); if(v<0.08) 
    Ces os gardaient donc les retouches de l'image d'avant (contre-rotation du buste, visée, IK des bras) et la nouvelle
    s'y ajoutait : rotation qui s'accumule sans fin. On mémorise la pose animée juste après mixer.update et on la remet
    dans les os avant le suivant : chaque image repart de la pose animée, les retouches ne peuvent plus s'additionner. */
-/* v1.7 : daba (arme de mêlée) tenue par la main droite (IK sur le manche), lame en avant. Coup : le bras se lève au-dessus de l'épaule
-   droite (daba en arrière), puis frappe vers l'avant et le bas : à l'impact le manche est à l'horizontale et la lame tombe sur la cible.
-   Clés [u (0→1 sur la durée du coup), levée du bras (rad), angle de la daba par rapport au bras, rotation vers l'intérieur] */
-const DABA_K=[[0,-1.15,1.25,-0.22],[0.36,1.95,1.0,0.05],[0.6,-0.45,0.45,0.18],[0.76,-0.9,0.3,0.15],[1,-1.15,1.25,-0.22]], DABA_HIT=0.6, _dk=[0,0,0];
-function dabaKey(u,out){ let i=0; while(i<DABA_K.length-2&&u>=DABA_K[i+1][0]) i++; const a=DABA_K[i], b=DABA_K[i+1], e=smooth(0,1,(u-a[0])/(b[0]-a[0]));
-  out[0]=lerp(a[1],b[1],e); out[1]=lerp(a[2],b[2],e); out[2]=lerp(a[3],b[3],e); return out; }
+const _dk=[0,0,0];
 function armReach(m,g){ const L=(n,o)=>{ m.bones[n].getWorldPosition(o); return g.worldToLocal(o); };
   m.reachR=L('RightArm',_sa).distanceTo(L('RightForeArm',_sb))+L('RightForeArm',_sa).distanceTo(L('RightHand',_sb));
   m.reachL=L('LeftArm',_sa).distanceTo(L('LeftForeArm',_sb))+L('LeftForeArm',_sa).distanceTo(L('LeftHand',_sb)); }
@@ -2704,7 +2679,7 @@ function animRealAnim(c,dt){
   if(fast){ m.st.px=pX; m.st.py=pY; m.st.hrx=dabaHR; m.st.hpx=hx; m.st.hpy=hy; m.st.hpz=hz; pvk=1; }
   const fkS=swK>0?1-Math.exp(-30*dt):0; if(fkS) pvk=Math.max(pvk,fkS); // changement d'arme : lissage rapide (pas de coupure : la pose suit la courbe sans saut)
   m.pivot.position.set(sm(m.st,'pvx',pvx,pvk),sm(m.st,'pvy',pvy,pvk),sm(m.st,'pvz',pvz,pvk));
-  hz+=(c.recoil||0)*0.08;
+  hz+=(c.recoil||0)*0.08; if(gun&&!swK&&c.recoil>0) pX+=c.recoil*(0.03+(WEAP[wType].kick||0)*1.5); // v1.7 : le canon se relève au tir
   // chorégraphie en cours : rechargement, culasse ou pompe après un tir
   const S_=_samp; for(let k=0;k<6;k++) S_.g[k]=0; S_.LA=S_.LB=(Gp&&Gp.hands===1)?'cup':'fore'; S_.RA=S_.RB='grip'; S_.e=0; S_.p=S_.pR=null;
   let ch=null, chU=0, chId=null;
@@ -2880,7 +2855,8 @@ function aimSens(){ return SET.sens*(editing?SET.editSens:buildMode?SET.buildSen
 const invY=()=>SET.invertY?-1:1;
 addEventListener('mousemove',e=>{ if(state!=='play'&&state!=='bus') return; if(IS_TOUCH&&!document.pointerLockElement) return; const s=0.0024*aimSens(); camYaw-=e.movementX*s; camPitch=clamp(camPitch-e.movementY*s*invY(),-1.25,1.15); });
 addEventListener('wheel',e=>{ if(state!=='play') return; const dirn=e.deltaY>0?1:-1; if(buildMode){ const o=['wall','ramp','floor','cone']; let i=o.indexOf(buildType); setBuildType(o[(i+dirn+4)%4]); return; } const o=[0,1,2,3,4,5].filter(i=>i===0||player.slots[i-1]); let i=o.indexOf(player.sel); selectSlot(o[(i+dirn+o.length)%o.length]); },{passive:true});
-function selectSlot(i){ const p=player; if(!p||(i>0&&!p.slots[i-1])) return; if(editing) confirmEdit(); if(buildMode) toggleBuild(false); if(p.sel!==i){ const from=p.cur; setSel(p,i); beginSwitch(p,from); ads=false; $('bAim').classList.remove('on'); } }
+function quickSwap(){ const p=player; if(p&&p.prevSel!==undefined&&p.prevSel!==p.sel) selectSlot(p.prevSel); } // v1.7 : arme précédente
+function selectSlot(i){ const p=player; if(!p||(i>0&&!p.slots[i-1])) return; if(editing) confirmEdit(); if(buildMode) toggleBuild(false); if(p.sel!==i){ const from=p.cur; p.prevSel=p.sel; setSel(p,i); beginSwitch(p,from); ads=false; $('bAim').classList.remove('on'); } }
 function crouchPress(){ const p=player; if(!p||!p.alive||p.phase!=='ground'||p.slideT>0) return;
   const sp=Math.hypot(p.vel.x,p.vel.z);
   if(!p.crouch&&sp>4.6&&p.grounded){ p.slideT=1.0; p.crouch=true; p.sprint=false; sprintOn=false; p.slideDir.set(p.vel.x,0,p.vel.z).normalize(); sfxSlide(); addShake(0.025); return; }
@@ -2923,6 +2899,7 @@ tbtn('bAim',()=>{ ads=!ads; $('bAim').classList.toggle('on',ads); });
 document.querySelectorAll('#pick button').forEach(b=>{ const t=b.dataset.p;
   b.addEventListener('touchstart',e=>{ e.preventDefault(); e.stopPropagation(); for(const tc of e.changedTouches) roles.set(tc.identifier,{role:'pick',p:t,el:b,x:tc.clientX,y:tc.clientY}); b.classList.add('act'); pieceDown(t,SET.tapBuild); },{passive:false});
   b.addEventListener('click',()=>{ if(!IS_TOUCH) pieceDown(t,false); }); });
+{ const sb=$('bSwap'); const f=e=>{ e.preventDefault(); e.stopPropagation(); quickSwap(); }; sb.addEventListener('touchstart',f,{passive:false}); sb.addEventListener('click',f); }
 document.querySelectorAll('#editPre button').forEach(b=>{ const f=e=>{ e.preventDefault(); e.stopPropagation(); editPreset(b.dataset.e); }; b.addEventListener('touchstart',f,{passive:false}); b.addEventListener('click',f); });
 document.querySelectorAll('.slot').forEach(s=>{ const f=e=>{ e.preventDefault(); e.stopPropagation(); selectSlot(+s.dataset.s); }; s.addEventListener('touchstart',f,{passive:false}); s.addEventListener('click',f); });
 for(const [id,k] of [['mKil','kilishi'],['mThe','the']]){ const el=$(id); const f=e=>{ e.preventDefault(); e.stopPropagation(); useItem(player,k); }; el.addEventListener('touchstart',f,{passive:false}); el.addEventListener('click',f); }
@@ -3098,15 +3075,18 @@ function updateCamera(dt){
   if(p.phase==='bus'&&bus.active){ updateCamVectors(); camera.position.copy(bus.pos).add(_t.set(0,4,0)).addScaledVector(camFwd,-28); camera.rotation.set(camPitch,camYaw,0,'YXZ'); return; }
   if(!p.alive||(won&&endShown)){ const t=matchTime*0.25; camera.position.set(p.pos.x+Math.cos(t)*12,p.pos.y+9,p.pos.z+Math.sin(t)*12); camera.lookAt(p.pos.x,p.pos.y+1,p.pos.z); return; }
   updateCamVectors();
-  const air=p.phase!=='ground'; const want=air?7.5:(ads&&p.cur!=='daba'&&!buildMode?(isScoped()?1.2:2.3):3.9);
+  const air=p.phase!=='ground', comb=(p.combatT||0)>0&&!buildMode&&!editing; const want=air?7.5:(ads&&p.cur!=='daba'&&!buildMode?(isScoped()?1.2:2.3):comb?3.5:3.9); // v1.7 : un peu plus près en combat
+  camSide=lerp(camSide,air?0.5:comb||ads?0.82:0.72,1-Math.exp(-6*dt));
   camDist=lerp(camDist,want,1-Math.exp(-10*dt));
   const tY=p.pos.y+1.55-0.45*p.ck-(p.slideT>0?0.15:0)-Math.sin(camLand/0.3*Math.PI)*0.16*camLandK; camLand=Math.max(0,camLand-dt); // v1.5 : la caméra plonge un peu à la réception
   if(camPivY===null||air||Math.abs(camPivY-tY)>3) camPivY=tY; else camPivY=lerp(camPivY,tY,1-Math.exp(-16*dt));
   const piv=_t.set(p.pos.x,camPivY,p.pos.z);
-  _m.copy(piv).addScaledVector(camFwd,-camDist).addScaledVector(camRight,0.72); _m.y+=0.2;
+  _m.copy(piv).addScaledVector(camFwd,-camDist).addScaledVector(camRight,camSide); _m.y+=0.2;
   _d.subVectors(_m,piv); const len=_d.length(); _d.divideScalar(len);
-  const h=rayCast(piv,_d,len,null,true); const t=h.type?Math.max(0.3,h.t-0.25):len;
-  camera.position.copy(piv).addScaledVector(_d,t);
+  // v1.7 : collisions : 3 rayons (centre, un peu à gauche et à droite) ; la caméra se rapproche tout de suite d'un obstacle et revient en douceur
+  let t=len; for(const off of [0,-0.22,0.22]){ _o.copy(_m).addScaledVector(camRight,off); _o.sub(piv); const l2=_o.length(); _o.divideScalar(l2); const h=rayCast(piv,_o,l2,null,true); if(h.type) t=Math.min(t,Math.max(0.3,h.t*len/l2-0.25)); }
+  camColT=t<camColT||camColT<0?t:lerp(camColT,t,1-Math.exp(-5*dt));
+  camera.position.copy(piv).addScaledVector(_d,camColT);
   const th=terrainH(camera.position.x,camera.position.z)+0.35; if(camera.position.y<th) camera.position.y=th;
   camera.rotation.set(camPitch,camYaw,0,'YXZ');
   if(shake>0.0005){ camera.position.x+=rnd(-1,1)*shake; camera.position.y+=rnd(-1,1)*shake; camera.rotation.x+=rnd(-1,1)*shake*0.12; camera.rotation.y+=rnd(-1,1)*shake*0.08; shake*=Math.exp(-11*dt); }
@@ -3390,7 +3370,7 @@ requestAnimationFrame(loop);
 loadAssets().then(()=>{ try{ makeWeaponIcons(); }catch(e){} initLobby(); goMenu(); try{ lobby.precompile(); lobby.warm(); lobby.render(); }catch(e){} requestAnimationFrame(()=>$('loading').remove()); setTimeout(()=>{ try{ loadSols(); loadAmbient(); loadPackTrees(); loadPackRocks(); }catch(e){ console.warn('décor',e); } },800); }); // une image rendue derrière l'écran : ombres comprises ; v1.6 : sols, animaux, arbres et rochers du pack chargés 0,8 s après l'affichage du lobby
 
 // accès de débogage
-window.FR={get lobby(){return lobby;}, PROFILE, Profile, get matchMode(){return matchMode;}, get camPitch(){return camPitch;}, get sprintOn(){return sprintOn;}, setSprint:v=>{sprintOn=v;}, placementProblem, computePlacement, dirFromYaw, get camYaw(){return camYaw;}, SET, openSettings, closeSettings, openHudEditor, renderTab, get paused(){return paused;}, THREE, ASSETS, selectSlot, swapTake, giveWeapon, beginSwitch, get nearItem(){return nearItem;}, setAds:v=>{ads=v;}, startEdit, confirmEdit, resetEdit, rayCast, crouchPress, get editing(){return editing;}, get state(){return state;}, get player(){return player;}, bots, chars, items, chests, pieces, housesInfo, doors:DOORS, setDoor, interact, hasLOS, findCover, storm, bus, startMatch, update, jumpFromBus:()=>jumpFromBus(player), tryBuild, setBuildType, toggleBuild, warmGPU, AMB, get TERRAIN(){return TERRAIN;}, get TERRAIN_MAT0(){return TERRAIN_MAT0;}, setQuality, warmGPU, qBox, boxGrounded, boxTouch, checkIntegrity, destroyPiece, pieceDown, pieceUp, damagePiece, editPreset, get buildRot(){return buildRot;}, spaceFreeAt:(x,z,y0,y1,r)=>spaceFree(x,z,y0,y1,r), get buildMode(){return buildMode;}, get pieceHeld(){return pieceHeld;}, pieceList, PINST, setFiring:v=>{firing=v;}, setCam:(y,p)=>{camYaw=y;camPitch=p;}, keys, renderer, scene, camera, get aliveCount(){return aliveCount;}, solids, terrainH};
+window.FR={get lobby(){return lobby;}, PROFILE, Profile, get matchMode(){return matchMode;}, get camPitch(){return camPitch;}, get sprintOn(){return sprintOn;}, setSprint:v=>{sprintOn=v;}, placementProblem, computePlacement, dirFromYaw, get camYaw(){return camYaw;}, SET, openSettings, closeSettings, openHudEditor, renderTab, get paused(){return paused;}, THREE, ASSETS, selectSlot, swapTake, giveWeapon, beginSwitch, get nearItem(){return nearItem;}, setAds:v=>{ads=v;}, startEdit, confirmEdit, resetEdit, rayCast, crouchPress, get editing(){return editing;}, get state(){return state;}, get player(){return player;}, bots, chars, items, chests, pieces, housesInfo, doors:DOORS, setDoor, interact, hasLOS, findCover, storm, bus, startMatch, update, jumpFromBus:()=>jumpFromBus(player), tryBuild, setBuildType, toggleBuild, warmGPU, AMB, get TERRAIN(){return TERRAIN;}, get TERRAIN_MAT0(){return TERRAIN_MAT0;}, setQuality, qBox, boxGrounded, boxTouch, checkIntegrity, destroyPiece, pieceDown, pieceUp, damagePiece, editPreset, quickSwap, get buildRot(){return buildRot;}, spaceFreeAt:(x,z,y0,y1,r)=>spaceFree(x,z,y0,y1,r), get buildMode(){return buildMode;}, get pieceHeld(){return pieceHeld;}, pieceList, PINST, setFiring:v=>{firing=v;}, setCam:(y,p)=>{camYaw=y;camPitch=p;}, keys, renderer, scene, camera, get aliveCount(){return aliveCount;}, solids, terrainH};
 </script>
 </body>
 </html>
