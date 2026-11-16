@@ -372,7 +372,7 @@ body.editing-hud.he-adv #bRot.hidden{display:flex!important}
 
 <div id="settings" class="hidden"><div class="sbox">
   <div class="shead"><span><svg class="ic"><use href="#i-gear"/></svg> Paramètres</span><button id="sClose" aria-label="Fermer"><svg class="ic"><use href="#i-close"/></svg></button></div>
-  <div class="stabs"><button data-t="ctrl" class="on">Contrôles</button><button data-t="build">Construction</button><button data-t="gfx">Graphismes</button><button data-t="snd">Son</button><button data-t="hud">HUD</button></div>
+  <div class="stabs"><button data-t="ctrl" class="on">Contrôles</button><button data-t="build">Construction</button><button data-t="gfx">Graphismes</button><button data-t="snd">Son</button><button data-t="hud">HUD</button><button data-t="match">Partie</button></div>
   <div class="sbody" id="sBody"></div>
   <div class="sfoot"><button class="big" id="sResume">REPRENDRE</button><button class="ghost hidden" id="sClear">Effacer mes constructions</button><button class="ghost" id="sQuit">Quitter la partie</button></div>
 </div></div>
@@ -399,6 +399,7 @@ import {WEAPONS as WMODELS, fitWeapon, fitPiece} from './src/core/weapons.js';
 import {PROC_WEAPONS, buildProcWeapon} from './src/core/weapon-models.js'; // v2.0 : armes modélisées dans le code
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {WEAP, GUNS, RARITY, RAR_COL, RAR_CSS, AMMO, AMMO_TYPES, randGun, rollRarity, rarMul, ammoOf} from './src/core/arsenal.js'; // v2.0 : catalogue des armes
+import {MAP, STORM, BOTS, BOT_PROFILES, BOT_LEVELS, botProfileFor, stormTotal} from './src/core/match.js'; // v2.0 : carte, tempête et bots
 import {BUILD, DMG_TAKEN, BUILD_START_HP} from './src/core/building.js'; // v2.0 : PV et temps de pose des constructions
 import {GRIP, HOLD, STOW, SWITCH_T, SW_ARM, swTimes, stowOf, DABA_K, DABA_HIT, dabaKey} from './src/core/weapon-handling.js'; // v1.7 : prise et changement d'arme
 
@@ -424,9 +425,11 @@ const IS_TOUCH = (()=>{ try{ const f=/[?&]touch=([01])/.exec(location.search); i
 // icônes du HUD : symboles SVG définis en tête de page (aucun emoji)
 const ico=(n,c)=>'<svg class="ic'+(c?' '+c:'')+'"><use href="#i-'+n+'"/></svg>';
 const V=(x=0,y=0,z=0)=>new THREE.Vector3(x,y,z);
+const LOW_DEVICE=!!((navigator.deviceMemory&&navigator.deviceMemory<=2)||(navigator.hardwareConcurrency&&navigator.hardwareConcurrency<=4)); // v2.0 : téléphone modeste
 const SET_DEF={sens:1,adsSens:0.6,scopeSens:0.3,invertY:false,aimAssist:true,vibra:true,joyFixed:false,autoSprint:true,fov:70,res:100,viewDist:340,showFps:false,showStats:false,vol:80,sfx:100,amb:70,btnOp:100,btnScale:100,minimap:true,killfeed:true,dmgNums:true,layout:{},
   tapBuild:true,editRelease:true,buildSens:1,editSens:1,fpsCap:0,faceCam:true,buildStyle:IS_TOUCH?'simple':'avance',
-  cBase:'medium',cShadow:'mid',cTex:'detail',cFx:'mid',cVeg:'high',aa:!IS_TOUCH,hudPreset:'classique',layoutPerso:null}; // v2.0 : profil personnalisé, anticrénelage (au prochain lancement) // v2.0 : buildStyle = mode de construction simple / avancé // v1.5 : faceCam = le perso regarde toujours où vise la caméra (jambes vers la marche) // v1.4 : construction rapide, limite d'images (0 = aucune)
+  cBase:'medium',cShadow:'mid',cTex:'detail',cFx:'mid',cVeg:'high',aa:!IS_TOUCH,hudPreset:'classique',layoutPerso:null,
+  botCount:IS_TOUCH?(LOW_DEVICE?BOTS.def.small:BOTS.def.touch):BOTS.def.pc,botLevel:'mixte'}; // v2.0 : nombre et niveau des bots (src/core/match.js) // v2.0 : profil personnalisé, anticrénelage (au prochain lancement) // v2.0 : buildStyle = mode de construction simple / avancé // v1.5 : faceCam = le perso regarde toujours où vise la caméra (jambes vers la marche) // v1.4 : construction rapide, limite d'images (0 = aucune)
 const SET=Object.assign({},SET_DEF,(()=>{ try{ return JSON.parse(localStorage.getItem('fr_set')||'{}')||{}; }catch(e){ return {}; } })());
 if(!SET.layout||typeof SET.layout!=='object') SET.layout={};
 if(!SET.layoutPerso&&Object.keys(SET.layout).length){ SET.layoutPerso=SET.layout; SET.hudPreset='perso'; } // v2.0 : une disposition faite avant la v2.0 devient « Personnalisée »
@@ -434,7 +437,8 @@ try{ if(/[?&]stats=1/.test(location.search)) SET.showStats=true; }catch(e){}
 function saveSet(){ try{ localStorage.setItem('fr_set',JSON.stringify(SET)); }catch(e){} }
 
 /* ---------- constantes du monde ---------- */
-const MAP=240, CELL=4, STEP=0.6, WATER_Y=-1.2, RIVER_W=13; // v1.0 : carte de 480 m de côté (360 m avant)
+const CELL=4, STEP=0.6, WATER_Y=-1.2, RIVER_W=13; // MAP (demi-côté) : src/core/match.js (v1.0 : 480 m de côté ; v2.0 : 680 m)
+const AREA=(MAP/240)**2; // v2.0 : surface par rapport à la carte v1.0 (brousse : arbres, rochers, butin à la même densité)
 const DIRS=[[0,-1],[1,0],[0,1],[-1,0]];
 const riverX = z => -138 + 12*Math.sin(z*0.022) + z*0.1;
 const BRIDGE_Z=30, BRIDGE_X=riverX(BRIDGE_Z);
@@ -453,7 +457,18 @@ const CITIES=[
   {id:'diffa', name:'Diffa', sub:'Les rives du lac Tchad', x:182, z:92, r:34, flat:0.7},
   {id:'parcw', name:'Parc du W', sub:'La réserve des baobabs', x:42, z:196, r:34, noflat:true},
   {id:'tillaberi', name:'Tillabéri', sub:"Sur l'autre rive", x:-196, z:32, r:24, flat:0.9, my:-8},
+  // v2.0 : carte agrandie (680 m) : nouvelles zones tout autour de l'ancienne carte
+  {id:'camp', name:'Camp militaire', sub:'Casernes, miradors et hangar', x:262, z:-40, r:42, flat:1.0},
+  {id:'bilma', name:'Bilma', sub:"L'oasis et ses salines", x:262, z:-238, r:40, flat:0.8},
+  {id:'malbaza', name:'Malbaza', sub:'La cimenterie', x:250, z:262, r:42, flat:1.2},
+  {id:'djado', name:'Djado', sub:'La forteresse en ruine', x:-10, z:-275, r:38, flat:1.6},
+  {id:'termit', name:'Termit', sub:'Le massif rocheux', x:-262, z:-236, r:50, noflat:true},
+  {id:'filingue', name:'Filingué', sub:'Le village sur la colline', x:-262, z:170, r:30, flat:4.5},
+  {id:'goure', name:'Gouré', sub:'Le village des dunes', x:285, z:118, r:28, flat:0.9},
+  {id:'gaya', name:'Gaya', sub:'Le grand marché du Sud', x:-50, z:282, r:36, flat:0.7},
 ];
+// v2.0 : reliefs des nouvelles zones (centres) : dunes autour de l'oasis de Bilma, collines de Termit, colline de Filingué
+const DUNE2={x:262,z:-238}, TERMIT={x:-262,z:-236}, HILL={x:-262,z:170};
 const LAKE={x:188,z:168,r:23}, PIT={x:-112,z:-212,r:19};
 // massif de l'Aïr : une crête au nord d'Agadez (0 → 1), à l'est de x ≈ −40 ; au-delà, le désert d'Arlit
 function airW(x,z){ if(z>-128) return 0; const u=clamp((-128-z)/74,0,1); return Math.pow(Math.sin(Math.PI*u),1.2)*smooth(-62,-18,x); }
@@ -467,6 +482,9 @@ function terrainH(x,z){
   const dt=Math.hypot(x-118,z+108);
   if(dt<95){ const w=1-smooth(35,95,dt); const r=Math.sin(x*0.07+z*0.032); h += w*(2.5+7*r*r+1.5*Math.sin(z*0.05+x*0.01)); }
   const aw=airW(x,z); if(aw>0) h += aw*(24+9*Math.sin(x*0.05)+4*Math.sin(x*0.17+z*0.11)) + aw*aw*5*Math.sin(x*0.29-z*0.13);
+  { const dx=x-DUNE2.x, dz=z-DUNE2.z, q=dx*dx+dz*dz; if(q<12100){ const d=Math.sqrt(q), w=1-smooth(48,110,d); const r=Math.sin(x*0.06-z*0.035); h += w*(2+6*r*r+1.2*Math.sin(z*0.05)); } } // v2.0 : dunes de Bilma
+  { const dx=x-TERMIT.x, dz=z-TERMIT.z, q=dx*dx+dz*dz; if(q<9025){ const d=Math.sqrt(q), w=1-smooth(25,95,d); h += w*(5+7*Math.abs(Math.sin(x*0.083)*Math.cos(z*0.071))+3*Math.sin(x*0.21+z*0.17)); } } // v2.0 : massif de Termit
+  { const dx=x-HILL.x, dz=z-HILL.z, q=dx*dx+dz*dz; if(q<6400){ const d=Math.sqrt(q); h += 4.5*(1-smooth(20,80,d)); } } // v2.0 : colline de Filingué
   for(let i=0;i<FLATS.length;i++){ const c=FLATS[i]; const dx=x-c.x, dz=z-c.z; const lim=c.r+12; if(dx*dx+dz*dz<lim*lim){ const d=Math.sqrt(dx*dx+dz*dz); h=lerp(h,c.flat,1-smooth(c.r*0.75,lim,d)); } }
   { const dp=Math.hypot(x-PIT.x,z-PIT.z); if(dp<PIT.r) h -= 3*(1-smooth(PIT.r*0.3,PIT.r,dp)); } // fosse de la mine d'Arlit (3 m : reste au-dessus du niveau de l'eau)
   const dr=Math.abs(x-riverX(z));
@@ -488,6 +506,8 @@ function groundColor(x,z,h){
   const dl=Math.hypot(x-LAKE.x,z-LAKE.z);
   if(h>WATER_Y-0.4){ mix(0.45,0.57,0.28,(1-smooth(13,30,dr))*0.9); mix(0.43,0.56,0.27,(1-smooth(LAKE.r,LAKE.r+20,dl))*0.85); } else mix(0.42,0.38,0.28,1);
   mix(0.62,0.6,0.36,(1-smooth(20,44,Math.hypot(x-42,z-196)))*0.7); // herbe du parc du W
+  mix(0.98,0.84,0.6,1-smooth(45,115,Math.hypot(x-DUNE2.x,z-DUNE2.z))); mix(0.58,0.47,0.38,(1-smooth(35,95,Math.hypot(x-TERMIT.x,z-TERMIT.z)))*0.9); // v2.0 : sable de Bilma, roche de Termit
+  mix(0.78,0.76,0.72,(1-smooth(20,46,Math.hypot(x-250,z-262)))*0.55); // v2.0 : poussière de ciment à Malbaza
   mix(0.66,0.55,0.38,(1-smooth(PIT.r*0.5,PIT.r+3,Math.hypot(x-PIT.x,z-PIT.z)))*0.9); // roche de la mine
   const n=0.035*Math.sin(x*0.37+z*0.21)+0.03*Math.sin(x*1.1-z*0.9)+0.02*Math.sin(x*2.3+z*1.7);
   return [clamp(r+n,0,1),clamp(g+n,0,1),clamp(b+n*0.8,0,1)];
@@ -506,6 +526,9 @@ function groundSplat(x,z,h){
   if(h>WATER_Y-0.4){ put(2,(1-smooth(13,30,dr))*0.85); put(4,(1-smooth(LAKE.r+4,LAKE.r+18,dl))*0.75); put(2,(1-smooth(LAKE.r+14,LAKE.r+34,dl))*(smooth(LAKE.r+4,LAKE.r+16,dl))*0.6); }
   else put(4,1);
   put(2,(1-smooth(20,44,Math.hypot(x-42,z-196)))*0.8);             // parc du W
+  put(0, 1-smooth(45,115,Math.hypot(x-DUNE2.x,z-DUNE2.z)));         // v2.0 : dunes de Bilma
+  put(3, (1-smooth(35,95,Math.hypot(x-TERMIT.x,z-TERMIT.z)))*0.95); // v2.0 : massif de Termit (gravier)
+  put(4, (1-smooth(20,46,Math.hypot(x-250,z-262)))*0.6);            // v2.0 : cimenterie de Malbaza (terre sèche)
   put(3,(1-smooth(PIT.r*0.5,PIT.r+3,Math.hypot(x-PIT.x,z-PIT.z)))*0.95); // mine
   return w; }
 function zoneAt(x,z){
@@ -531,7 +554,7 @@ const QP={
   high:  {name:'Élevé',   rockNear:110, prMax:2,   shadow:true,  smap:2048, view:400, animFar:75, vis:200, pmax:400, beam:75, flash:true,  decals:40, itemMesh:80, gunLod:90, detail:1e9, bushes:true, canopy2:true, chestVis:150, itemVis:110, giraffe:220, splat:true,soft:true},
 };
 // v2.0 : premier lancement : profil selon l'appareil (mémoire, cœurs) ; ensuite celui choisi par le joueur
-let quality = IS_TOUCH ? ((navigator.deviceMemory&&navigator.deviceMemory<=2)||(navigator.hardwareConcurrency&&navigator.hardwareConcurrency<=4) ? 'vlow' : 'low') : 'high';
+let quality = IS_TOUCH ? (LOW_DEVICE ? 'vlow' : 'low') : 'high';
 try{ const q=localStorage.getItem('fr_q'); if(q&&QP[q]) quality=q; }catch(e){}
 QP.custom={...QP.medium,name:'Personnalisé'}; // recalculé par buildCustomQ() à partir des réglages séparés
 let Q=quality==='custom'?buildCustomQ():QP[quality];
@@ -732,7 +755,7 @@ function loadSols(){ const L=new THREE.TextureLoader(); let n=0; const texs=SOLS
 /* ---------- génération : terrain ---------- */
 const lootSpots=[], chestSpots=[], housesInfo=[]; const LOD_OBJ={};
 {
-  const S=MAP*2+60, N=LOWQ()?150:190; /* terrain moins dense en qualité Basse */ const g=new THREE.PlaneGeometry(S,S,N,N); g.rotateX(-Math.PI/2);
+  const S=MAP*2+60, N=LOWQ()?180:250; /* terrain moins dense en qualité Basse ; v2.0 : carte plus grande, mailles de 4,1 m (Basse) et 3 m */ const g=new THREE.PlaneGeometry(S,S,N,N); g.rotateX(-Math.PI/2);
   const p=g.attributes.position; const cols=new Float32Array(p.count*3); const c=new THREE.Color();
   const s0=new Float32Array(p.count*4), s1=new Float32Array(p.count*2);
   for(let i=0;i<p.count;i++){ const x=p.getX(i), z=p.getZ(i); const h=terrainH(x,z); p.setY(i,h); const gc=groundColor(x,z,h); c.setRGB(gc[0],gc[1],gc[2],THREE.SRGBColorSpace); cols[i*3]=c.r; cols[i*3+1]=c.g; cols[i*3+2]=c.b;
@@ -1074,17 +1097,69 @@ addFort(26,-98); addMosque(-24,-114);
 { const c=CITY.tillaberi; for(let i=0;i<9;i++){ const a=i/9*Math.PI*2+rr(-0.15,0.15), r=rr(9,19); addHut(c.x+Math.cos(a)*r,c.z+Math.sin(a)*r,rr(2,2.6),rr(2.3,2.9)); }
   for(let k=0;k<5;k++){ const a=R()*6.28, r=Math.sqrt(R())*c.r*0.7; addHouse(c.x+Math.cos(a)*r,c.z+Math.sin(a)*r,rr(6,8),rr(6,7.5),rr(4,5.5),'banco'); }
   chestSpots.push([c.x,terrainH(c.x,c.z),c.z,'tillaberi']); }
-// Brousse (carte agrandie : ≈ 1,8 × plus d'arbres, de rochers, de butin)
-{ let n=0; for(let k=0;k<1400&&n<150;k++){ const x=rr(-MAP+8,MAP-8), z=rr(-MAP+8,MAP-8); if(airW(x,z)>0.2||!outsideCities(x,z,4)) continue; if(addTree(x,z,rr(0.8,1.1),R()<0.12?'baobab':'acacia')) n++; }
-  for(let k=0;k<100;k++){ const x=rr(-MAP+8,MAP-8), z=rr(-MAP+8,MAP-8); if(!outsideCities(x,z,4)) continue; addRock(x,z,airW(x,z)>0.25?1.6:rr(0.7,1.1)); }
-  for(let k=0;k<55;k++){ const x=rr(-MAP+8,MAP-8), z=rr(-MAP+8,MAP-8); if(airW(x,z)>0.15||!outsideCities(x,z,4)) continue; addMound(x,z); }
-  for(let k=0;k<55;k++){ const x=rr(-MAP+12,MAP-12), z=rr(-MAP+12,MAP-12); if(!outsideCities(x,z,2)||nearWater(x,z,4)) continue; lootSpots.push([x,terrainH(x,z),z]); }
+/* ---- v2.0 : nouvelles zones de la carte agrandie (maisons ouvertes avec portes et butin, comme les villes d'avant) ---- */
+const lootIn=(c,n,r0=4,r1=0.85)=>{ for(let i=0;i<n;i++){ const a=R()*6.28, r=rr(r0,c.r*r1), x=c.x+Math.cos(a)*r, z=c.z+Math.sin(a)*r; if(!nearWater(x,z,2)) lootSpots.push([x,terrainH(x,z),z]); } };
+function addSilo(x,z,rad=2.6,H=14){ if(!freeArea(x-rad,z-rad,x+rad,z+rad,1.5)) return; footprints.push({minX:x-rad,minZ:z-rad,maxX:x+rad,maxZ:z+rad}); const b=terrainH(x,z)-0.3;
+  MG.plaster.add(prismGeo(rad,rad,H,14,6.28*rad),M4(x,b+H/2,z),C(0xcfcac0)); MG.plain.add(new THREE.ConeGeometry(rad*1.05,1.6,14),M4(x,b+H+0.8,z),C(0x8f9ba4));
+  addSolid(x-rad*0.8,b,z-rad*0.8,x+rad*0.8,b+H,z+rad*0.8,{harvest:true}); }
+// n maisons ouvertes au hasard entre r0 et r1 du centre (plusieurs essais : la place peut être prise)
+function placeHouses(c,n,r0,r1,style,hMax=5.6){ let k=0; for(let t=0;t<n*14&&k<n;t++){ const a=R()*6.28, r=rr(r0,r1); if(addHouse(c.x+Math.cos(a)*r,c.z+Math.sin(a)*r,rr(6,8),rr(6,7.5),rr(4,hMax),typeof style==='function'?style():style)) k++; } return k; }
+function addSandbags(x,z,len,alongX){ return addLowWall(x,z,len,alongX,C(0xb8a074)); }
+// Camp militaire : casernes (maisons ouvertes), hangar, miradors, sacs de sable, citerne
+{ const c=CITY.camp; for(let i=-1;i<=1;i++) for(let j=-1;j<=1;j+=2) addHouse(c.x+i*15+rr(-1,1),c.z+j*11,rr(9.5,10.5),rr(6.5,7.2),rr(4.2,4.8),'plaster');
+  addShed(c.x-4,c.z+27,16,12,7); addWatchtower(c.x-30,c.z-26); addWatchtower(c.x+31,c.z+20); addWaterTower(c.x+26,c.z-22);
+  for(let k=0;k<10;k++){ const a=k/10*6.28+rr(-0.2,0.2), r=rr(c.r*0.55,c.r*0.8); addSandbags(c.x+Math.cos(a)*r,c.z+Math.sin(a)*r,rr(3,5),Math.abs(Math.cos(a))<0.7); }
+  chestSpots.push([c.x,terrainH(c.x,c.z),c.z,'camp'],[c.x-15,terrainH(c.x-15,c.z+2),c.z+2,'camp']); lootIn(c,9); }
+// Bilma : l'oasis (palmiers dattiers, puits, salines), cases et maisons de banco, au milieu des dunes
+{ const c=CITY.bilma; { const b=terrainH(c.x,c.z); MG.banco.add(prismGeo(1.5,1.6,1,12,9.5),M4(c.x,b+0.5,c.z),C(0xd9bf98)); addSolid(c.x-1.2,b,c.z-1.2,c.x+1.2,b+1,c.z+1.2,{harvest:true}); footprints.push({minX:c.x-2,minZ:c.z-2,maxX:c.x+2,maxZ:c.z+2}); }
+  placeHouses(c,6,9,c.r*0.8,'banco');
+  let n=0; for(let k=0;k<200&&n<22;k++){ const a=R()*6.28, r=rr(5,c.r*0.8); if(addTree(c.x+Math.cos(a)*r,c.z+Math.sin(a)*r,rr(0.95,1.25),'palm')) n++; }
+  for(let k=0;k<6;k++){ const x=c.x+18+(k%3)*5.2, z=c.z-14+Math.floor(k/3)*5.2; if(!freeArea(x-2.2,z-2.2,x+2.2,z+2.2,0.5)) continue; footprints.push({minX:x-2.2,minZ:z-2.2,maxX:x+2.2,maxZ:z+2.2}); MG.plain.add(boxGeo(4.4,0.12,4.4),M4(x,terrainH(x,z)+0.06,z),C(0xf2ede4)); } // salines
+  for(let i=0;i<10;i++){ const a=i/10*6.28+rr(-0.15,0.15), r=rr(22,30); addHut(c.x+Math.cos(a)*r,c.z+Math.sin(a)*r,rr(2,2.6),rr(2.3,2.9)); }
+  chestSpots.push([c.x+2.5,terrainH(c.x+2.5,c.z+2.5),c.z+2.5,'puits']); lootIn(c,8); }
+// Malbaza : la cimenterie (silos, hangars, convoyeurs, château d'eau, pylônes) et les logements des ouvriers
+{ const c=CITY.malbaza; addSilo(c.x-8,c.z-6); addSilo(c.x-2,c.z-6); addSilo(c.x+4,c.z-6,2.2,11);
+  addShed(c.x+16,c.z+10,16,12,7.5); addShed(c.x-18,c.z+12,13,10,6.5); addWaterTower(c.x+24,c.z-20);
+  { const A=V(c.x-2,terrainH(c.x-2,c.z-6)+12,c.z-3.4), Bp=V(c.x+16,terrainH(c.x+16,c.z+4)+7.5,c.z+4); const d=V().subVectors(Bp,A), len=d.length(); d.normalize();
+    MG.plain.add(boxGeo(1,0.4,len),new THREE.Matrix4().compose(V().addVectors(A,Bp).multiplyScalar(0.5),new THREE.Quaternion().setFromUnitVectors(V(0,0,1),d),V(1,1,1)),C(0x6a7178)); }
+  for(const [px,pz] of [[c.x+32,c.z+26],[c.x-30,c.z-20],[c.x+6,c.z+34]]) addPylon(px,pz);
+  placeHouses(c,5,22,c.r*0.95,'plaster',5);
+  scatterLowWalls(c,5); chestSpots.push([c.x+16,terrainH(c.x+16,c.z+10),c.z+3,'usine']); lootIn(c,9); }
+// Djado : la forteresse en ruine (ksar), maisons de banco effondrées, rochers
+{ const c=CITY.djado; addFort(c.x,c.z,30,7,1.4);
+  placeHouses(c,9,21,c.r*0.95,'banco',5.2);
+  scatterLowWalls(c,8); for(let i=0;i<8;i++){ const a=R()*6.28, r=rr(c.r,c.r+18); addRock(c.x+Math.cos(a)*r,c.z+Math.sin(a)*r,rr(1,1.6)); }
+  chestSpots.push([c.x,terrainH(c.x,c.z),c.z,'fort']); lootIn(c,9,6); }
+// Termit : massif rocheux (gros rochers à récolter, buttes), peu de maisons : butin caché entre les rochers
+{ const c=CITY.termit; for(let k=0;k<70;k++){ const a=R()*6.28, r=Math.sqrt(R())*c.r*1.3; addRock(c.x+Math.cos(a)*r,c.z+Math.sin(a)*r,rr(1.2,2.6)); }
+  for(let k=0;k<18;k++){ const a=R()*6.28, r=Math.sqrt(R())*c.r; addMound(c.x+Math.cos(a)*r,c.z+Math.sin(a)*r); }
+  addHouse(c.x+6,c.z-4,7,6.5,4.4,'banco'); addHouse(c.x-12,c.z+14,6.5,6.5,4.2,'banco'); addWatchtower(c.x-4,c.z+30);
+  chestSpots.push([c.x+2,terrainH(c.x+2,c.z+10),c.z+10,'rochers']); lootIn(c,10,6,1); }
+// Filingué : village sur la colline (cases, maisons, murets)
+{ const c=CITY.filingue; placeHouses(c,6,6,c.r*0.8,'banco');
+  for(let i=0;i<10;i++){ const a=i/10*6.28+rr(-0.15,0.15), r=rr(12,24); addHut(c.x+Math.cos(a)*r,c.z+Math.sin(a)*r,rr(2,2.6),rr(2.3,2.9)); }
+  scatterLowWalls(c,5); addTree(c.x+1,c.z+1,1.3,'baobab'); chestSpots.push([c.x+3,terrainH(c.x+3,c.z+3),c.z+3,'village']); lootIn(c,6); }
+// Gouré : village des dunes (cases, palmiers, quelques maisons)
+{ const c=CITY.goure; placeHouses(c,5,5,c.r*0.8,()=>R()<0.5?'banco':'plaster');
+  for(let i=0;i<11;i++){ const a=i/11*6.28+rr(-0.15,0.15), r=rr(11,23); addHut(c.x+Math.cos(a)*r,c.z+Math.sin(a)*r,rr(2,2.6),rr(2.3,2.9)); }
+  let n=0; for(let k=0;k<80&&n<9;k++){ const a=R()*6.28, r=rr(6,c.r); if(addTree(c.x+Math.cos(a)*r,c.z+Math.sin(a)*r,rr(0.9,1.2),'palm')) n++; }
+  chestSpots.push([c.x,terrainH(c.x,c.z),c.z,'village']); lootIn(c,6); }
+// Gaya : le grand marché du Sud (étals, maisons)
+{ const c=CITY.gaya; for(let i=0;i<5;i++) for(let j=0;j<3;j++) addStall(c.x-11+i*5.6,c.z-6+j*5.4);
+  chestSpots.push([c.x,terrainH(c.x,c.z+5.4),c.z+5.4,'market']);
+  for(let i=-3;i<=3;i++) for(let j=-3;j<=3;j++){ const x=c.x+i*11.5+rr(-1.5,1.5), z=c.z+j*11.5+rr(-1.5,1.5); if(Math.hypot(x-c.x,z-c.z)>c.r*0.92||R()<0.2) continue; addHouse(x,z,rr(6.5,9),rr(6.5,9),R()<0.2?rr(7,8.5):rr(4.2,6.2),R()<0.6?'plaster':'banco'); }
+  scatterLowWalls(c,5); }
+// Brousse (carte agrandie : ≈ 1,8 × plus d'arbres, de rochers, de butin ; v2.0 : × AREA de plus pour la carte de 680 m)
+{ let n=0; for(let k=0;k<1400*AREA&&n<150*AREA;k++){ const x=rr(-MAP+8,MAP-8), z=rr(-MAP+8,MAP-8); if(airW(x,z)>0.2||!outsideCities(x,z,4)) continue; if(addTree(x,z,rr(0.8,1.1),R()<0.12?'baobab':'acacia')) n++; }
+  for(let k=0;k<100*AREA;k++){ const x=rr(-MAP+8,MAP-8), z=rr(-MAP+8,MAP-8); if(!outsideCities(x,z,4)) continue; addRock(x,z,airW(x,z)>0.25?1.6:rr(0.7,1.1)); }
+  for(let k=0;k<55*AREA;k++){ const x=rr(-MAP+8,MAP-8), z=rr(-MAP+8,MAP-8); if(airW(x,z)>0.15||!outsideCities(x,z,4)) continue; addMound(x,z); }
+  for(let k=0;k<55*AREA;k++){ const x=rr(-MAP+12,MAP-12), z=rr(-MAP+12,MAP-12); if(!outsideCities(x,z,2)||nearWater(x,z,4)) continue; lootSpots.push([x,terrainH(x,z),z]); }
   for(let k=0;k<60;k++){ const x=rr(-40,MAP-10), z=rr(-205,-130); if(airW(x,z)<0.35) continue; addRock(x,z,rr(1.4,2.4)); }
   // palmiers doum le long du fleuve et autour du lac
-  for(let k=0;k<80;k++){ const z=rr(-MAP+10,MAP-10), x=riverX(z)+(R()<0.5?-1:1)*(RIVER_W+rr(6,13)); if(Math.abs(x)>MAP-10||!outsideCities(x,z,1)) continue; addTree(x,z,rr(0.9,1.2),'palm'); }
+  for(let k=0;k<80*MAP/240;k++){ const z=rr(-MAP+10,MAP-10), x=riverX(z)+(R()<0.5?-1:1)*(RIVER_W+rr(6,13)); if(Math.abs(x)>MAP-10||!outsideCities(x,z,1)) continue; addTree(x,z,rr(0.9,1.2),'palm'); }
   for(let k=0;k<26;k++){ const a=R()*6.28, r=LAKE.r+rr(5,13); addTree(LAKE.x+Math.cos(a)*r,LAKE.z+Math.sin(a)*r,rr(0.9,1.2),'palm'); }
   // buissons : décor sans collision, donne de la densité pour pas cher
-  for(let k=0;k<1200&&bushList.length<460;k++){ const x=rr(-MAP+6,MAP-6), z=rr(-MAP+6,MAP-6); if(airW(x,z)>0.3||nearWater(x,z,1)) continue; let ok=true; for(const f of footprints){ if(x>f.minX-1&&x<f.maxX+1&&z>f.minZ-1&&z<f.maxZ+1){ ok=false; break; } } if(ok) bushList.push({x,z,b:terrainH(x,z),s:rr(0.45,1.05),r:R()*6}); } }
+  for(let k=0;k<1200*AREA&&bushList.length<460*AREA;k++){ const x=rr(-MAP+6,MAP-6), z=rr(-MAP+6,MAP-6); if(airW(x,z)>0.3||nearWater(x,z,1)) continue; let ok=true; for(const f of footprints){ if(x>f.minX-1&&x<f.maxX+1&&z>f.minZ-1&&z<f.maxZ+1){ ok=false; break; } } if(ok) bushList.push({x,z,b:terrainH(x,z),s:rr(0.45,1.05),r:R()*6}); } }
 // construire les meshes statiques
 MAT.neon=new THREE.MeshBasicMaterial({vertexColors:true});
 for(const [k,mat] of [['banco',MAT.banco],['decor',MAT.decor],['plaster',MAT.plaster],['plain',MAT.plain],['straw',MAT.straw],['neon',MAT.neon]]){ const m=MG[k].mesh(mat); if(m){ if(k==='neon') m.castShadow=false; scene.add(m); } }
@@ -1750,7 +1825,7 @@ function tryBuild(c,type,dir,opts){
   const why=placementProblem(pl);
   if(why){ if(c===player&&performance.now()-buildMsgT>900){ buildMsgT=performance.now(); showMsg(why==='joueur'?'QUELQU\'UN EST DANS LE PASSAGE':why==='vide'?'RIEN POUR LA TENIR':'IMPOSSIBLE ICI', why==='joueur'?'recule un peu pour poser':why==='vide'?'pose-la contre le sol ou une autre pièce':'la pièce serait sous le sable',0.9); } return false; }
   createPiece(pl,c); if(!(c===player&&matchMode==='train')) c.banco-=BUILD[type].cost; c.buildCD=c===player?0.05:1.2; c.built++;
-  sfxBuild(c.pos.distanceTo(camera.position)); return true;
+  if(!c.isPlayer) BSTAT.builds++; sfxBuild(c.pos.distanceTo(camera.position)); return true;
 }
 const ghosts={}; for(const k of ['wall','floor','ramp','cone']){ ghosts[k]=makePieceObj(k,MAT.ghost,MAT.ghost).obj; }
 // v1.5 : contour blanc sur le fantôme (repris de l'autre version) : la pièce prévue se lit même au soleil, sur le sable clair
@@ -2075,9 +2150,10 @@ function dropAt(c,kind,extra){ const it=spawnItem(kind,c.pos.x,c.pos.y+0.4,c.pos
 function dropWeapon(){ const p=player; if(!p||!p.alive||p.phase!=='ground'||p.sel===0) return; const i=p.sel-1, t=p.slots[i]; if(!t) return;
   dropAt(p,'w:'+t,{rar:p.srar[i],mag:p.mag[t]}); p.slots[i]=null; delete p.mag[t]; const from=t; p.prevSel=0; setSel(p,0); beginSwitch(p,from); p.reloadT=0; sfxPick();
   showMsg('ARME LÂCHÉE',WEAP[t].name,0.8); }
-function botAutoWeapon(b,d){ let best=null,sc=-99; for(const t of b.slots){ if(!t) continue; let s2=WEAP[t].rar+b.srar[b.slots.indexOf(t)]*0.3; if(t==='pompe'||t==='pompet') s2+= d<10?5:-3; if(t==='sniper') s2+= d>50?4:-3; if(t==='mitraillette'&&d<20) s2+=1; if(s2>sc){ sc=s2; best=t; } }
+function botAutoWeapon(b,d){ let best=null,sc=-99; for(const t of b.slots){ if(!t) continue; let s2=WEAP[t].rar+b.srar[b.slots.indexOf(t)]*0.3; if(t==='pompe'||t==='pompet') s2+= d<10?5:-3; if(t==='sniper') s2+= d>50?4:-3; if(t==='tactique') s2+= d>25?2:-1; if(t==='mitraillette'&&d<20) s2+=1; if(s2>sc){ sc=s2; best=t; } }
   if(best&&b.cur!==best){ const from=b.cur; setSel(b,b.slots.indexOf(best)+1); beginSwitch(b,from); } }
-const NAMES=['Moussa','Aïcha','Ousmane','Mariama','Hadiza','Ibrahim','Zeinabou','Amadou','Rahila','Souleymane','Fati','Hassane','Habsatou','Boubacar','Ramatou','Idrissa','Safiatou','Issa','Balkissa','Yacouba','Nafissa','Harouna','Mariam','Seydou','Bintou'];
+const NAMES=['Moussa','Aïcha','Ousmane','Mariama','Hadiza','Ibrahim','Zeinabou','Amadou','Rahila','Souleymane','Fati','Hassane','Habsatou','Boubacar','Ramatou','Idrissa','Safiatou','Issa','Balkissa','Yacouba','Nafissa','Harouna','Mariam','Seydou','Bintou',
+  /* v2.0 : jusqu'à 59 bots */ 'Abdou','Salamatou','Mahamadou','Hawa','Abdoulaye','Kadidja','Moctar','Aminata','Garba','Zalika','Inoussa','Djamila','Oumarou','Halima','Sani','Rakia','Laouali','Fatouma','Adamou','Tanko','Hamsatou','Chaibou','Mounira','Salifou','Raliatou','Yaou','Rabi','Akli','Tinhinan','Ghali','Nana','Kader','Asma','Elhadji','Saratou','Mamane','Hassia'];
 const chars=[]; let player=null; const bots=[];
 class Char{
   constructor(name,skin,isPlayer){ this.name=name; this.skin=skin; this.isPlayer=isPlayer; this.pos=V(); this.vel=V(); this.yaw=0; this.model=makeModel(skin,isPlayer); this.mkey=modelKey(skin,isPlayer); scene.add(this.model.g); this.reset(); }
@@ -2104,7 +2180,7 @@ function startReload(c){ const w=WEAP[c.cur]; if(!c.alive||w.melee||c.reloadT>0|
   c.useT=0; c.boltT=0; c.pumpT=0; }
 function finishReload(c){ const w=WEAP[c.cur]; const need=w.mag-c.mag[c.cur]; const take=c.isPlayer?Math.min(need,ammoLeft(c,c.cur)):need; c.mag[c.cur]+=take; useAmmo(c,c.cur,take); }
 function useItem(c,kind){ if(!c||!c.alive||c.phase==='bus'||c.useT>0||c.reloadT>0) return; if(kind==='kilishi'&&(c.kilishi<=0||c.hp>=100)) return; if(kind==='the'&&(c.the<=0||c.shield>=75)) return; c.useKind=kind; c.useT=c.useMax=kind==='kilishi'?2.0:1.6; }
-function finishUse(c){ if(c.useKind==='kilishi'){ c.kilishi--; c.hp=Math.min(100,c.hp+25); } else { c.the--; c.shield=Math.min(75,c.shield+25); } if(c.isPlayer) sfxPick(); c.useKind=null; }
+function finishUse(c){ if(!c.isPlayer) BSTAT.heals++; if(c.useKind==='kilishi'){ c.kilishi--; c.hp=Math.min(100,c.hp+25); } else { c.the--; c.shield=Math.min(75,c.shield+25); } if(c.isPlayer) sfxPick(); c.useKind=null; }
 function updateTimers(c,dt){
   c.fireCD-=dt; c.buildCD-=dt; c.hurtT-=dt; c.swingT-=dt; if(c.noiseT>0) c.noiseT-=dt; updateSwitch(c,dt); if(c.raiseT>0) c.raiseT-=dt;
   if(c.meleeAt>0){ c.meleeAt-=dt; if(c.meleeAt<=0&&c.isPlayer) meleeHit(c); }
@@ -2118,7 +2194,9 @@ function updateTimers(c,dt){
 }
 
 /* ---------- dégâts & éliminations ---------- */
-let aliveCount=20, matchTime=0, won=false, endShown=false, deadT=0;
+let aliveCount=20, matchPlayers=20, matchTime=0, won=false, endShown=false, deadT=0;
+/* v2.0 : compteurs des bots (mesures avant / après de l'IA ; quelques additions par tir, rien d'autre) */
+const BSTAT={}; function resetBStat(){ Object.assign(BSTAT,{shots:0,hits:0,engD:0,builds:0,heals:0,cover:0,rotations:0}); } resetBStat();
 const feedEl=$('feed');
 function feed(html,me){ const d=document.createElement('div'); d.innerHTML=html; if(me) d.classList.add('me'); feedEl.prepend(d); while(feedEl.children.length>5) feedEl.lastChild.remove(); setTimeout(()=>d.remove(),6000); }
 function damageChar(t,amount,att,head,wname,point){
@@ -2135,7 +2213,7 @@ function killChar(t,att,wname){
   if(matchMode==='train'&&t.dummy){ // mannequin : tombe, revient 3 s plus tard, rien d'autre
     t.alive=false; t.hp=0; t.deathT=0; t.respawnT=3; t.useT=0; t.reloadT=0; if(att){ att.kills++; if(att===player){ showMsg('MANNEQUIN À TERRE','il se relève dans 3 s',1.1); sfxElim(); } }
     for(let k=0;k<12;k++) spawnParticle(t.pos.x+rnd(-0.4,0.4),t.pos.y+rnd(0,1.6),t.pos.z+rnd(-0.4,0.4),rnd(-3,3),rnd(1,5),rnd(-3,3),[0x7fd0ff,0xffffff,0xffd166][k%3],rnd(0.5,1),1,6); return; }
-  t.alive=false; t.hp=0; t.deathT=0; t.rank=aliveCount; t.killer=att; aliveCount--;
+  t.alive=false; t.hp=0; t.deathT=0; t.rank=aliveCount; t.killer=att; aliveCount--; t.diedAt=matchTime; t.diedArmed=t.slots.some(Boolean);
   t.useT=0; t.useKind=null; t.reloadT=0; t.mantle=null; // un kilishi entamé ne soigne pas un mort
   t.model.glider.visible=false;
   if(att){ att.kills++; const verb=wname==='daba'?'a assommé':'a éliminé';
@@ -2226,10 +2304,10 @@ function pickup(c,it){
 function updateItems(dt){
   for(let i=items.length-1;i>=0;i--){ const it=items[i]; if(!it.alive){ items.splice(i,1); continue; }
     if(it.vy!==0||it.vx!==0){ it.vy-=18*dt; it.x+=it.vx*dt; it.z+=it.vz*dt; it.y+=it.vy*dt; const g=groundAt(it.x,it.z,it.y+0.5); if(it.y<=g){ it.y=g; it.vy=0; it.vx=0; it.vz=0; } it.g.position.set(it.x,it.y,it.z); }
-    if(it.noPick>0) it.noPick-=dt; it.ph+=dt*2; it.m.position.y=0.45+Math.sin(it.ph)*0.12; it.m.rotation.y+=dt*1.5;
-    const dc=Math.abs(it.x-camera.position.x)+Math.abs(it.z-camera.position.z); it.g.visible=dc<Q.itemVis; it.g.children[1].visible=dc<Q.beam; it.m.visible=dc<Q.itemMesh||!it.kind.startsWith('w:'); }
+    if(it.noPick>0) it.noPick-=dt; it.ph+=dt*2;
+    const dc=Math.abs(it.x-camera.position.x)+Math.abs(it.z-camera.position.z); it.g.visible=dc<Q.itemVis; if(it.g.visible){ it.m.position.y=0.45+Math.sin(it.ph)*0.12; it.m.rotation.y+=dt*1.5; } /* v2.0 : flottement des seuls objets affichés */ it.g.children[1].visible=dc<Q.beam; it.m.visible=dc<Q.itemMesh||!it.kind.startsWith('w:'); }
 }
-let nearItem=null;
+let nearItem=null, pickTick=0;
 function tryPickups(c){ let near=null; for(const it of items){ if(!it.alive||it.noPick>0) continue; const dx=it.x-c.pos.x, dz=it.z-c.pos.z, dy=it.y-c.pos.y; if(dx*dx+dz*dz<2.6&&Math.abs(dy)<1.8){ if(!pickup(c,it)&&c===player&&it.kind.startsWith('w:')) near=it; } } if(c===player) nearItem=near; }
 // v1.3 : E / bouton : prendre l'arme proche, sinon ouvrir ou fermer la porte proche
 function interact(){ const p=player; if(!p||!p.alive||p.phase!=='ground') return; const d=doorNear(p);
@@ -2245,8 +2323,9 @@ function openChest(ch,c){ ch.open=true; ch.t=0; c.chestsOpened++; const g=randGu
   spawnItem('w:'+g,ch.x,ch.y+0.6,ch.z,1,true,{rar:rollRarity(g,1)}); // coffre : meilleure rareté
   n.forEach(k=>spawnItem(k,ch.x,ch.y+0.6,ch.z,k==='ammo'?AMMO[ammoOf(g)].box*2:k==='banco'?40:1,true,k==='ammo'?{atype:ammoOf(g)}:null));
   if(c===player){ showMsg('COFFRE OUVERT','',1.1); tone(523,0.1,0.15,'triangle'); tone(784,0.15,0.15,'triangle',null,0.08); } }
-function updateChests(dt){ for(const ch of chests){ const dc=Math.abs(ch.x-camera.position.x)+Math.abs(ch.z-camera.position.z); ch.g.visible=dc<Q.chestVis; ch.glow.visible=!ch.open&&dc<Q.beam;
+function updateChests(dt){ let ci=0; for(const ch of chests){ ci++; const dc=Math.abs(ch.x-camera.position.x)+Math.abs(ch.z-camera.position.z); ch.g.visible=dc<Q.chestVis; ch.glow.visible=!ch.open&&dc<Q.beam;
     if(ch.open){ ch.t+=dt; ch.lid.rotation.x=Math.min(1.9,ch.t*6); continue; } ch.glow.material.opacity=0.6+Math.sin(matchTime*4)*0.3;
+  if((pickTick+ci)%3) continue; /* v2.0 : test d'ouverture une image sur 3 par coffre */
   for(const c of chars){ if(!c.alive||c.phase!=='ground') continue; const dx=ch.x-c.pos.x, dz=ch.z-c.pos.z; if(dx*dx+dz*dz<5&&Math.abs(ch.y-c.pos.y)<1.8){ openChest(ch,c); break; } } } }
 
 /* =====================================================================
@@ -2265,7 +2344,7 @@ function buildBus(){ // v1.3 : pièces fusionnées par matière (3 appels de des
   const mb=body.mesh(MAT.plain), mw=wax.mesh(waxMat[0]), ms=signs.mesh(new THREE.MeshBasicMaterial({map:TEX.sign})); ms.castShadow=ms.receiveShadow=false;
   g.add(mb,mw,ms); g.visible=false; scene.add(g); return g;
 }
-const bus={g:buildBus(),start:V(),end:V(),dir:V(),pos:V(),t:0,dur:30,active:false};
+const bus={g:buildBus(),start:V(),end:V(),dir:V(),pos:V(),t:0,dur:Math.round(30*(MAP+45)/285),active:false}; // v2.0 : 30 s pour 570 m avant, même vitesse sur la carte agrandie
 function setupBus(){ const a=Math.random()*Math.PI*2; bus.dir.set(Math.cos(a),0,Math.sin(a)); const off=rnd(-70,70); const c=V(-bus.dir.z*off,0,bus.dir.x*off);
   bus.start.copy(c).addScaledVector(bus.dir,-MAP-45); bus.end.copy(c).addScaledVector(bus.dir,MAP+45); bus.start.y=bus.end.y=100; bus.t=0; bus.active=true; bus.g.visible=true; bus.g.rotation.y=Math.atan2(-bus.dir.x,-bus.dir.z); }
 function updateBus(dt){ if(!bus.active) return; bus.t+=dt; const k=bus.t/bus.dur; bus.pos.lerpVectors(bus.start,bus.end,k); bus.pos.y=100+Math.sin(bus.t*1.3)*0.6; bus.g.position.copy(bus.pos); bus.g.rotation.z=Math.sin(bus.t*0.9)*0.04;
@@ -2275,11 +2354,11 @@ function updateBus(dt){ if(!bus.active) return; bus.t+=dt; const k=bus.t/bus.dur
 function jumpFromBus(c){ if(c.phase!=='bus') return; c.phase='fall'; c.pos.set(bus.pos.x,bus.pos.y-3,bus.pos.z); c.vel.set(bus.dir.x*8,0,bus.dir.z*8); c.model.g.visible=true;
   if(c===player){ state='play'; $('busUI').classList.add('hidden'); camPitch=-0.55; } }
 
-const PHASES=[{wait:70,shrink:40,r:160,dps:1},{wait:38,shrink:30,r:90,dps:2},{wait:28,shrink:24,r:44,dps:4},{wait:20,shrink:18,r:16,dps:7},{wait:14,shrink:22,r:0,dps:10}];
-const storm={phase:0,state:'wait',timer:0,cx:0,cz:0,r:360,fx:0,fz:0,fr:360,tx:0,tz:0,tr:118};
+const PHASES=STORM.phases; // v2.0 : phases dans src/core/match.js (v1.0 : 5 phases, 5 min ; v2.0 : 7 phases, 17 min)
+const storm={phase:0,state:'wait',timer:0,cx:0,cz:0,r:STORM.startR,fx:0,fz:0,fr:STORM.startR,tx:0,tz:0,tr:118};
 function nextCircle(){ const ph=PHASES[storm.phase]; if(!ph) return; const maxOff=Math.max(0,storm.r-ph.r)*0.75; const a=Math.random()*Math.PI*2, d=Math.sqrt(Math.random())*maxOff;
-  storm.tx=clamp(storm.cx+Math.cos(a)*d,-MAP+ph.r*0.6,MAP-ph.r*0.6); storm.tz=clamp(storm.cz+Math.sin(a)*d,-MAP+ph.r*0.6,MAP-ph.r*0.6); if(storm.phase===0){ storm.tx=clamp(storm.tx,-150,150); storm.tz=clamp(storm.tz,-150,150); } storm.tr=ph.r; }
-function resetStorm(){ storm.phase=0; storm.state='wait'; storm.cx=0; storm.cz=0; storm.r=360; storm.timer=PHASES[0].wait; nextCircle(); }
+  storm.tx=clamp(storm.cx+Math.cos(a)*d,-MAP+ph.r*0.6,MAP-ph.r*0.6); storm.tz=clamp(storm.cz+Math.sin(a)*d,-MAP+ph.r*0.6,MAP-ph.r*0.6); if(storm.phase===0){ storm.tx=clamp(storm.tx,-STORM.firstOff,STORM.firstOff); storm.tz=clamp(storm.tz,-STORM.firstOff,STORM.firstOff); } storm.tr=ph.r; }
+function resetStorm(){ storm.phase=0; storm.state='wait'; storm.cx=0; storm.cz=0; storm.r=STORM.startR; storm.timer=PHASES[0].wait; nextCircle(); }
 const stormMesh=new THREE.Mesh(new THREE.CylinderGeometry(1,1,1,64,1,true),new THREE.MeshBasicMaterial({map:TEX.sand,color:0xe39a52,transparent:true,opacity:0.62,side:THREE.DoubleSide,depthWrite:false,fog:false}));
 TEX.sand.repeat.set(10,2); stormMesh.renderOrder=3; scene.add(stormMesh);
 const stormInner=new THREE.Mesh(new THREE.CylinderGeometry(1,1,1,64,1,true),new THREE.MeshBasicMaterial({color:0xd98a3c,transparent:true,opacity:0.18,side:THREE.BackSide,depthWrite:false,fog:false}));
@@ -2333,29 +2412,37 @@ function hasLOS(a,b,out){ _o.set(a.pos.x,a.pos.y+1.5,a.pos.z); _m.set(b.pos.x,b.
 const _los={type:null,obj:null,t:0};
 function botThink(b){
   const nextR=storm.state==='wait'?storm.tr:storm.r, ncx=storm.state==='wait'?storm.tx:storm.cx, ncz=storm.state==='wait'?storm.tz:storm.cz;
-  const dSafe=Math.hypot(b.pos.x-ncx,b.pos.z-ncz);
-  const danger = b.inStorm || (storm.state==='wait'&&storm.timer<22&&dSafe>nextR*0.85) || (storm.state==='shrink'&&dSafe>nextR*0.85);
+  const dSafe=Math.hypot(b.pos.x-ncx,b.pos.z-ncz), P=b.prof||BOT_PROFILES.normal;
+  // v2.0 : rotation : on part à temps selon la distance à courir (au sprint ≈ 7,4 m/s) et la marge du profil (avant : 22 s avant, quelle que soit la distance)
+  const runT=Math.max(0,dSafe-nextR*0.7)/7.4;
+  const danger = b.inStorm || (storm.state==='wait'&&dSafe>nextR*0.85&&storm.timer<runT+P.rotate) || (storm.state==='shrink'&&dSafe>nextR*0.85);
+  if(danger&&!b.flee&&!b.inStorm) BSTAT.rotations++;
+  // v2.0 : après l'atterrissage, le bot pille d'abord (perception réduite tant qu'on ne le touche pas) ; en fin de partie, il tient une position
+  if(b.landedAt==null) b.landedAt=matchTime; const looting=matchTime<b.landedAt+b.lootT&&!((b.hurtT||0)>0)&&!b.target, endgame=aliveCount<=10;
   // cible : il faut la percevoir (devant soi à ±70°, tout près, ou entendue en train de tirer), puis la voir (ligne de vue)
   const fx=-Math.sin(b.yaw), fz=-Math.cos(b.yaw);
-  let best=null,bd=1e9; for(const c of chars){ if(c===b||!c.alive||c.phase!=='ground') continue; const dx=c.pos.x-b.pos.x, dz=c.pos.z-b.pos.z, dh=Math.hypot(dx,dz); const d=dh+Math.abs(c.pos.y-b.pos.y); const lim=c===player?56:38; if(d>=lim||d>=bd) continue;
-    const front=dh<0.01||(dx*fx+dz*fz)/dh>0.34, heard=c.noiseT>0&&d<45; if(!(front||heard||dh<7||c===b.target)) continue; bd=d; best=c; }
+  let best=null,bd=1e9; for(const c of chars){ if(c===b||!c.alive||c.phase!=='ground') continue; const dx=c.pos.x-b.pos.x, dz=c.pos.z-b.pos.z, dh=Math.hypot(dx,dz); const d=dh+Math.abs(c.pos.y-b.pos.y); const lim=(c===player?56:38)*P.sight*(looting&&d>12?0.55:1); if(d>=lim||d>=bd) continue;
+    const front=dh<0.01||(dx*fx+dz*fz)/dh>0.34, heard=c.noiseT>0&&d<45*P.sight; if(!(front||heard||dh<7||c===b.target)) continue; bd=d; best=c; }
   b.canSee=false; b.blocker=null;
   if(best) botAutoWeapon(b,bd);
-  if(best){ const see=hasLOS(b,best,_los); if(see&&(b.calmT<=0||b.target)){ if(b.target!==best){ b.target=best; b.reactT=rnd(0.7,1.3); } b.canSee=true; b.seeT=0; }
+  if(best){ const see=hasLOS(b,best,_los); if(see&&(b.calmT<=0||b.target)){ if(b.target!==best){ b.target=best; b.reactT=rnd(P.react[0],P.react[1]); } b.canSee=true; b.seeT=0; }
     else if(b.target===best && _los.type==='piece' && _los.t<40){ b.blocker=_los.obj; } }
   if(b.target){ if(!b.target.alive){ b.target=null; } else if(!b.canSee){ b.seeT+=0.3; if(b.seeT>3) b.target=null; else if(b.target!==best){ if(!hasLOS(b,b.target,_los)&&_los.type==='piece'&&_los.t<40) b.blocker=_los.obj; else if(hasLOS(b,b.target)) b.canSee=true; } } }
   // v1.3 : se mettre à couvert pour recharger, se soigner, ou quand on vient d'être touché avec peu de vie
   { const t0=b.target; if(t0&&t0.alive&&!danger){ const heals=b.kilishi>0||b.the>0;
-      const need=b.reloadT>0||b.useT>0||(b.hp+b.shield<60&&heals)||((b.hurtT||0)>0.2&&b.hp<80);
-      if(need&&(!b.cover||matchTime>b.cover.until)&&matchTime>=(b.coverNoneT||0)){ b.cover=findCover(b,t0)||null; if(!b.cover) b.coverNoneT=matchTime+1.2; } // rien autour : on ne recherche pas à chaque réflexion
+      const need=b.reloadT>0||b.useT>0||(b.hp+b.shield<P.heal&&heals)||((b.hurtT||0)>0.2&&b.hp<80);
+      if(need&&(!b.cover||matchTime>b.cover.until)&&matchTime>=(b.coverNoneT||0)){ b.cover=findCover(b,t0)||null; if(!b.cover) b.coverNoneT=matchTime+1.2; else BSTAT.cover++; } // rien autour : on ne recherche pas à chaque réflexion
       else if(!need&&b.cover&&matchTime>b.cover.until) b.cover=null; }
     else b.cover=null; }
   // déplacements
   if(b.detourT>0){ b.detourT-=0.3; }
   else if(danger){ const a=Math.atan2(ncz-b.pos.z,ncx-b.pos.x); const rd=Math.max(0,nextR*rnd(0.2,0.6)); b.moveTarget=V(ncx-Math.cos(a)*rd,0,ncz-Math.sin(a)*rd); b.flee=true; }
   else { b.flee=false; if(!b.target){ if(!b.moveTarget || Math.hypot(b.moveTarget.x-b.pos.x,b.moveTarget.z-b.pos.z)<2){
-        let it=null,id=26; for(const x of items){ if(!x.alive) continue; const d=Math.hypot(x.x-b.pos.x,x.z-b.pos.z); if(d<id&&Math.abs(x.y-b.pos.y)<2.5){ id=d; it=x; } }
-        if(it) b.moveTarget=V(it.x,0,it.z); else { const rr2=Math.max(10,storm.r*0.6); const a=Math.random()*6.28, d=Math.random()*rr2; b.moveTarget=V(clamp(storm.cx+Math.cos(a)*d,-MAP+10,MAP-10),0,clamp(storm.cz+Math.sin(a)*d,-MAP+10,MAP-10)); } } } }
+        let it=null,id=P.loot; for(const x of items){ if(!x.alive) continue; const d=Math.hypot(x.x-b.pos.x,x.z-b.pos.z); if(d<id&&Math.abs(x.y-b.pos.y)<2.5){ id=d; it=x; } }
+        if(it) b.moveTarget=V(it.x,0,it.z);
+        else if(endgame){ if(b.holdT>0){ b.holdT-=0.3; b.moveTarget=null; }
+          else { b.holdT=rnd(8,16); if(dSafe>nextR*0.7){ const a=Math.atan2(b.pos.z-ncz,b.pos.x-ncx)+rnd(-0.3,0.3), d=nextR*rnd(0.45,0.65); b.moveTarget=V(clamp(ncx+Math.cos(a)*d,-MAP+10,MAP-10),0,clamp(ncz+Math.sin(a)*d,-MAP+10,MAP-10)); } } } // fin de partie : tenir sa position, ou rentrer dans la zone de son côté (pas tous au centre)
+        else { const rr2=Math.max(10,storm.r*0.6); const a=Math.random()*6.28, d=Math.random()*rr2; b.moveTarget=V(clamp(storm.cx+Math.cos(a)*d,-MAP+10,MAP-10),0,clamp(storm.cz+Math.sin(a)*d,-MAP+10,MAP-10)); } } } }
   // bloqué ?
   const moved=Math.hypot(b.pos.x-b.lastPos.x,b.pos.z-b.lastPos.z); b.lastPos.copy(b.pos);
   if(b.moving&&moved<0.25){ b.stuck++; if(b.stuck>=2) b.wantJump=true;
@@ -2363,24 +2450,24 @@ function botThink(b){
       const tx=(b.moveTarget?b.moveTarget.x:b.pos.x)-b.pos.x, tz=(b.moveTarget?b.moveTarget.z:b.pos.z)-b.pos.z, l=Math.hypot(tx,tz)||1, side=Math.random()<0.5?1:-1;
       b.moveTarget=V(clamp(b.pos.x+(-tz/l)*side*12-tx/l*2,-MAP+10,MAP-10),0,clamp(b.pos.z+(tx/l)*side*12-tz/l*2,-MAP+10,MAP-10)); b.detourT=1.5; b.flee=false; b.stuck=0; b.target=b.canSee?b.target:null; } } else b.stuck=0;
   // soins
-  if((!b.target||!b.canSee)&&b.useT<=0&&b.reloadT<=0){ if(b.hp<60&&b.kilishi>0) useItem(b,'kilishi'); else if(b.shield<50&&b.the>0) useItem(b,'the'); }
-  b.strafeT-=0.3; if(b.strafeT<=0){ b.strafe=Math.random()<0.5?1:-1; b.strafeT=rnd(0.6,1.6); if(Math.random()<0.15&&b.target) b.wantJump=true; }
+  if((!b.target||!b.canSee)&&b.useT<=0&&b.reloadT<=0){ if(b.hp<P.heal&&b.kilishi>0) useItem(b,'kilishi'); else if(b.shield<50&&b.the>0) useItem(b,'the'); }
+  b.strafeT-=0.3; if(b.strafeT<=0){ b.strafe=(Math.random()<0.5?1:-1)*P.strafe; b.strafeT=rnd(0.6,1.6); if(Math.random()<P.jump&&b.target) b.wantJump=true; }
 }
 function botOnDamaged(b,att){
   if(att===b) return;
   if(b.target!==att&&(!b.target||Math.random()<0.75)){ b.target=att; b.reactT=Math.min(b.reactT,0.3); b.seeT=0; }
-  if(b.banco>=10&&b.buildCD<=0&&b.phase==='ground'&&Math.random()<0.5){ const dir=dirFromYaw(Math.atan2(-(att.pos.x-b.pos.x),-(att.pos.z-b.pos.z))); tryBuild(b,'wall',dir); if(Math.random()<0.3) setTimeout(()=>{ if(b.alive&&b.banco>=10){ b.buildCD=0; tryBuild(b,'ramp',dir); } },350); }
+  if(b.banco>=10&&b.buildCD<=0&&b.phase==='ground'&&Math.random()<(b.prof?b.prof.build:0.5)){ const dir=dirFromYaw(Math.atan2(-(att.pos.x-b.pos.x),-(att.pos.z-b.pos.z))); tryBuild(b,'wall',dir); if(Math.random()<0.3) setTimeout(()=>{ if(b.alive&&b.banco>=10){ b.buildCD=0; tryBuild(b,'ramp',dir); } },350); }
 }
 function botShoot(b,target){
   const w=b.cur; if(b.fireCD>0||b.switchT>0||w==='daba') return; const W=WEAP[w], B=W.bot; b.recoil=1; b.noiseT=1.5; if(w==='sniper') b.boltT=0.9; else if(w==='pompe') b.pumpT=0.5;
   _o.set(b.pos.x,b.pos.y+1.45,b.pos.z);
   const d=Math.hypot(target.pos.x-b.pos.x,target.pos.z-b.pos.z);
   let p = B.shotgun ? (d<7?0.85:d<15?0.45:0.12) : B.sniper ? clamp(0.62-d*0.002,0.25,0.6) : clamp(0.5-d*0.009,0.06,0.45)*(B.acc||1);
-  if(target===player) p*= B.sniper?0.5:0.75; else p*=0.65; if(Math.hypot(target.vel.x,target.vel.z)>3) p*=0.85; if(!target.grounded) p*=0.75;
+  if(target===player) p*= B.sniper?0.5:0.75; else p*=0.65; p=Math.min(0.95,p*(b.prof?b.prof.acc:1)); // v2.0 : précision du profil if(Math.hypot(target.vel.x,target.vel.z)>3) p*=0.85; if(!target.grounded) p*=0.75;
   const head=Math.random()<0.1; _m.set(target.pos.x,target.pos.y+(head?(target.crouch?1.1:1.65):(target.crouch?0.8:1.15)),target.pos.z);
   if(Math.random()>p){ _m.x+=rnd(-1,1)*rnd(0.8,2); _m.y+=rnd(-0.5,1.4); _m.z+=rnd(-1,1)*rnd(0.8,2); }
   _d.subVectors(_m,_o).normalize(); const h=rayCast(_o,_d,B.shotgun?40:B.sniper?320:150,b);
-  const pt=h.p.clone();
+  const pt=h.p.clone(); BSTAT.shots++; BSTAT.engD+=d; if(h.type==='char') BSTAT.hits++;
   if(h.type==='char'){ let dmg = (B.shotgun ? (d<6?48:d<12?30:14)*(w==='pompet'?0.62:1) : B.dmg)*rarMul(w,curRar(b)).dmg; if(h.head) dmg*=B.sniper?2:1.5; if(!h.obj.isPlayer) dmg*=0.55; damageChar(h.obj,dmg,b,h.head,w,pt); }
   else if(h.type==='piece') damagePiece(h.obj,B.shotgun?45:B.sniper?60:20,'bot');
   const dc=b.pos.distanceTo(camera.position);
@@ -2424,7 +2511,7 @@ function updateBot(b,dt){
     else b.inCover=true;
     const want=b.inCover&&b.cover.low; if(want!==!!b.coverCrouch){ b.coverCrouch=want; b.crouch=want; }
     const dx=t.pos.x-b.pos.x, dz=t.pos.z-b.pos.z; b.yaw=Math.atan2(-dx,-dz); b.aimPitch=clamp(Math.atan2(t.pos.y-b.pos.y-0.2,Math.hypot(dx,dz)),-0.8,0.8); }
-  else if(t&&t.alive&&!b.flee){ const dx=t.pos.x-b.pos.x, dz=t.pos.z-b.pos.z, d=Math.hypot(dx,dz)||1; const nx=dx/d, nz=dz/d; const want=b.cur==='pompe'?5:b.cur==='sniper'?40:b.cur==='mitraillette'?12:18;
+  else if(t&&t.alive&&!b.flee){ const dx=t.pos.x-b.pos.x, dz=t.pos.z-b.pos.z, d=Math.hypot(dx,dz)||1; const nx=dx/d, nz=dz/d; const want=SHELL_GUNS.has(b.cur)?5:b.cur==='sniper'?40:b.cur==='tactique'?28:b.cur==='mitraillette'?12:18; /* v2.0 : distances des nouvelles armes */
     const rad = d>want+5?1:d<want-5?-0.7:0; wx=nx*rad+(-nz)*b.strafe*0.85; wz=nz*rad+nx*b.strafe*0.85; b.yaw=Math.atan2(-dx,-dz); b.aimPitch=clamp(Math.atan2(t.pos.y-b.pos.y-0.2,d),-0.8,0.8); }
   else if(b.moveTarget){ let mx=b.moveTarget.x, mz=b.moveTarget.z; const nv=houseNav(b,mx,mz); if(nv){ mx=nv[0]; mz=nv[1]; }
     const dx=mx-b.pos.x, dz=mz-b.pos.z, d=Math.hypot(dx,dz); if(d>(nv?0.25:1.5)){ wx=dx/d; wz=dz/d; if(t&&t.alive) { const tx=t.pos.x-b.pos.x, tz=t.pos.z-b.pos.z; b.yaw=Math.atan2(-tx,-tz); } else b.yaw=Math.atan2(-wx,-wz); } }
@@ -2433,7 +2520,7 @@ function updateBot(b,dt){
   b.sprint=!b.crouch&&b.moving&&(b.flee||(b.cover&&!b.inCover)||(!t&&b.moveTarget&&Math.hypot(b.moveTarget.x-b.pos.x,b.moveTarget.z-b.pos.z)>30));
   moveChar(b,wx,wz,5.3*(b.sprint?1.4:1),dt,b.wantJump); b.wantJump=false;
   if(t&&t.alive&&b.reactT<=0&&b.useT<=0&&b.reloadT<=0){ if(b.canSee) botShoot(b,t); else if(b.blocker&&b.blocker.alive&&b.fireCD<=0){ _o.set(b.pos.x,b.pos.y+1.45,b.pos.z); damagePiece(b.blocker,SHELL_GUNS.has(b.cur)?40:b.cur==='sniper'?55:16,'bot'); if(b.pos.distanceTo(camera.position)<110) tracer(muzzle(b,_t),b.blocker.center,0xffd9a0); sfxShot(b.cur,b.pos.distanceTo(camera.position)); b.fireCD=SHELL_GUNS.has(b.cur)?1:0.2; } }
-  tryPickups(b);
+  if(((pickTick+b.ix)%3)===0) tryPickups(b); /* v2.0 : une image sur 3 par bot (60 bots × tous les objets à chaque image coûtait 8 % du calcul) */
 }
 function updateAir(c,dt,wx,wz){
   const g=groundAt(c.pos.x,c.pos.z,c.pos.y);
@@ -2626,7 +2713,7 @@ function animRealAnim(c,dt){
   g.visible=c.isPlayer||dc<Q.vis; if(!g.visible) return;
   if(c===player&&isScoped()) g.visible=false;
   g.position.copy(c.pos); g.rotation.y=c.yaw;
-  m.acc+=dt; m.frame++; if(!c.isPlayer&&dc>Q.animFar&&(m.frame%3)) return; dt=m.acc; m.acc=0;
+  m.acc+=dt; m.frame++; if(!c.isPlayer&&dc>Q.animFar&&(m.frame%(dc>Q.animFar*2?6:3))) return; dt=m.acc; m.acc=0; /* v2.0 : au-delà de 2 × animFar, une image sur 6 */
   const air=c.phase!=='ground'||!c.grounded, sliding=c.slideT>0, sky=c.phase==='fall'||c.phase==='glide';
   const sp=Math.hypot(c.vel.x,c.vel.z);
   // v1.3 : immobile, le perso qui se tourne avec la caméra fait quelques pas sur place (pas de pivot « patin à glace »)
@@ -2829,7 +2916,7 @@ function animReal(c,dt){
   const dc=Math.abs(c.pos.x-camera.position.x)+Math.abs(c.pos.z-camera.position.z); g.visible=c.isPlayer||dc<Q.vis; if(!g.visible) return;
   if(c===player&&isScoped()) g.visible=false;
   g.position.copy(c.pos); g.rotation.y=c.yaw;
-  m.acc+=dt; m.frame++; if(!c.isPlayer&&dc>Q.animFar&&(m.frame%3)) return; dt=m.acc; m.acc=0;
+  m.acc+=dt; m.frame++; if(!c.isPlayer&&dc>Q.animFar&&(m.frame%(dc>Q.animFar*2?6:3))) return; dt=m.acc; m.acc=0; /* v2.0 : au-delà de 2 × animFar, une image sur 6 */
   const st=m.st, k=1-Math.exp(-14*dt), kl=1-Math.exp(-22*dt);
   const air=c.phase!=='ground'||!c.grounded, sliding=c.slideT>0;
   const sp=Math.hypot(c.vel.x,c.vel.z), moveK=(!air&&!sliding)?clamp(sp/6.3,0,1):0;
@@ -3048,7 +3135,7 @@ function makeWeaponIcons(){
 function updateHUD(dt){
   const p=player;
   { const pv=IS_TOUCH&&p.alive&&p.phase==='ground'&&!editing&&!paused; if(pv!==cache.pick){ cache.pick=pv; $('pick').classList.toggle('hidden',!pv); if(!pv) pieceHeld=null; } } // v1.4 : pièces toujours à l'écran au sol
-  setTxt('aliveChip',ico('users')+'<b>'+aliveCount+'</b><small>en vie</small>'); setTxt('killChip',ico('elim')+'<b>'+p.kills+'</b><small>élim.</small>');
+  setTxt('aliveChip',ico('users')+'<b>'+aliveCount+'</b><small>'+(matchMode==='br'?'en vie / '+matchPlayers:'en vie')+'</small>'); /* v2.0 : sur le nombre de joueurs de la partie */ setTxt('killChip',ico('elim')+'<b>'+p.kills+'</b><small>élim.</small>');
   let st; if(matchMode==='train') st=ico('target')+'Entraînement libre'; else if(storm.state==='wait') st=ico('wind')+'Harmattan dans <b>'+fmt(storm.timer)+'</b>'; else if(storm.state==='shrink') st=ico('wind')+'L\'harmattan avance <b>'+fmt(storm.timer)+'</b>'; else st=ico('wind')+'Tempête finale';
   setTxt('stormChip',st); $('stormChip').classList.toggle('danger',!!p.inStorm);
   $('shBar').firstElementChild.style.width=(p.shield/75*100)+'%'; setTxt('shNum',Math.ceil(p.shield));
@@ -3171,7 +3258,7 @@ function update(dt){
   updatePlayer(dt);
   for(const b of bots) if(b.alive) updateBot(b,dt);
   for(const c of chars) (c.model.real?(c.model.mx?animRealAnim:animReal):animChar)(c,dt);
-  updateItems(dt); updateChests(dt); updateDebris(dt);
+  pickTick++; updateItems(dt); updateChests(dt); updateDebris(dt);
   updateCollapse(dt);
   for(const p of pieceList){ if(p.inst!==null){ if(p.flash>0) p.flash=Math.max(0,p.flash-dt*6); pinstColor(p); if(p.hitT>0&&p.baseM) wobblePiece(p,dt); continue; }
     if(!p.edited&&!p.noInst&&p.build>=1&&p.anim>=1){ pinstAdd(p); if(p.inst!==null) continue; }
@@ -3259,6 +3346,12 @@ const TABS={
     ['toggle','aa','Anticrénelage (bords lisses, coûte cher au téléphone) — appliqué au prochain lancement'],
     ['toggle','showFps','Afficher les FPS'],['toggle','showStats','Stats techniques (CPU, draw calls, triangles)'],
     ['hint','Très faible : ni ombres ni effets, résolution réduite, 180 m de vue (petits téléphones). Faible : pas d’ombres, 230 m. Moyen : ombres simples, sol détaillé, 300 m. Élevé : ombres douces, ×2, 400 m. Personnalisé : part du profil choisi avant, puis chaque réglage à part. Il n’y a pas d’effets de post-traitement (flou, bloom) dans le jeu. Si ça rame encore : résolution 70 %.']],
+  match:[['range','botCount','Nombre de bots',BOTS.min,BOTS.max,BOTS.step,v=>v+' bots · '+(v+1)+' joueurs'],
+    ['seg','botLevel','NIVEAU DES BOTS',Object.entries(BOT_LEVELS).map(([k,t])=>[k,t.toUpperCase()])],
+    ['hint','Débutants : visent moins bien, réagissent lentement, construisent peu. Normaux : comme avant. Avancés : visent mieux, réagissent vite, construisent pour se protéger, se soignent plus tôt et rejoignent la zone en avance. Mélangés : 35 % débutants, 45 % normaux, 20 % avancés.'],
+    ['hintf',()=>{ if(!(state==='play'||state==='bus')||matchMode!=='br') return 'Aucune partie en cours.'; const inm=bots.filter(b=>b.inMatch), al=inm.filter(b=>b.alive), cnt=k=>inm.filter(b=>b.profKey===k).length;
+      return `Partie en cours : ${inm.length} bots (${cnt('debutant')} débutants, ${cnt('normal')} normaux, ${cnt('avance')} avancés) · ${al.length} encore en jeu · ${inm.length-al.length} éliminés.`; }],
+    ['hintf',()=>`Plus de bots = plus de calcul pour le téléphone. Conseillé : ${BOTS.def.small} sur un petit téléphone, ${BOTS.def.touch} au téléphone, ${BOTS.def.pc} sur ordinateur. S'applique à la prochaine partie. Carte de ${MAP*2} m, tempête finie en ${Math.round(stormTotal()/60)} min.`]],
   snd:[['range','vol','Volume général',0,100,1,v=>v+' %'],['range','sfx','Effets (tirs, construction)',0,100,1,v=>v+' %'],['range','amb',"Vent de l'harmattan",0,100,1,v=>v+' %']],
   hud:[['seg','hudPreset','DISPOSITION DU HUD',()=>[['classique','CLASSIQUE'],['compact','COMPACTE'],['construction','CONSTRUCTION'],...(SET.layoutPerso?[['perso','PERSONNALISÉE']]:[])]],
     ['button',ico('layout')+'Personnaliser la disposition du HUD',()=>openHudEditor()],['hint','Déplace chaque élément avec le doigt, change sa taille, son opacité ou masque-le, puis Enregistrer : ta disposition devient « Personnalisée » (gardée sur le téléphone). Compacte : boutons plus petits et plus discrets. Construction : pièces, ÉDITER et BÂTIR plus grands.'],
@@ -3374,10 +3467,17 @@ function startMatch(mode){
   initAudio(); clearMatch(); if(lobby) lobby.hide();
   const name=(PROFILE.name||'').trim().slice(0,14)||'Joueur';
   let skin=PROFILE.skin; if(!SKINS[skin]||(SKINS[skin].real&&!ASSETS.c[SKINS[skin].real])) skin='touareg';
-  if(!player){ player=new Char(name,skin,true); chars.push(player); const names=[...NAMES].sort(()=>Math.random()-0.5); const realOk=Object.keys(ASSETS.c).length>0; const bskins=realOk?Object.keys(SKINS).filter(k=>SKINS[k].real&&ASSETS.c[SKINS[k].real]):['touareg','lutteur','kabou','commercante']; for(let i=0;i<19;i++){ const b=new Char(names[i],bskins[i%bskins.length],false); bots.push(b); chars.push(b); } }
+  if(!player){ player=new Char(name,skin,true); chars.push(player); }
+  // v2.0 : nombre de bots réglable (Paramètres › Partie) ; les persos sont créés une fois, au plus grand nombre demandé, et réutilisés
+  const nBots=matchMode==='train'?Math.max(DUMMIES,bots.length):clamp(Math.round(SET.botCount||BOTS.def.pc),BOTS.min,BOTS.max);
+  if(bots.length<nBots){ const names=[...NAMES].sort(()=>Math.random()-0.5).filter(n=>!bots.some(b=>b.name===n)); const realOk=Object.keys(ASSETS.c).length>0; const bskins=realOk?Object.keys(SKINS).filter(k=>SKINS[k].real&&ASSETS.c[SKINS[k].real]):['touareg','lutteur','kabou','commercante'];
+    for(let i=bots.length;i<nBots;i++){ const b=new Char(names.shift()||('Bot '+(i+1)),bskins[i%bskins.length],false); b.ix=i; bots.push(b); chars.push(b); } }
   player.name=name; player.setSkin(skin);
   for(const c of chars) c.reset();
-  aliveCount=chars.length; matchTime=0; won=false; endShown=false; deadT=0; buildMode=false; editing=null; camPivY=null; shake=0; refreshBuildUI(); firing=false; ads=false; bloom=0; nearItem=null; $('bAim').classList.remove('on');
+  // bots de la partie (les autres restent hors jeu) et leur profil (débutant / normal / avancé)
+  bots.forEach((b,i)=>{ b.inMatch=i<nBots; if(!b.inMatch){ b.alive=false; b.phase='out'; b.model.g.visible=false; } b.profKey=botProfileFor(SET.botLevel,i,nBots); b.prof=BOT_PROFILES[b.profKey]; b.landedAt=null; b.lootT=rnd(35,70); b.holdT=0; });
+  matchPlayers=1+bots.filter(b=>b.inMatch).length;
+  aliveCount=matchPlayers; matchTime=0; resetBStat(); won=false; endShown=false; deadT=0; buildMode=false; editing=null; camPivY=null; shake=0; refreshBuildUI(); firing=false; ads=false; bloom=0; nearItem=null; $('bAim').classList.remove('on');
   $('bottom').style.visibility=''; $('end').classList.add('hidden'); $('hud').classList.remove('hidden'); $('touch').classList.toggle('hidden',!IS_TOUCH);
   if(matchMode==='train'){ setupTraining(); resize(); return; }
   // butin
@@ -3386,11 +3486,11 @@ function startMatch(mode){
     if(k.startsWith('w:')){ const g=k.slice(2); spawnItem(k,s[0],s[1],s[2],1,false,{rar:rollRarity(g)}); if(Math.random()<0.6) spawnItem('ammo',s[0]+0.7,s[1],s[2]+0.4,0,false,{atype:ammoOf(g)}); } // arme au sol : souvent avec ses munitions
     else spawnItem(k,s[0],s[1],s[2],0,false,k==='ammo'?{atype:pick(AMMO_TYPES)}:null); } }
   for(const s of chestSpots){ if(s[3]==='roof'&&Math.random()<0.2) continue; spawnChest(s[0],s[1],s[2]); }
-  resetStorm(); stormMesh.visible=stormInner.visible=true; setupBus(); for(const b of bots) initBot(b);
+  resetStorm(); stormMesh.visible=stormInner.visible=true; setupBus(); for(const b of bots) if(b.inMatch) initBot(b);
   camYaw=Math.atan2(-bus.dir.x,-bus.dir.z)+0.9; camPitch=-0.25; curZone=null;
   state='bus'; $('busUI').classList.remove('hidden');
   $('bJumpBus').textContent='SAUTER'; $('busUI').querySelector('p').textContent = IS_TOUCH?'Le taxi-brousse survole le Niger… choisis où sauter !':'Le taxi-brousse survole le Niger… Espace ou clic pour sauter !';
-  resize(); showMsg('FADA ROYALE',chars.length+' joueurs · que le meilleur gagne',2.2);
+  resize(); showMsg('FADA ROYALE',matchPlayers+' joueurs · que le meilleur gagne',2.2);
 }
 /* ---------- mode Entraînement : toutes les armes, banco illimité, mannequins, pas de tempête ---------- */
 const TRAIN_SPOT=[62,-42], DUMMIES=8; // v1.4 : au milieu d’une case de construction (avant : sur un coin, le 1er mur était refusé)
@@ -3414,12 +3514,12 @@ function showEnd(win){
   const p=player; $('end').classList.remove('hidden');
   // profil local : on n'enregistre que les vraies parties de Battle Royale terminées (victoire ou élimination)
   let rew=''; if(matchMode==='br'&&!p.recorded){ p.recorded=true;
-    const r=Profile.recordMatch(PROFILE,{mode:'br',rank:win?1:p.rank,total:chars.length,kills:p.kills,dmg:p.dmgDealt,built:p.built,chests:p.chestsOpened,harvest:p.harvested,won:win,time:matchTime});
+    const r=Profile.recordMatch(PROFILE,{mode:'br',rank:win?1:p.rank,total:matchPlayers,kills:p.kills,dmg:p.dmgDealt,built:p.built,chests:p.chestsOpened,harvest:p.harvested,won:win,time:matchTime});
     rew=`<b>+${r.xp} XP</b> · <b>+${r.cauris}</b> cauris`+(r.levelUp?` · <b>niveau ${r.levelUp} !</b>`:'')+(r.missions.length?`<small>Mission accomplie : ${r.missions.join(' · ')} (à récupérer dans le lobby)</small>`:''); }
   $('eRew').innerHTML=rew; $('touch').classList.add('hidden'); $('bottom').style.visibility='hidden'; $('buildBar').classList.add('hidden');
   try{ document.exitPointerLock&&document.exitPointerLock(); }catch(e){}
   const t=$('eTitle'); t.className=win?'win':''; t.textContent=win?'TOP 1 !':'ÉLIMINÉ';
-  $('eSub').textContent = win ? 'Toute la fada est fière de toi. Dernier debout au Niger !' : (p.killer?`Éliminé par ${p.killer.name} · classement #${p.rank} sur ${chars.length}`:`L'harmattan t'a emporté · classement #${p.rank} sur ${chars.length}`);
+  $('eSub').textContent = win ? 'Toute la fada est fière de toi. Dernier debout au Niger !' : (p.killer?`Éliminé par ${p.killer.name} · classement #${p.rank} sur ${matchPlayers}`:`L'harmattan t'a emporté · classement #${p.rank} sur ${matchPlayers}`);
   $('eStats').innerHTML=`<div><b>#${win?1:p.rank}</b>Classement</div><div><b>${p.kills}</b>Élims</div><div><b>${Math.round(p.dmgDealt)}</b>Dégâts</div><div><b>${p.built}</b>Banco posé</div>`;
 }
 // v1.3 : derrière le fondu de lancement, on prépare les programmes GPU et on envoie les textures des armes, accessoires
@@ -3480,7 +3580,7 @@ requestAnimationFrame(loop);
 loadAssets().then(()=>{ try{ makeWeaponIcons(); }catch(e){} initLobby(); goMenu(); try{ lobby.precompile(); lobby.warm(); lobby.render(); }catch(e){} requestAnimationFrame(()=>$('loading').remove()); setTimeout(()=>{ try{ loadSols(); loadAmbient(); loadPackTrees(); loadPackRocks(); }catch(e){ console.warn('décor',e); } },800); }); // une image rendue derrière l'écran : ombres comprises ; v1.6 : sols, animaux, arbres et rochers du pack chargés 0,8 s après l'affichage du lobby
 
 // accès de débogage
-window.FR={fpsGate, goMenu, get screenHz(){return screenHz;}, FPS_CAPS, HUD_PRESETS, get quality(){return quality;}, get Q(){return Q;}, applyLayout, get lobby(){return lobby;}, PROFILE, Profile, get matchMode(){return matchMode;}, get camPitch(){return camPitch;}, get sprintOn(){return sprintOn;}, setSprint:v=>{sprintOn=v;}, placementProblem, computePlacement, dirFromYaw, get camYaw(){return camYaw;}, SET, openSettings, closeSettings, openHudEditor, renderTab, get paused(){return paused;}, THREE, ASSETS, selectSlot, swapTake, giveWeapon, beginSwitch, get nearItem(){return nearItem;}, setAds:v=>{ads=v;}, startEdit, confirmEdit, resetEdit, rayCast, crouchPress, get editing(){return editing;}, get state(){return state;}, get player(){return player;}, bots, chars, items, chests, pieces, housesInfo, doors:DOORS, setDoor, interact, hasLOS, findCover, storm, bus, startMatch, update, jumpFromBus:()=>jumpFromBus(player), tryBuild, setBuildType, toggleBuild, warmGPU, AMB, get TERRAIN(){return TERRAIN;}, get TERRAIN_MAT0(){return TERRAIN_MAT0;}, setQuality, qBox, boxGrounded, boxTouch, checkIntegrity, destroyPiece, pieceDown, pieceUp, damagePiece, editPreset, quickSwap, BUILD, setSet:(k,v)=>{ SET[k]=v; refreshBuildUI(); }, dropWeapon, spawnItem, items, WEAP, ammoOf, get buildRot(){return buildRot;}, spaceFreeAt:(x,z,y0,y1,r)=>spaceFree(x,z,y0,y1,r), get buildMode(){return buildMode;}, get pieceHeld(){return pieceHeld;}, pieceList, PINST, setFiring:v=>{firing=v;}, setCam:(y,p)=>{camYaw=y;camPitch=p;}, keys, renderer, scene, camera, get aliveCount(){return aliveCount;}, solids, terrainH};
+window.FR={CITIES, MAP, STORM, stormTotal, zoneAt, lootSpots, chestSpots, BSTAT, get matchTime(){return matchTime;}, spectate:()=>{ /* tests : le joueur ne prend pas part à la partie (les bots seuls) */ player.alive=false; player.hp=0; player.phase='spect'; player.model.g.visible=false; aliveCount--; endShown=true; }, fpsGate, goMenu, get screenHz(){return screenHz;}, FPS_CAPS, HUD_PRESETS, get quality(){return quality;}, get Q(){return Q;}, applyLayout, get lobby(){return lobby;}, PROFILE, Profile, get matchMode(){return matchMode;}, get camPitch(){return camPitch;}, get sprintOn(){return sprintOn;}, setSprint:v=>{sprintOn=v;}, placementProblem, computePlacement, dirFromYaw, get camYaw(){return camYaw;}, SET, openSettings, closeSettings, openHudEditor, renderTab, get paused(){return paused;}, THREE, ASSETS, selectSlot, swapTake, giveWeapon, beginSwitch, get nearItem(){return nearItem;}, setAds:v=>{ads=v;}, startEdit, confirmEdit, resetEdit, rayCast, crouchPress, get editing(){return editing;}, get state(){return state;}, get player(){return player;}, bots, chars, items, chests, pieces, housesInfo, doors:DOORS, setDoor, interact, hasLOS, findCover, storm, bus, startMatch, update, jumpFromBus:()=>jumpFromBus(player), tryBuild, setBuildType, toggleBuild, warmGPU, AMB, get TERRAIN(){return TERRAIN;}, get TERRAIN_MAT0(){return TERRAIN_MAT0;}, setQuality, qBox, boxGrounded, boxTouch, checkIntegrity, destroyPiece, pieceDown, pieceUp, damagePiece, editPreset, quickSwap, BUILD, setSet:(k,v)=>{ SET[k]=v; refreshBuildUI(); }, dropWeapon, spawnItem, items, WEAP, ammoOf, get buildRot(){return buildRot;}, spaceFreeAt:(x,z,y0,y1,r)=>spaceFree(x,z,y0,y1,r), get buildMode(){return buildMode;}, get pieceHeld(){return pieceHeld;}, pieceList, PINST, setFiring:v=>{firing=v;}, setCam:(y,p)=>{camYaw=y;camPitch=p;}, keys, renderer, scene, camera, get aliveCount(){return aliveCount;}, solids, terrainH};
 </script>
 </body>
 </html>
