@@ -1,5 +1,119 @@
 # Fada Royale — Rapport de tests
 
+# v2.0
+
+Mêmes conditions que les versions précédentes : Chromium sans écran, rendu logiciel (SwiftShader), réseau externe coupé, boucle du jeu figée et avancée image par image par les tests. **Aucun test sur un vrai téléphone** (pas d'appareil ni d'émulateur Android ici) : les tests « téléphone » émulent un Pixel 7 (écran, toucher) et, pour les mesures de calcul, ralentissent le processeur ×4 (`perf_mobile.cjs`, la même approximation que Lighthouse). **Les FPS sur Android ne sont pas garantis** ; le rendu (GPU) n'est pas mesurable ici.
+
+Batterie complète lancée sur le code final (34 tests), puis relancée pour les tests touchés par les derniers réglages : **tous passent**, aucune erreur de page. Deux tests (`construction2`, `tactile`) se sont révélés fragiles après le déplacement d'arbres et de rochers dans la brousse (correctif des maisons) : le jeu n'avait pas changé ; les tests ont été corrigés (voir « Corrections des tests ») puis relancés.
+
+## Mission « Weapon System 2.0 » — 13 tests demandés
+
+| # | Test demandé | Test | Résultat |
+|---|---|---|---|
+| 1 | Équiper chacune des cinq armes | `arsenal.cjs` (8 armes), `prise.cjs` | Les 8 armes s'équipent, modèle visible en main ; 5 catégories demandées : fusil d'assaut, pompe tactique, fusil tactique, sniper, pompe |
+| 2 | Passer rapidement d'une arme à l'autre | `changement.cjs` | 10 changements en 1 s : l'arme affichée = l'arme choisie ; paires d'armes : jamais deux armes visibles, aucun saut isolé de la main |
+| 3 | Tirer avec chaque catégorie | `arsenal.cjs` | Les 8 armes tirent ; automatiques en rafale (mitraillette 7 tirs en 20 images), semi-automatiques un coup par clic |
+| 4 | Recharger chaque arme | `arsenal.cjs` | Chargeur plein après rechargement pour les 8 armes ; durées 1,8 à 4 s ; pompes cartouche par cartouche |
+| 5 | Consommation des munitions | `arsenal.cjs` | Le tir vide le chargeur, pas la réserve ; le rechargement prend dans le bon type (légères, moyennes, lourdes, cartouches), les autres types ne bougent pas ; caisse de 10 lourdes ramassée avec 55 en poche : 60 (plafond), 5 restent au sol |
+| 6 | Ramasser une arme au sol | `arsenal.cjs` | Fusil tactique épique (chargeur 7) ramassé : case 2, rareté épique, chargeur 7 |
+| 7 | Abandonner une arme | `arsenal.cjs` | Touche G : case vide, arme au sol avec sa rareté et son chargeur, daba en main ; reprise ensuite à l'identique |
+| 8 | Remplacer une arme dans l'inventaire | `arsenal.cjs` | Inventaire plein : la pompe tactique légendaire remplace le sniper en main (case 5), le sniper tombe au sol avec sa rareté et ses 3 balles |
+| 9 | Les cinq niveaux de rareté | `arsenal.cjs` | Faisceau et anneau au sol gris / vert / bleu / violet / orange ; dégâts par balle du fusil d'assaut sur un mannequin : 22 / 23,5 / 25 / 26,5 / 28 |
+| 10 | Prise en main pendant la course | `prise.cjs` | 110 situations bonnes (Boss et Guerrière × 9 armes × repos, course, sprint, combat, visée, rechargement, coups de daba) |
+| 11 | Prise en main pendant la visée | `prise.cjs` | Canon vers l'avant (1,00) en visée pour toutes les armes, mains à leur point d'appui |
+| 12 | Animations de changement d'arme | `changement.cjs`, `animtest.cjs` | Rangement à l'étui puis sortie ; demi-tour 0,17 s ; tir 0,53 s après l'appui ; sortie de sprint 0,2 s ; changement en l'air terminé à la réception |
+| 13 | Performances sur mobile | `perf_mobile.cjs` | Processeur ralenti ×4 (pas un vrai téléphone) : 3,1 à 4,7 ms de calcul par image en tirant selon l'arme (Entraînement) — voir « Performances » |
+
+## Mission « 2.0 Gameplay » — 17 tests demandés
+
+| # | Test demandé | Test | Résultat |
+|---|---|---|---|
+| 1 | Dix murs à la suite sans interruption | `construction2.cjs` | 10 murs en 1,2 s, doigt jamais levé |
+| 2 | Enchaîner murs, sols, rampes et cônes | `construction.cjs`, `construction2.cjs` | Mur, rampe, sol, toit à la suite (matérialisation, instances) ; en combat : tir, mur, tir, rampe, tir, mur, tir, sol |
+| 3 | Changer de pièce pendant la construction | `construction2.cjs` | Doigt sur MUR puis RAMPE sans lever : la pièce suivante est une rampe, on reste en construction |
+| 4 | Mode simple / avancé | `construction2.cjs`, `build.cjs` | Simple : TOURNER caché, rotation bloquée, sol posé à la place voisine si la case est prise ; avancé : TOURNER visible, rotation 1 |
+| 5 | Construire vite pendant un combat | `construction2.cjs`, `tactile.cjs` | 4 tirs et 4 pièces enchaînés ; en courant avec 3 doigts : 2 pièces, 5,7 m parcourus, caméra tournée |
+| 6 | Nouveaux PV des constructions | `construction2.cjs` | Mur 300 PV (avant 150), rampe / sol / toit 280 (avant 140) ; pour détruire un mur fini : 10 balles de fusil d'assaut, 3 coups de pompe, 5 de sniper, 5 de daba |
+| 7 | Modifier et détruire les structures | `construction.cjs`, `support.cjs` | Porte, fenêtre, demi-mur, rampe éditée ; destruction : 0 collision restante ; tour de 20 pièces qui s'effondre quand on casse le bas |
+| 8 | Déplacer les boutons du HUD | `graphismes.cjs` | Au doigt dans l'éditeur : TIRER déplacé de 120 px, agrandi à 130 %, opacité 60 % ; SAUT masqué (visible en transparence dans l'éditeur) |
+| 9 | Redémarrer et vérifier la sauvegarde du HUD | `graphismes.cjs` | Page rechargée : TIRER à la même place, même taille et opacité ; SAUT toujours masqué ; disposition « Personnalisée » ; dispositions Compacte / Construction / Classique / Personnalisée appliquées |
+| 10 | Changer les profils graphiques | `graphismes.cjs`, `profiles.cjs` | Au même endroit : 94 / 102 / 199 / 207 appels de dessin (Très faible → Élevé) ; ombres, sol, effets, végétation du profil Personnalisé vérifiés un par un |
+| 11 | Limites FPS disponibles | `graphismes.cjs` | Écran mesuré 60 Hz → limites proposées 30, 45, 60, aucune ; porte de limite sur 2 s d'images : 30,5 / 45,5 / 60 à 60 Hz et 30,5 / 45,5 / 60,5 / 90,5 / 120 à 120 Hz. Mesure réelle impossible ici : le navigateur de test ne dépasse pas 24 images/s |
+| 12 | Explorer toute la nouvelle carte | `combat.cjs`, `bots.cjs` | Les 21 lieux visités à pied : nom affiché, sol sous les pieds, aucun NaN ; une maison de chaque nouveau lieu ouverte avec E et visitée ; les 48 portes des nouveaux lieux s'ouvrent |
+| 13 | Navigation des bots | `partie.cjs`, `houses.cjs`, `cover.cjs` | Parties entières : 3 à 7 morts dans la tempête sur 40 à 60 joueurs (le reste rejoint la zone), aucun bot mort sans arme ; bots entrés dans une maison par la porte en ≈ 4 s ; 11 bots sur 12 à couvert |
+| 14 | Combats entre bots et joueur | `combat.cjs`, `bots.cjs` | 2 parties complètes, joueur piloté par le test (visée imparfaite, 0,5 s de réaction) contre 39 bots : il élimine 11 puis 4 bots, est tué par un bot ou par la tempête ; duels (6 par niveau, 2 exécutions) : précision 25,9 / 26,7 / 32,9 % puis 25,9 / 29,3 / 37,6 %, premier tir après 1,46 / 1,16 / 0,60 s puis 1,44 / 1,14 / 0,72 s (débutant / normal / avancé) |
+| 15 | Partie complète | `partie.cjs`, `combat.cjs`, `sim.cjs` | Toutes les parties lancées sont allées au bout (dernier survivant), 0 erreur, 0 NaN |
+| 16 | Durée de 15 à 20 minutes | `partie.cjs`, `combat.cjs` | Réglage final, 21 parties entières : **toutes entre 15 et 20 min** (907 à 1 153 s). 49 bots mélangés (6 parties) : 971 à 1 153 s, moyenne 17,3 min ; 39 (4) : 958 à 1 080 s, 17,1 min ; 59 (4) : 958 à 1 066 s, 16,8 min ; 19 normaux (3) : 1 008 à 1 047 s, 17,2 min ; 39 débutants (2) : 17,9 min ; 39 avancés (2) : 907 et 1 119 s. Avec le joueur (`combat.cjs`, 39 bots) : 17,5 et 18,2 min. Avant les derniers réglages (zones de tempête plus larges), 1 partie sur 3 descendait à 13,5-14,5 min |
+| 17 | Performances sur Android | `perf_mobile.cjs`, `bots.cjs` | Pas de téléphone ici : processeur ralenti ×4 — voir « Performances ». FPS non garantis |
+
+## Bots : avant / après
+
+`partie.cjs` : parties entières entre bots, le joueur regarde (FR.spectate).
+
+| | Avant (v1.7) | v2.0 |
+|---|---|---|
+| Nombre | 19 (20 joueurs) | 19 à 59 réglables ; par défaut 49 / 39 / 29 |
+| Carte | 480 m | 680 m |
+| Durée d'une partie (19 bots) | 4,1 min (232 à 264 s) | 17,2 min (1 008 à 1 047 s) ; 39 bots 17,1 min ; 49 bots 17,3 min ; 59 bots 16,8 min |
+| Morts dans la tempête | 1 sur 19 | 4,3 sur 19 ; 5,5 sur 49 (partent à temps malgré une carte 2 × plus grande) |
+| Précision des tirs | 27,8 % | ≈ 30 % en partie ; en duel : 25,9 % (débutants), 26,7 à 29,3 % (normaux), 32,9 à 37,6 % (avancés) |
+| Distance des combats | 18 m | 17 m |
+| Vie médiane d'un bot | 164 s (19 bots) | 550 s (19 bots) ; 167 s (49 bots) |
+| Par niveau (39 bots) | — | débutants : précision 27,6 %, 148 constructions, vie médiane 217 s ; avancés : 32,8 %, 236 constructions, 160 s |
+| Constructions par partie | 109 (19 bots) | 113 (19 bots) ; 266 (49 bots) |
+| Bots morts sans arme | 0 | 0 |
+
+## Performances
+
+Calcul du jeu (logique + animation des persos, sans le rendu) :
+
+| Situation | Mesure |
+|---|---|
+| Navigateur de test, tous les bots au sol dans un rayon de 150 m du joueur (`bots.cjs`) | 19 bots 2,1 ms · 39 bots 3,4 ms · 49 bots 4,8 ms · 59 bots 4,0 ms par image |
+| Parties entières, au sol (`partie.cjs`) | 19 bots 0,8 ms · 49 bots 1,7 ms par image en moyenne (v1.7, 19 bots : 1,2 ms) |
+| Processeur ralenti ×4, ville, 1 min après l'atterrissage (`perf_mobile.cjs`) | 29 bots 5,5 ms (95 % des images sous 8,2) · 39 bots 4,2 ms (7,5) · 59 bots 10,9 ms (16,1) |
+| Processeur ralenti ×4, pire cas (tous les bots autour du joueur) | 29 bots 11,3 ms (16,3) · 38 bots 14,3 ms (21,8) · 55 bots 19,8 ms (28,6) |
+| Processeur ralenti ×4, lancement de la 1re partie (persos créés) | 19 bots 0,43 s · 29 bots 0,5 s · 39 bots 0,8 s · 59 bots 0,79 s ; parties suivantes 0,06 à 0,09 s |
+
+Une image dure 33 ms à 30 images/s et 16,7 ms à 60 : avec 59 bots tous proches, le calcul seul prend presque tout le budget d'un téléphone moyen. D'où les valeurs par défaut : 39 bots au téléphone, 29 sur un téléphone modeste, 49 sur ordinateur.
+
+Optimisations mesurées au profileur (59 bots) : le ramassage des bots coûtait 8 % du calcul (chaque bot testait tous les objets à chaque image) → une image sur 3 ; coffres → une image sur 3 ; flottement des objets non affichés supprimé ; bots lointains (au-delà de 2 × la distance d'animation complète) animés une image sur 6.
+
+## Non-régression (tests des versions précédentes)
+
+| Test | Résultat |
+|---|---|
+| `prise.cjs` | 110 situations bonnes (9 armes dont les 2 nouvelles) |
+| `changement.cjs`, `construction.cjs`, `tactile.cjs`, `build.cjs`, `support.cjs` | Tout est bon (montée mur + rampe : 60,9 m en 10 s, identique ; 56 m en 9 s dans les deux ordres) |
+| `houses.cjs` | Porte fermée qui bloque, E, escalier, rebord, muret ; bots entrés en ≈ 4 s |
+| `cover.cjs` | 11 bots sur 12 à couvert |
+| `fixes2.cjs`, `ddatest.cjs`, `decals.cjs` | TOP 1 sans dégâts de tempête après la victoire ; 0 différence sur 3 000 rayons (3 967 collisions) ; 10 impacts pour 10 balles |
+| `sim.cjs` | 2 parties de 6 min (limite du test) : 0 erreur, 0 NaN |
+| `flows.cjs` ordinateur et téléphone | Tir, rechargement, lunette, construction, édition, soin, pause, fin de partie, rejouer, retour |
+| `lobbytest.cjs` ordinateur et téléphone | Persos, boutique, missions, pseudo, modes, JOUER, fin et récompenses, retour, Entraînement ; lancement 13,9 s (49 bots, rendu logiciel) et 4,6 s (29 bots) |
+| `hud.cjs` | Captures ordinateur et téléphone : « 30 en vie / 30 », bouton des emotes, nouveaux lieux sur la mini-carte |
+| `animtest.cjs` Boss et Guerrière | 14 situations, aucun NaN, quaternions normés. Comparé à la v1.7 dans le même environnement : mêmes sauts du buste image par image (ex. 12,0° / 12,2°) ; les écarts du banc viennent du point d'atterrissage (taxi-brousse au hasard) |
+| `decor.cjs`, `profiles.cjs` | Aucun programme GPU compilé en partie ; Basse 103, Moyenne 199, Haute 213 appels de dessin |
+
+## Corrections des tests (pas du jeu)
+
+- `construction2.cjs` : ne revisait pas le mur entre deux tirs ; le recul faisait passer les tirs au-dessus du mur selon l'endroit choisi. Il revise maintenant avant chaque tir (comme un joueur).
+- `tactile.cjs` : le joueur partait d'un point quelconque de la grille de construction et n'avait pas toujours le temps de changer de case ; il part d'une case sur terrain plat et court 2 s au lieu de 1,3.
+- `combat.cjs` : la limite de durée était de 70 s au lieu de 70 min, la visée du joueur piloté était parfaite ; corrigés avant les mesures.
+- `bots.cjs` : duel à un endroit tiré au hasard (une dune pouvait cacher la cible) et trop court ; 6 duels sur un terrain dégagé connu.
+
+## Bugs du jeu trouvés par les tests v2.0 et corrigés
+
+- Maisons des nouveaux lieux posées sur une dune ou un rocher : seuil de porte trop haut pour l'ouvrir (Bilma, Termit) → maisons seulement sur un terrain assez plat ; les 48 portes s'ouvrent.
+- Parties trop courtes au début (13 à 14 min) : la partie se joue quand les derniers survivants se croisent → zones intermédiaires plus larges, bots prudents en fin de partie, dégâts entre bots ×0,45.
+
+## Ce qui reste
+
+- Précision : débutant et normal sont parfois proches au fusil d'assaut à 22 m (25,9 contre 26,7 à 29,3 % selon l'exécution), parce qu'un tir « raté » touche encore souvent à cette distance ; élargir l'écart des tirs ratés selon le niveau. Le délai du premier tir, lui, sépare nettement les niveaux.
+- Mesures sur de vrais téléphones Android (rendu et FPS).
+- Termit n'a pas de maison (terrain trop pentu partout) : un replat à aménager si tu veux des maisons dans le massif.
+
+
 # v1.7
 
 Mêmes conditions que la v1.6 (Chromium sans écran, rendu logiciel SwiftShader, réseau externe coupé, boucle figée). **Pas de test sur un vrai téléphone** : aucun appareil ni émulateur Android dans l'environnement. Les tests tactiles envoient de vrais événements tactiles multi-doigts par le protocole de Chrome (Pixel 7 paysage simulé).

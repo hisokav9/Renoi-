@@ -110,7 +110,9 @@ Brousse (arbres, rochers, buttes, buissons, butin) à la même densité qu'avant
 
 ## 6. Tempête et durée des parties (`src/core/match.js`, nouveau)
 
-7 phases au lieu de 5 : zone de départ de 500 m de rayon (toute la carte), puis 250, 160, 95, 52, 24, 9 et 0 m ; dégâts 1 à 12 par seconde ; tempête finie en **18 min** (avant : ≈ 5 min). Mesuré sur des parties entières entre bots : **15,8 min en moyenne avec 39 ou 49 bots**, 14 min avec 59 (voir le rapport de tests).
+7 phases au lieu de 5 : zone de départ de 500 m de rayon (toute la carte), puis 280, 190, 125, 70, 32, 12 et 0 m ; dégâts 1 à 12 par seconde ; tempête finie en **19 min 20 s** (avant : ≈ 5 min).
+
+Réglé sur des parties entières mesurées (`tests/partie.cjs`) : une partie se joue quand les derniers survivants se croisent. Avec des zones intermédiaires étroites (160, 95, 52 m), 1 partie sur 3 finissait en 13,5-14,5 min ; avec les zones larges ci-dessus, des bots prudents en fin de partie (ils tiennent leur position et ne vont pas chercher les autres bots au loin) et des dégâts entre bots ×0,45 (le joueur subit les mêmes dégâts qu'avant), **les 21 parties mesurées durent de 15,1 à 19,2 min** (moyennes : 17,2 min avec 19 bots, 17,1 avec 39, 17,3 avec 49, 16,8 avec 59), et 17,5 / 18,2 min avec le joueur.
 
 ## 7. Bots
 
@@ -120,7 +122,8 @@ Brousse (arbres, rochers, buttes, buissons, butin) à la même densité qu'avant
 | Niveaux | un seul | **Débutants, Normaux, Avancés, Mélangés** (35 / 45 / 20 %) : précision, délai de réaction, perception, construction quand ils sont touchés, seuil de soin, pas de côté, sauts, marge pour rejoindre la zone, rayon de recherche du butin |
 | Zone | partaient 22 s avant que la tempête avance, quelle que soit la distance | partent à temps selon la distance à courir et leur niveau |
 | Début de partie | combat dès l'atterrissage | pillent d'abord (perception réduite tant qu'on ne les touche pas, 35 à 70 s) |
-| Fin de partie | erraient au hasard dans la zone | tiennent leur position, ou rentrent dans la zone de leur côté |
+| Fin de partie | erraient au hasard dans la zone | à 12 survivants ou moins : tiennent leur position, ou rentrent dans la zone de leur côté ; ne vont pas chercher les autres bots au loin |
+| Dégâts entre bots | ×0,55 | ×0,45 (parties plus longues ; dégâts sur le joueur inchangés) |
 | Armes | — | distances de combat des 2 nouvelles armes |
 | Célébrations | — | emote après une élimination, parfois |
 
