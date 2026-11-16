@@ -99,10 +99,12 @@ Modèles 3D des armes : revolver, mitraillette, fusil d'assaut, pompe, sniper, m
 | Bilma | Nord-est | Oasis : palmiers dattiers, puits, salines, cases, maisons de banco, au milieu des dunes |
 | Malbaza | Sud-est | Cimenterie : 3 silos, 2 hangars, convoyeur, château d'eau, pylônes, logements |
 | Djado | Nord | Forteresse en ruine (ksar), maisons de banco, murets, rochers |
-| Termit | Nord-ouest | Massif rocheux (collines, 70 gros rochers à récolter), 2 maisons, mirador |
+| Termit | Nord-ouest | Massif rocheux (collines, 70 gros rochers à récolter, buttes), mirador, butin caché entre les rochers ; pas de maison (trop de pente : voir plus bas) |
 | Filingué | Ouest (autre rive) | Village sur une colline : cases, maisons, baobab |
 | Gouré | Est | Village des dunes : cases, maisons, palmiers |
 | Gaya | Sud | Grand marché : 15 étals, maisons |
+
+Les maisons des nouveaux lieux ne sont posées que sur un terrain assez plat (≤ 0,9 m de dénivelé sous la maison et 2,5 m autour) : sur une dune ou un rocher, le seuil de la porte se retrouvait trop haut pour l'ouvrir (trouvé par `combat.cjs` à Bilma et Termit ; vérifié ensuite : les 48 portes des nouveaux lieux s'ouvrent).
 
 Brousse (arbres, rochers, buttes, buissons, butin) à la même densité qu'avant sur toute la carte ; fleuve et palmiers sur toute la longueur ; terrain plus fin en Moyen / Élevé (mailles de 3 m) ; taxi-brousse à la même vitesse (traversée de 40 s).
 

@@ -25,7 +25,7 @@ const { chromium } = require('playwright'); const [,, base, nm = '2', nb = '39']
       const h = FR.housesInfo.find(h => h.door && h.doorObj && Math.hypot((h.minX + h.maxX) / 2 - c.x, (h.minZ + h.maxZ) / 2 - c.z) < c.r + 6); if (!h) { houses.push({ lieu: c.name, maison: false }); continue; }
       const D = h.door; FR.setDoor(h.doorObj, false); step(30); p.pos.set(D.ox, FR.terrainH(D.ox, D.oz) + 0.3, D.oz); p.vel.set(0, 0, 0); step(10);
       const yaw = Math.atan2(-(D.ix - D.ox), -(D.iz - D.oz)); FR.setCam(yaw, -0.1); FR.keys.KeyW = true; step(20); FR.keys.KeyW = false; const blocked = !(p.pos.x > h.minX && p.pos.x < h.maxX && p.pos.z > h.minZ && p.pos.z < h.maxZ);
-      p.pos.set(D.ox, FR.terrainH(D.ox, D.oz) + 0.3, D.oz); p.vel.set(0, 0, 0); step(5); FR.interact(); step(30); FR.setCam(yaw, -0.1); FR.keys.KeyW = true; step(40); FR.keys.KeyW = false; step(5);
+      FR.interact(); step(30); FR.setCam(yaw, -0.1); FR.keys.KeyW = true; step(40); FR.keys.KeyW = false; step(5); // E là où la porte fermée a arrêté le joueur (contre la porte, comme un joueur)
       const inside = p.pos.x > h.minX && p.pos.x < h.maxX && p.pos.z > h.minZ && p.pos.z < h.maxZ; houses.push({ lieu: c.name, porteFermeeBloque: blocked, ouverteAvecE: !!h.doorObj.open, entre: inside }); }
     FR.goMenu(); window.__freeze = false; return { lieux: out, maisons: houses }; });
   for (const l of ex.lieux) if (!l.nomAffiche || l.marche < 2 || !l.auSol || l.nan) pb.push('lieu ' + l.lieu);

@@ -1108,7 +1108,11 @@ function addSilo(x,z,rad=2.6,H=14){ if(!freeArea(x-rad,z-rad,x+rad,z+rad,1.5)) r
   MG.plaster.add(prismGeo(rad,rad,H,14,6.28*rad),M4(x,b+H/2,z),C(0xcfcac0)); MG.plain.add(new THREE.ConeGeometry(rad*1.05,1.6,14),M4(x,b+H+0.8,z),C(0x8f9ba4));
   addSolid(x-rad*0.8,b,z-rad*0.8,x+rad*0.8,b+H,z+rad*0.8,{harvest:true}); }
 // n maisons ouvertes au hasard entre r0 et r1 du centre (plusieurs essais : la place peut être prise)
-function placeHouses(c,n,r0,r1,style,hMax=5.6){ let k=0; for(let t=0;t<n*14&&k<n;t++){ const a=R()*6.28, r=rr(r0,r1); if(addHouse(c.x+Math.cos(a)*r,c.z+Math.sin(a)*r,rr(6,8),rr(6,7.5),rr(4,hMax),typeof style==='function'?style():style)) k++; } return k; }
+// v2.0 : seulement sur un terrain assez plat (≤ 0,9 m de dénivelé sur la maison et 2,5 m autour) : sinon, sur une dune ou un rocher,
+// le seuil de la porte se retrouve trop haut au-dessus du sol pour l'ouvrir (Bilma, Termit)
+function flatEnough(x,z,w,d,m=2.5,lim=0.9){ let lo=1e9,hi=-1e9; for(const u of [-1,-0.5,0,0.5,1]) for(const v of [-1,-0.5,0,0.5,1]){ const h=terrainH(x+u*(w/2+m),z+v*(d/2+m)); if(h<lo) lo=h; if(h>hi) hi=h; } return hi-lo<=lim; }
+function placeHouses(c,n,r0,r1,style,hMax=5.6){ let k=0; for(let t=0;t<n*20&&k<n;t++){ const a=R()*6.28, r=rr(r0,r1), x=c.x+Math.cos(a)*r, z=c.z+Math.sin(a)*r, w=rr(6,8), d=rr(6,7.5);
+  if(!flatEnough(x,z,w,d)) continue; if(addHouse(x,z,w,d,rr(4,hMax),typeof style==='function'?style():style)) k++; } return k; }
 function addSandbags(x,z,len,alongX){ return addLowWall(x,z,len,alongX,C(0xb8a074)); }
 // Camp militaire : casernes (maisons ouvertes), hangar, miradors, sacs de sable, citerne
 { const c=CITY.camp; for(let i=-1;i<=1;i++) for(let j=-1;j<=1;j+=2) addHouse(c.x+i*15+rr(-1,1),c.z+j*11,rr(9.5,10.5),rr(6.5,7.2),rr(4.2,4.8),'plaster');
@@ -1138,7 +1142,7 @@ function addSandbags(x,z,len,alongX){ return addLowWall(x,z,len,alongX,C(0xb8a07
 // Termit : massif rocheux (gros rochers à récolter, buttes), peu de maisons : butin caché entre les rochers
 { const c=CITY.termit; for(let k=0;k<70;k++){ const a=R()*6.28, r=Math.sqrt(R())*c.r*1.3; addRock(c.x+Math.cos(a)*r,c.z+Math.sin(a)*r,rr(1.2,2.6)); }
   for(let k=0;k<18;k++){ const a=R()*6.28, r=Math.sqrt(R())*c.r; addMound(c.x+Math.cos(a)*r,c.z+Math.sin(a)*r); }
-  addHouse(c.x+6,c.z-4,7,6.5,4.4,'banco'); addHouse(c.x-12,c.z+14,6.5,6.5,4.2,'banco'); addWatchtower(c.x-4,c.z+30);
+  placeHouses(c,2,0,c.r*0.9,'banco',4.4); addWatchtower(c.x-4,c.z+30);
   chestSpots.push([c.x+2,terrainH(c.x+2,c.z+10),c.z+10,'rochers']); lootIn(c,10,6,1); }
 // Filingué : village sur la colline (cases, maisons, murets)
 { const c=CITY.filingue; placeHouses(c,6,6,c.r*0.8,'banco');
