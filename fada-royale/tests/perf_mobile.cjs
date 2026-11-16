@@ -24,14 +24,14 @@ const { chromium, devices } = require('playwright'); const [,, base, thr = '4'] 
     res.lancement[n] = await p2.evaluate(n => { const FR = window.FR; FR.SET.botCount = n; window.__freeze = true; const t0 = performance.now(); FR.startMatch('br'); const t1 = performance.now(); FR.goMenu(); const t2 = performance.now(); FR.startMatch('br'); const t3 = performance.now(); FR.goMenu(); return { premiere: Math.round(t1 - t0), suivante: Math.round(t3 - t2) }; }, n);
     await c2.close(); }
   console.log('lancement (ms, persos créés à la 1re partie)', JSON.stringify(res.lancement));
-  res.armes = await page.evaluate(() => { const FR = window.FR, p = FR.player; FR.startMatch('train'); window.__freeze = true; window.__keepAmmo = false; const out = {};
+  res.armes = await page.evaluate(() => { const FR = window.FR; FR.startMatch('train'); const p = FR.player; window.__freeze = true; window.__keepAmmo = false; const out = {};
     for (const w of ['revolver', 'mitraillette', 'fusil', 'tactique', 'pompe', 'pompet', 'mitrailleuse', 'sniper']) { p.slots = [w, null, null, null, null]; p.srar = [FR.WEAP[w].rar, 0, 0, 0, 0]; p.mag = { [w]: FR.WEAP[w].mag }; FR.selectSlot(1); for (let i = 0; i < 25; i++) FR.update(1 / 30);
       FR.setCam(0, -0.02); FR.setFiring(true); const t0 = performance.now(); for (let i = 0; i < 90; i++) FR.update(1 / 30); out[w] = +((performance.now() - t0) / 90).toFixed(2); FR.setFiring(false); }
     FR.goMenu(); window.__freeze = false; return out; });
   console.log('armes (ms/image en tirant)', JSON.stringify(res.armes));
   res.parties = []; res.foule = [];
   for (const n of [29, 39, 59]) {
-    const r = await page.evaluate(n => { const FR = window.FR, p = FR.player; FR.SET.botCount = n; FR.SET.botLevel = 'mixte'; FR.startMatch('br'); window.__freeze = true;
+    const r = await page.evaluate(n => { const FR = window.FR; FR.SET.botCount = n; FR.SET.botLevel = 'mixte'; FR.startMatch('br'); const p = FR.player; window.__freeze = true;
       FR.jumpFromBus(); for (let i = 0; i < 30 * 60; i++) { p.hp = 100; FR.update(1 / 30); } // une minute de jeu : les bots ont atterri
       const c = FR.CITIES.find(x => x.id === 'agadez'); p.phase = 'ground'; p.pos.set(c.x, FR.terrainH(c.x, c.z) + 0.3, c.z); p.vel.set(0, 0, 0); for (let i = 0; i < 30; i++) { p.hp = 100; FR.update(1 / 30); }
       const ts = []; for (let i = 0; i < 240; i++) { p.hp = 100; p.shield = 100; const t0 = performance.now(); FR.update(1 / 30); ts.push(performance.now() - t0); }
