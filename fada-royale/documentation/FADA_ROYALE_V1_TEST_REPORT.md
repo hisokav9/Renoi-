@@ -95,6 +95,16 @@ Optimisations mesurées au profileur (59 bots) : le ramassage des bots coûtait 
 | `animtest.cjs` Boss et Guerrière | 14 situations, aucun NaN, quaternions normés. Comparé à la v1.7 dans le même environnement : mêmes sauts du buste image par image (ex. 12,0° / 12,2°) ; les écarts du banc viennent du point d'atterrissage (taxi-brousse au hasard) |
 | `decor.cjs`, `profiles.cjs` | Aucun programme GPU compilé en partie ; Basse 103, Moyenne 199, Haute 213 appels de dessin |
 
+## APK 2.0
+
+| Vérification | Résultat |
+|---|---|
+| Construction (`python3 android/build_apk.py`) | `android/dist/FadaRoyale-2.0.apk`, 11,8 Mo, signature v2 vérifiée |
+| Clé de signature | Empreinte du certificat `3DB2BF18C0ABE4BE…`, la même que la v1.7 : s'installe par-dessus |
+| Version | versionName 2.0 (versionCode 19) |
+| Contenu | Nouveaux modules présents (`src/core/arsenal.js`, `weapon-models.js`, `building.js`, `match.js`), réglage final de la tempête ; ni clé ni tests dans l'APK |
+| Jeu de l'APK hors ligne (WebView simulée, Pixel 7) | 79 fichiers servis, aucun introuvable, aucune erreur JavaScript ; lobby « v2.0 », JOUER → taxi-brousse |
+
 ## Corrections des tests (pas du jeu)
 
 - `construction2.cjs` : ne revisait pas le mur entre deux tirs ; le recul faisait passer les tirs au-dessus du mur selon l'endroit choisi. Il revise maintenant avant chaque tir (comme un joueur).
