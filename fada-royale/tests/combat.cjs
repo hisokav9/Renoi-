@@ -2,7 +2,7 @@
 // 1. carte : le joueur marche (touches du clavier) dans chacun des 21 lieux : nom du lieu affiché, sol sous les pieds, pas de NaN ;
 //    dans chaque nouveau lieu qui a des maisons : ouvrir la porte d'une maison (E) et entrer
 // 2. parties complètes, le joueur piloté par le test (ni invincible ni aidé) : il va chercher une arme, vise le torse des bots qu'il
-//    voit (comme un joueur, avec les vrais tirs), sinon rejoint la zone. Mesures : tirs et touches des bots sur le joueur, du joueur sur
+//    voit avec un temps de réaction (0,5 s) et une erreur de visée (comme un joueur moyen, avec les vrais tirs), sinon rejoint la zone. Mesures : tirs et touches des bots sur le joueur, du joueur sur
 //    les bots, éliminations, rang du joueur, durée totale de la partie (elle continue entre bots après la mort du joueur)
 // Usage : node tests/combat.cjs http://127.0.0.1:8000/index.html [parties=2] [bots=39]
 const { chromium } = require('playwright'); const [,, base, nm = '2', nb = '39'] = process.argv;
@@ -35,16 +35,19 @@ const { chromium } = require('playwright'); const [,, base, nm = '2', nb = '39']
   // 2. parties
   for (let m = 0; m < +nm; m++) {
     const r = await page.evaluate(nb => { const FR = window.FR; FR.SET.botCount = +nb; FR.SET.botLevel = 'mixte'; FR.startMatch('br'); window.__freeze = true; const p = FR.player, T = FR.THREE;
-      const st = { joueurTire: 0, joueurTouche: 0, botsTirentSurJoueur: 0, joueurToucheParBots: 0, degatsRecus: 0, elimJoueur: 0 }; let t = 0, firedOn = false, deathT = null, hp0 = 100;
+      let seenT = 0, seenB = null, ex = 0, ey = 0; const st = { joueurTire: 0, joueurTouche: 0, botsTirentSurJoueur: 0, joueurToucheParBots: 0, degatsRecus: 0, elimJoueur: 0 }; let t = 0, firedOn = false, deathT = null, hp0 = 100;
       const cam = FR.camera, d = new T.Vector3();
       // le joueur saute du taxi-brousse au milieu du trajet
-      for (let i = 0; i < 30 * 70 && FR.aliveCount > 1; i++) { t += 1 / 30;
+      for (let i = 0; i < 30 * 60 * 30 && FR.aliveCount > 1; i++) { t += 1 / 30; // au plus 30 min
         if (p.phase === 'bus' && FR.bus.t > FR.bus.dur * 0.45) FR.jumpFromBus();
         if (p.alive && p.phase === 'ground') {
           let tgt = null, td = 70; for (const b of FR.bots) { if (!b.alive || !b.inMatch || b.phase !== 'ground') continue; const dd = b.pos.distanceTo(p.pos); if (dd < td && FR.hasLOS(p, b)) { td = dd; tgt = b; } }
           const hasGun = p.slots.some(Boolean);
+          if (tgt !== seenB) { seenB = tgt; seenT = 0; ex = (Math.random() - 0.5) * 0.06; ey = (Math.random() - 0.5) * 0.04; } else seenT += 1 / 30;
           if (tgt && hasGun) { if (p.cur === 'daba') FR.selectSlot(p.slots.findIndex(Boolean) + 1); const ty = tgt.pos.y + (tgt.crouch ? 0.8 : 1.2); FR.keys.KeyW = false;
-            const dx = tgt.pos.x - cam.position.x, dz = tgt.pos.z - cam.position.z; FR.setCam(Math.atan2(-dx, -dz), Math.atan2(ty - cam.position.y, Math.hypot(dx, dz))); firedOn = !firedOn; FR.setFiring(firedOn); }
+            if (Math.random() < 0.05) { ex = (Math.random() - 0.5) * 0.06; ey = (Math.random() - 0.5) * 0.04; } // la visée bouge (erreur de ±1,7° environ)
+            const dx = tgt.pos.x - cam.position.x, dz = tgt.pos.z - cam.position.z; FR.setCam(Math.atan2(-dx, -dz) + ex, Math.atan2(ty - cam.position.y, Math.hypot(dx, dz)) + ey);
+            if (seenT > 0.5) { firedOn = !firedOn; FR.setFiring(firedOn); } else FR.setFiring(false); }
           else { FR.setFiring(false); let goal = null;
             if (!hasGun) { let bd = 90; for (const it of FR.items) { if (!it.alive || !it.kind.startsWith('w:')) continue; const dd = Math.hypot(it.x - p.pos.x, it.z - p.pos.z); if (dd < bd) { bd = dd; goal = [it.x, it.z]; } } }
             if (!goal) { const ds = Math.hypot(p.pos.x - FR.storm.cx, p.pos.z - FR.storm.cz); const tr = FR.storm.state === 'wait' ? FR.storm.tr : FR.storm.r; const tx = FR.storm.state === 'wait' ? FR.storm.tx : FR.storm.cx, tz = FR.storm.state === 'wait' ? FR.storm.tz : FR.storm.cz;

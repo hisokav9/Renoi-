@@ -35,22 +35,24 @@ const { chromium } = require('playwright'); const [,, base] = process.argv;
   // 4. niveaux
   const mix = await page.evaluate(() => { const FR = window.FR; FR.SET.botLevel = 'mixte'; FR.SET.botCount = 49; FR.startMatch('br'); const inm = FR.bots.filter(b => b.inMatch), k = {}; for (const b of inm) k[b.profKey] = (k[b.profKey] || 0) + 1; FR.goMenu(); return k; });
   console.log('mélangés ', JSON.stringify(mix)); if (!(mix.debutant >= 15 && mix.debutant <= 19 && mix.normal >= 20 && mix.normal <= 24 && mix.avance >= 8 && mix.avance <= 12)) pb.push('répartition des niveaux');
+  // duels sur un terrain dégagé connu (zone d'Entraînement, plate et sans obstacle), ligne de vue vérifiée ; 6 duels de 40 s par niveau
   const duel = {};
-  for (const lvl of ['debutant', 'normal', 'avance']) duel[lvl] = await page.evaluate(lvl => { const FR = window.FR; FR.SET.botLevel = lvl; FR.SET.botCount = 19; FR.startMatch('br'); window.__freeze = true; FR.spectate();
+  for (const lvl of ['debutant', 'normal', 'avance']) duel[lvl] = await page.evaluate(lvl => { const FR = window.FR; let shots = 0, hits = 0, firsts = [], runs = 0, skipped = 0;
+    for (let rep = 0; rep < 6; rep++) { FR.SET.botLevel = lvl; FR.SET.botCount = 19; FR.startMatch('br'); window.__freeze = true; FR.spectate();
       const step = n => { for (let i = 0; i < n; i++) FR.update(1 / 30); }; FR.bus.t = FR.bus.dur; step(2);
       const [a, t] = FR.bots; for (const b of FR.bots.slice(2)) { b.alive = false; b.model.g.visible = false; }
-      // terrain dégagé : le tireur à 22 m de la cible, fusil d'assaut rare, plein de munitions ; la cible ne riposte pas et ne meurt pas
-      let x0 = 40, z0 = -30; for (let k = 0; k < 400; k++) { const x = (Math.random() - 0.5) * 500, z = (Math.random() - 0.5) * 500; if (!FR.solids.some(s => s.maxX > x - 30 && s.minX < x + 30 && s.maxZ > z - 6 && s.minZ < z + 6) && Math.abs(FR.terrainH(x - 22, z) - FR.terrainH(x + 22, z)) < 1) { x0 = x; z0 = z; break; } }
+      const x0 = 62, z0 = -42 + rep * 7;
       for (const [b, dx] of [[a, -11], [t, 11]]) { b.phase = 'ground'; b.grounded = true; b.pos.set(x0 + dx, FR.terrainH(x0 + dx, z0) + 0.1, z0); b.vel.set(0, 0, 0); b.model.g.visible = true; b.hp = 100; b.shield = 0; b.landedAt = -99; }
-      a.slots = ['fusil', null, null, null, null]; a.srar = [2, 0, 0, 0, 0]; a.mag = { fusil: 30 }; FR.selectSlot && 0; a.sel = 1; a.cur = 'fusil'; a.yaw = -Math.PI / 2; a.banco = 0;
+      a.slots = ['fusil', null, null, null, null]; a.srar = [2, 0, 0, 0, 0]; a.mag = { fusil: 30 }; a.sel = 1; a.cur = 'fusil'; a.yaw = -Math.PI / 2; a.banco = 0;
       t.slots = [null, null, null, null, null]; t.cur = 'daba'; t.banco = 0; t.yaw = Math.PI / 2;
-      FR.storm.state = 'done'; FR.storm.r = 9999; FR.BSTAT.shots = 0; FR.BSTAT.hits = 0; let first = -1;
+      FR.storm.state = 'done'; FR.storm.r = 9999; step(1); if (!FR.hasLOS(a, t)) { skipped++; FR.goMenu(); continue; }
+      FR.BSTAT.shots = 0; FR.BSTAT.hits = 0; let first = -1;
       for (let i = 0; i < 30 * 40; i++) { t.hp = 100; t.shield = 0; t.target = null; t.moveTarget = null; t.pos.set(x0 + 11, FR.terrainH(x0 + 11, z0) + 0.05, z0); t.vel.set(0, 0, 0); a.ammoT.medium = 999; if (a.mag.fusil < 5) a.mag.fusil = 30;
         a.pos.x = x0 - 11; a.pos.z = z0; step(1); if (first < 0 && FR.BSTAT.shots > 0) first = i / 30; }
-      const r = { profil: a.prof.name, tirs: FR.BSTAT.shots, touches: FR.BSTAT.hits, precision: +(FR.BSTAT.hits / Math.max(1, FR.BSTAT.shots) * 100).toFixed(1), premierTirApres: +first.toFixed(2) };
-      FR.goMenu(); window.__freeze = false; return r; }, lvl);
+      shots += FR.BSTAT.shots; hits += FR.BSTAT.hits; if (first >= 0) firsts.push(first); runs++; FR.goMenu(); }
+    window.__freeze = false; return { profil: FR.SET.botLevel, duels: runs, sansLigneDeVue: skipped, tirs: shots, touches: hits, precision: +(hits / Math.max(1, shots) * 100).toFixed(1), premierTirMoyen: +(firsts.reduce((x, y) => x + y, 0) / Math.max(1, firsts.length)).toFixed(2) }; }, lvl);
   console.log('duel     ', JSON.stringify(duel));
-  if (!(duel.debutant.precision < duel.normal.precision && duel.normal.precision < duel.avance.precision) || !(duel.debutant.premierTirApres > duel.avance.premierTirApres)) pb.push('effet des niveaux');
+  if (!(duel.debutant.precision < duel.normal.precision && duel.normal.precision < duel.avance.precision) || !(duel.debutant.premierTirMoyen > duel.avance.premierTirMoyen) || Object.values(duel).some(d => d.duels < 4)) pb.push('effet des niveaux');
   // 5. calcul, pire cas : tous les bots au sol autour du joueur
   const perf = [];
   for (const n of [19, 39, 49, 59]) perf.push(await page.evaluate(n => { const FR = window.FR; FR.SET.botLevel = 'mixte'; FR.SET.botCount = n; FR.startMatch('br'); window.__freeze = true;
