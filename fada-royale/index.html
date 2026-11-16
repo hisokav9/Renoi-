@@ -162,6 +162,8 @@ body.touch #mats{right:auto;bottom:auto;left:8px;top:34%;flex-direction:column}
 /* sur tactile, la vie et les armes sont centrées dans la place laissée par les boutons de droite (sinon le bouton sprint couvre la 6e case) */
 body.touch #bottom{left:calc((100% - 256px) / 2)}
 #touch .tb,#pick{opacity:var(--bop,1)}
+#bEmote{position:absolute;top:8px;right:56px;width:40px;height:40px;border-radius:11px;background:var(--panel);border:1px solid rgba(255,236,210,.3);color:#fff7ea;font-size:22px;pointer-events:auto;display:flex;align-items:center;justify-content:center}
+#emoteBar{position:absolute;top:54px;right:8px;display:flex;gap:6px;pointer-events:auto;z-index:3}#emoteBar button{padding:9px 11px;border-radius:10px;background:var(--panel);border:1px solid rgba(255,209,102,.45);color:#fff7ea;font:900 12px Rubik;display:flex;gap:5px;align-items:center}#emoteBar kbd{font:700 10px Rubik;opacity:.7}body.touch #emoteBar kbd{display:none}
 #gear{position:absolute;top:8px;right:8px;width:40px;height:40px;border-radius:11px;background:var(--panel);border:1px solid rgba(255,236,210,.3);color:#fff7ea;font-size:22px;pointer-events:auto;display:flex;align-items:center;justify-content:center;touch-action:none}
 #fps{position:absolute;top:12px;right:56px;white-space:nowrap;font-variant-numeric:tabular-nums;font-size:11px;padding:5px 9px}
 #settings{position:fixed;inset:0;z-index:14;display:flex;align-items:center;justify-content:center;background:rgba(15,9,3,.74);padding:10px;touch-action:pan-y}
@@ -258,6 +260,7 @@ body.editing-hud.he-adv #bRot.hidden{display:flex!important}
 <body>
 <!-- icônes du jeu (dessinées pour Fada Royale, trait 2 px, couleur héritée) -->
 <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<symbol id="i-emote" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 14.5c1 1.6 2.3 2.4 4 2.4s3-.8 4-2.4"/><path d="M9 9.5h.01M15 9.5h.01" stroke-width="3"/></symbol>
 <symbol id="i-gear" viewBox="0 0 24 24"><path stroke-width="1.8" d="M19.47 10.58 L22.12 10.72 L22.12 13.28 L19.47 13.42 L18.29 16.27 L20.06 18.25 L18.25 20.06 L16.27 18.29 L13.42 19.47 L13.28 22.12 L10.72 22.12 L10.58 19.47 L7.73 18.29 L5.75 20.06 L3.94 18.25 L5.71 16.27 L4.53 13.42 L1.88 13.28 L1.88 10.72 L4.53 10.58 L5.71 7.73 L3.94 5.75 L5.75 3.94 L7.73 5.71 L10.58 4.53 L10.72 1.88 L13.28 1.88 L13.42 4.53 L16.27 5.71 L18.25 3.94 L20.06 5.75 L18.29 7.73 Z"/><circle cx="12" cy="12" r="3.3"/></symbol>
 <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.3"/><path d="M2.8 20c0-3.6 2.8-6.2 6.2-6.2s6.2 2.6 6.2 6.2"/><path d="M15.6 4.9a3.2 3.2 0 0 1 0 6.3M17.8 14.3c2 .8 3.4 2.9 3.4 5.7"/></symbol>
 <symbol id="i-elim" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7.6"/><path d="M12 1.8v5.4M12 16.8v5.4M1.8 12h5.4M16.8 12h5.4"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/></symbol>
@@ -299,6 +302,8 @@ body.editing-hud.he-adv #bRot.hidden{display:flex!important}
 <div id="hud" class="hidden">
   <div id="scope" class="hidden"></div>
   <button id="gear" title="Paramètres" aria-label="Paramètres"><svg class="ic"><use href="#i-gear"/></svg></button>
+  <button id="bEmote" title="Emotes (J)" aria-label="Emotes"><svg class="ic"><use href="#i-emote"/></svg></button>
+  <div id="emoteBar" class="hidden"><button data-em="salut"><kbd>1</kbd>SALUT</button><button data-em="bravo"><kbd>2</kbd>BRAVO</button><button data-em="victoire"><kbd>3</kbd>VICTOIRE</button><button data-em="danse"><kbd>4</kbd>DANSE</button></div>
   <div class="chip hidden" id="fps">60 FPS</div>
   <div id="stormFx"></div>
   <div id="vign"></div>
@@ -2181,7 +2186,33 @@ function startReload(c){ const w=WEAP[c.cur]; if(!c.alive||w.melee||c.reloadT>0|
 function finishReload(c){ const w=WEAP[c.cur]; const need=w.mag-c.mag[c.cur]; const take=c.isPlayer?Math.min(need,ammoLeft(c,c.cur)):need; c.mag[c.cur]+=take; useAmmo(c,c.cur,take); }
 function useItem(c,kind){ if(!c||!c.alive||c.phase==='bus'||c.useT>0||c.reloadT>0) return; if(kind==='kilishi'&&(c.kilishi<=0||c.hp>=100)) return; if(kind==='the'&&(c.the<=0||c.shield>=75)) return; c.useKind=kind; c.useT=c.useMax=kind==='kilishi'?2.0:1.6; }
 function finishUse(c){ if(!c.isPlayer) BSTAT.heals++; if(c.useKind==='kilishi'){ c.kilishi--; c.hp=Math.min(100,c.hp+25); } else { c.the--; c.shield=Math.min(75,c.shield+25); } if(c.isPlayer) sfxPick(); c.useKind=null; }
+/* ---------- v2.0 : emotes ----------
+   Le projet n'a aucun clip de danse ou d'emote (seulement marche, course, saut, glissade, soin, coup, abattage) : les 4 gestes sont
+   construits à la main sur le squelette, comme le coup de daba (cibles des mains pour l'IK des bras, rotations du buste). */
+const EMOTES={salut:{name:'SALUT',dur:2.6},bravo:{name:'BRAVO',dur:2.8},victoire:{name:'VICTOIRE',dur:2.6},danse:{name:'DANSE',dur:8}};
+function startEmote(c,k){ if(!c||!c.alive||c.phase!=='ground'||!c.grounded||c.useT>0||c.reloadT>0||c.swPh||c.mantle||(c===player&&(buildMode||editing))||!EMOTES[k]) return false;
+  if(Math.hypot(c.vel.x,c.vel.z)>0.8) return false; c.emote={k,t:0}; return true; }
+function updateEmote(c,dt){ const e=c.emote; if(!e) return; e.t+=dt;
+  if(e.t>EMOTES[e.k].dur||!c.alive||c.phase!=='ground'||Math.hypot(c.vel.x,c.vel.z)>0.8||!c.grounded||c.useT>0||c.reloadT>0||c.swPh||c.mantle||(c.hurtT||0)>0.25||(c===player&&(buildMode||firing||editing))) c.emote=null; }
+// fondu d'entrée et de sortie (0,25 s)
+const emoteK=e=>Math.min(1,e.t/0.25,Math.max(0,(EMOTES[e.k].dur-e.t)/0.25));
+// cibles des mains (repère du perso : x à droite, y en haut, −z devant) ; renvoie [poids main droite, poids main gauche]
+function emoteHands(e,lR,lL){ const t=e.t, k=emoteK(e);
+  if(e.k==='salut'){ lR.set(0.32+0.12*Math.sin(t*15),1.9,-0.1); lL.set(-0.22,0.95,-0.02); return [k,0]; }
+  if(e.k==='bravo'){ const o=0.035+0.13*(0.5+0.5*Math.cos(t*Math.PI*2*2.2)); lR.set(o,1.32,-0.34); lL.set(-o,1.32,-0.34); return [k,k]; }
+  if(e.k==='victoire'){ const y=1.98+0.08*Math.abs(Math.sin(t*Math.PI*2)); lR.set(0.3,y,-0.06); lL.set(-0.3,y,-0.06); return [k,k]; }
+  const u=0.5+0.5*Math.sin(t*Math.PI*2*1.4); lR.set(0.34,1.0+0.85*u,-0.22); lL.set(-0.34,1.0+0.85*(1-u),-0.22); return [k,k]; }
+// buste : la danse balance les hanches et les épaules, le perso rebondit ; bravo : petite flexion
+function emoteBody(c,e,B,g){ const t=e.t, k=emoteK(e); _efw.set(0,0,1).applyQuaternion(g.quaternion);
+  if(e.k==='danse'){ const s=Math.sin(t*Math.PI*2*1.4); addRot(B.Hips,_UP,s*0.22*k); addRot(B.Spine1,_efw,s*0.1*k); addRot(B.Spine2,_UP,-s*0.18*k); addRot(B.Head,_efw,-s*0.12*k); g.position.y+=0.05*k*Math.abs(Math.sin(t*Math.PI*2*1.4)); }
+  else if(e.k==='bravo'){ addRot(B.Head,_ax,0.08*k); }
+  else if(e.k==='victoire'){ addRot(B.Head,_ax,-0.18*k); addRot(B.Spine2,_ax,-0.08*k); } }
+const _efw=new THREE.Vector3();
+let emoteOpen=false;
+function toggleEmoteBar(v){ emoteOpen=v===undefined?!emoteOpen:v; $('emoteBar').classList.toggle('hidden',!emoteOpen); }
+function playerEmote(k){ toggleEmoteBar(false); if(state!=='play') return; if(!startEmote(player,k)) showMsg('PAS MAINTENANT','arrête-toi, au sol, sans recharger ni construire',1.1); }
 function updateTimers(c,dt){
+  updateEmote(c,dt);
   c.fireCD-=dt; c.buildCD-=dt; c.hurtT-=dt; c.swingT-=dt; if(c.noiseT>0) c.noiseT-=dt; updateSwitch(c,dt); if(c.raiseT>0) c.raiseT-=dt;
   if(c.meleeAt>0){ c.meleeAt-=dt; if(c.meleeAt<=0&&c.isPlayer) meleeHit(c); }
   if(c.reloadT>0){ c.reloadT-=dt;
@@ -2213,7 +2244,8 @@ function killChar(t,att,wname){
   if(matchMode==='train'&&t.dummy){ // mannequin : tombe, revient 3 s plus tard, rien d'autre
     t.alive=false; t.hp=0; t.deathT=0; t.respawnT=3; t.useT=0; t.reloadT=0; if(att){ att.kills++; if(att===player){ showMsg('MANNEQUIN À TERRE','il se relève dans 3 s',1.1); sfxElim(); } }
     for(let k=0;k<12;k++) spawnParticle(t.pos.x+rnd(-0.4,0.4),t.pos.y+rnd(0,1.6),t.pos.z+rnd(-0.4,0.4),rnd(-3,3),rnd(1,5),rnd(-3,3),[0x7fd0ff,0xffffff,0xffd166][k%3],rnd(0.5,1),1,6); return; }
-  t.alive=false; t.hp=0; t.deathT=0; t.rank=aliveCount; t.killer=att; aliveCount--; t.diedAt=matchTime; t.diedArmed=t.slots.some(Boolean);
+  t.alive=false; t.hp=0; t.deathT=0; t.rank=aliveCount; t.killer=att; aliveCount--; t.diedAt=matchTime; t.diedArmed=t.slots.some(Boolean); t.emote=null;
+  if(att&&!att.isPlayer&&Math.random()<0.3) att.celebrateAt=matchTime+rnd(0.6,1.4); // v2.0 : le bot célèbre parfois (emote)
   t.useT=0; t.useKind=null; t.reloadT=0; t.mantle=null; // un kilishi entamé ne soigne pas un mort
   t.model.glider.visible=false;
   if(att){ att.kills++; const verb=wname==='daba'?'a assommé':'a éliminé';
@@ -2231,7 +2263,7 @@ function killChar(t,att,wname){
   if(t===player){ deadT=0; }
   checkEnd();
 }
-function checkEnd(){ if(endShown) return; if(player.alive && aliveCount<=1){ won=true; endShown=true; setTimeout(()=>showEnd(true),900); for(let k=0;k<120;k++) spawnParticle(player.pos.x+rnd(-3,3),player.pos.y+rnd(3,6),player.pos.z+rnd(-3,3),rnd(-4,4),rnd(2,8),rnd(-4,4),[0xe05206,0xffffff,0x0db02b][k%3],rnd(1.5,3),1.4,5); } }
+function checkEnd(){ if(endShown) return; if(player.alive && aliveCount<=1){ won=true; endShown=true; startEmote(player,'victoire'); setTimeout(()=>showEnd(true),900); for(let k=0;k<120;k++) spawnParticle(player.pos.x+rnd(-3,3),player.pos.y+rnd(3,6),player.pos.z+rnd(-3,3),rnd(-4,4),rnd(2,8),rnd(-4,4),[0xe05206,0xffffff,0x0db02b][k%3],rnd(1.5,3),1.4,5); } }
 
 /* ---------- tir du joueur ---------- */
 let camYaw=0, camPitch=-0.1, camDist=4, ads=false, camPivY=null, shake=0, camSide=0.72, camColT=-1;
@@ -2501,6 +2533,8 @@ function updateBot(b,dt){
   if(b.phase==='bus') return;
   if(b.phase==='fall'||b.phase==='glide'){ let wx=0,wz=0; if(b.landTarget){ const dx=b.landTarget.x-b.pos.x, dz=b.landTarget.z-b.pos.z, d=Math.hypot(dx,dz); if(d>2){ wx=dx/d; wz=dz/d; } } updateAir(b,dt,wx,wz); if(wx||wz) b.yaw=Math.atan2(-wx,-wz); return; }
   b.calmT-=dt; b.thinkT-=dt; if(b.thinkT<=0){ b.thinkT=0.28+Math.random()*0.08; botThink(b); }
+  if(b.celebrateAt&&matchTime>=b.celebrateAt){ b.celebrateAt=0; if(!b.flee&&!(b.target&&b.target.alive&&b.canSee)){ b.vel.x=b.vel.z=0; startEmote(b,pick(['victoire','danse','salut','bravo'])); } }
+  if(b.emote){ if(b.flee||(b.target&&b.target.alive&&b.canSee)) b.emote=null; else { moveChar(b,0,0,0,dt,false); b.moving=false; return; } } // v2.0 : immobile pendant l'emote
   b.reactT-=dt;
   let wx=0,wz=0; const t=b.target;
   if(b.cover&&t&&t.alive&&!b.flee){ const C=b.cover, cd=Math.hypot(C.x-b.pos.x,C.z-b.pos.z);
@@ -2769,12 +2803,13 @@ function animRealAnim(c,dt){
   mixPose(m);
   // --- retouches procédurales ---
   addRot(B.Hips,_UP,an.legYaw); addRot(B.Spine,_UP,-an.legYaw*0.45); addRot(B.Spine1,_UP,-an.legYaw*0.3); addRot(B.Spine2,_UP,-an.legYaw*0.25);
+  if(c.emote){ _ax.set(1,0,0).applyQuaternion(g.quaternion); emoteBody(c,c.emote,B,g); }
   const pitch=clamp(c.isPlayer?camPitch:(c.aimPitch||0),-1.1,1.1); an.pitch=lerp(an.pitch,pitch,1-Math.exp(-14*dt)); const pS=an.pitch;
   const bm=c===player&&buildMode&&c.phase==='ground', using=c.useT>0&&!!c.useKind;
   // v1.7 : changement d'arme : swK = 0 en position prête, 1 à l'étui ; étape 1 : l'ancienne arme y va, étape 2 : la nouvelle en sort
   let sw=0, wType=c.cur, swK=0;
   if(c.swPh){ sw=1; wType=c.swPh===1&&c.swFrom?c.swFrom:c.cur; swK=c.swPh===1?smooth(0,1,c.swU):c.swPh===3?1:1-smooth(0,1,c.swU); }
-  const climbing=!!c.mantle, gun=wType!=='daba', Gp=GRIP[wType], showW=!sky&&!using&&!bm&&!climbing;
+  const climbing=!!c.mantle, gun=wType!=='daba', Gp=GRIP[wType], showW=!sky&&!using&&!bm&&!climbing&&!c.emote; /* v2.0 : arme rangée pendant une emote */
   _ax.set(1,0,0).applyQuaternion(g.quaternion);
   const pk=sliding||air?0.5:1; addRot(B.Spine1,_ax,pS*0.1*pk); addRot(B.Spine2,_ax,pS*0.16*pk); addRot(B.Neck,_ax,pS*0.2); addRot(B.Head,_ax,pS*(gun?0.2:0.3));
   // soins : la tête mord (kilishi) ou bascule en arrière pour boire (thé)
@@ -2855,6 +2890,7 @@ function animRealAnim(c,dt){
   else if(c.phase==='glide'){ _lR.set(0.34,2.08,0.02); _lL.set(-0.34,2.08,0.02); wL=wR=1; have=true; }
   else if(c.phase==='fall'){ _lR.set(0.75,1.5,0.2); _lL.set(-0.75,1.5,0.2); wL=wR=1; have=true; }
   else if(bm){ m.bp.localToWorld(_tR.set(0.16,-0.02,0.05)); m.bp.localToWorld(_tL.set(-0.16,-0.02,0.05)); g.worldToLocal(_lR.copy(_tR)); g.worldToLocal(_lL.copy(_tL)); wL=wR=1; have=true; }
+  else if(c.emote){ const w=emoteHands(c.emote,_lR,_lL); wR=w[0]; wL=w[1]; have=true; } // v2.0 : emote
   else if(isDaba&&!using&&dc<110){ anchorLocal(m,g,wo,'daba','grip',_lR); _lL.set(-0.2,1,0); wR=1; wL=0; have=true; }
   else if(using||(gun&&dc<110)){
     anchorLocal(m,g,wo,wType,S_.LA,_la); anchorLocal(m,g,wo,wType,S_.LB,_lb); _lL.lerpVectors(_la,_lb,S_.e);
@@ -2980,6 +3016,8 @@ addEventListener('keydown',e=>{ if(e.target&&e.target.tagName==='INPUT') return;
   if(e.code==='KeyB') toggleBuild();
   { const PK={KeyQ:'wall',KeyZ:'floor',KeyV:'ramp',KeyG:'cone',F1:'wall',F2:'ramp',F3:'floor',F4:'cone'}[e.code]; if(PK){ e.preventDefault(); if(!e.repeat) pieceDown(PK,false); } } // v1.4
   const dg=['Digit1','Digit2','Digit3','Digit4','Digit5','Digit6'].indexOf(e.code);
+  if(e.code==='KeyJ'&&state==='play'){ toggleEmoteBar(); return; } // v2.0 : emotes
+  if(emoteOpen&&dg>=0&&dg<4){ playerEmote(['salut','bravo','victoire','danse'][dg]); return; } if(emoteOpen&&e.code==='Escape') toggleEmoteBar(false);
   if(dg>=0&&editing&&editing.p.type==='wall'&&dg<3){ editPreset(['porte','fenetre','demi'][dg]); return; } // v1.7 : raccourcis d'édition
   if(dg>=0){ if(buildMode){ if(dg<4) setBuildType(['wall','ramp','floor','cone'][dg]); } else selectSlot(dg); }
   if(e.code==='KeyE') interact();
@@ -3395,9 +3433,11 @@ $('sClose').addEventListener('click',()=>closeSettings()); $('sResume').addEvent
 $('sQuit').addEventListener('click',()=>{ closeSettings(); goMenu(); });
 $('sClear').addEventListener('click',()=>{ let n=0; for(const q of [...pieceList]) if(q.owner===player){ destroyPiece(q,true); n++; } closeSettings(); showMsg('CONSTRUCTIONS EFFACÉES',n+' pièce'+(n>1?'s':''),1.4); }); // v1.4
 { const g=$('gear'); const f=e=>{ e.preventDefault(); e.stopPropagation(); if(!hudEditing) openSettings(); }; g.addEventListener('touchstart',f,{passive:false}); g.addEventListener('click',f); }
+{ const g=$('bEmote'); const f=e=>{ e.preventDefault(); e.stopPropagation(); if(!hudEditing) toggleEmoteBar(); }; g.addEventListener('touchstart',f,{passive:false}); g.addEventListener('click',f);
+  document.querySelectorAll('#emoteBar button').forEach(b=>{ const h=e=>{ e.preventDefault(); e.stopPropagation(); playerEmote(b.dataset.em); }; b.addEventListener('touchstart',h,{passive:false}); b.addEventListener('click',h); }); }
 document.addEventListener('pointerlockchange',()=>{ if(!document.pointerLockElement&&(state==='play'||state==='bus')&&!settingsOpen&&!hudEditing&&!endShown&&!IS_TOUCH&&player&&player.alive) openSettings(); });
 // --- disposition du HUD ---
-const LAY=['bFire','bJump','bReload','bBuild','bCrouch','bSprint','bAim','bEdit','bRot','pick','joy','mats','tl','bottom','feed','gear'];
+const LAY=['bFire','bJump','bReload','bBuild','bCrouch','bSprint','bAim','bEdit','bRot','pick','joy','mats','tl','bottom','feed','gear','bEmote'];
 const TOUCH_IDS=['bFire','bJump','bReload','bBuild','bCrouch','bSprint','bAim','bEdit','bRot','pick','joy'];
 /* v2.0 : dispositions toutes faites (taille s, opacité o) ; sans x / y, l'élément garde sa place d'origine.
    Les modifier dans l'éditeur puis Enregistrer en fait la disposition « Personnalisée » */
@@ -3407,7 +3447,7 @@ const HUD_PRESETS={
   construction:{pick:{s:1.25},bEdit:{s:1.2},bBuild:{s:1.15},bRot:{s:1.15},bJump:{s:1.08},bCrouch:{s:0.85,o:0.75},bSprint:{s:0.85,o:0.75},bAim:{s:0.9},feed:{s:0.85,o:0.75}},
 };
 const HE_NOHIDE=new Set(['joy','gear']); // le joystick et les paramètres ne se masquent pas (sinon on ne peut plus jouer ni revenir aux réglages)
-const HE_NAMES={bFire:'Bouton TIRER',bJump:'Bouton SAUT',bReload:'Recharger',bBuild:'Construire',bCrouch:'Accroupi',bSprint:'Sprint',bAim:'Viser',bEdit:'Éditer',pick:'Pièces (mur, rampe…)',joy:'Joystick',mats:'Banco, kilishi, thé',tl:'Mini-carte & infos',bottom:'Vie & armes',feed:'Éliminations',gear:'Paramètres',bRot:'Tourner (mode avancé)'};
+const HE_NAMES={bFire:'Bouton TIRER',bJump:'Bouton SAUT',bReload:'Recharger',bBuild:'Construire',bCrouch:'Accroupi',bSprint:'Sprint',bAim:'Viser',bEdit:'Éditer',pick:'Pièces (mur, rampe…)',joy:'Joystick',mats:'Banco, kilishi, thé',tl:'Mini-carte & infos',bottom:'Vie & armes',feed:'Éliminations',gear:'Paramètres',bRot:'Tourner (mode avancé)',bEmote:'Emotes'};
 function applyLayout(lay){
   for(const id of LAY){ const el=$(id); if(!el) continue; const L=lay[id];
     if(id==='joy'){ if(!SET.joyFixed){ el.style.left=el.style.top=el.style.margin=el.style.transform=''; if(joy.id===null) el.style.opacity=0; continue; }
@@ -3580,7 +3620,7 @@ requestAnimationFrame(loop);
 loadAssets().then(()=>{ try{ makeWeaponIcons(); }catch(e){} initLobby(); goMenu(); try{ lobby.precompile(); lobby.warm(); lobby.render(); }catch(e){} requestAnimationFrame(()=>$('loading').remove()); setTimeout(()=>{ try{ loadSols(); loadAmbient(); loadPackTrees(); loadPackRocks(); }catch(e){ console.warn('décor',e); } },800); }); // une image rendue derrière l'écran : ombres comprises ; v1.6 : sols, animaux, arbres et rochers du pack chargés 0,8 s après l'affichage du lobby
 
 // accès de débogage
-window.FR={CITIES, MAP, STORM, stormTotal, zoneAt, lootSpots, chestSpots, BSTAT, get matchTime(){return matchTime;}, spectate:()=>{ /* tests : le joueur ne prend pas part à la partie (les bots seuls) */ player.alive=false; player.hp=0; player.phase='spect'; player.model.g.visible=false; aliveCount--; endShown=true; }, fpsGate, goMenu, get screenHz(){return screenHz;}, FPS_CAPS, HUD_PRESETS, get quality(){return quality;}, get Q(){return Q;}, applyLayout, get lobby(){return lobby;}, PROFILE, Profile, get matchMode(){return matchMode;}, get camPitch(){return camPitch;}, get sprintOn(){return sprintOn;}, setSprint:v=>{sprintOn=v;}, placementProblem, computePlacement, dirFromYaw, get camYaw(){return camYaw;}, SET, openSettings, closeSettings, openHudEditor, renderTab, get paused(){return paused;}, THREE, ASSETS, selectSlot, swapTake, giveWeapon, beginSwitch, get nearItem(){return nearItem;}, setAds:v=>{ads=v;}, startEdit, confirmEdit, resetEdit, rayCast, crouchPress, get editing(){return editing;}, get state(){return state;}, get player(){return player;}, bots, chars, items, chests, pieces, housesInfo, doors:DOORS, setDoor, interact, hasLOS, findCover, storm, bus, startMatch, update, jumpFromBus:()=>jumpFromBus(player), tryBuild, setBuildType, toggleBuild, warmGPU, AMB, get TERRAIN(){return TERRAIN;}, get TERRAIN_MAT0(){return TERRAIN_MAT0;}, setQuality, qBox, boxGrounded, boxTouch, checkIntegrity, destroyPiece, pieceDown, pieceUp, damagePiece, editPreset, quickSwap, BUILD, setSet:(k,v)=>{ SET[k]=v; refreshBuildUI(); }, dropWeapon, spawnItem, items, WEAP, ammoOf, get buildRot(){return buildRot;}, spaceFreeAt:(x,z,y0,y1,r)=>spaceFree(x,z,y0,y1,r), get buildMode(){return buildMode;}, get pieceHeld(){return pieceHeld;}, pieceList, PINST, setFiring:v=>{firing=v;}, setCam:(y,p)=>{camYaw=y;camPitch=p;}, keys, renderer, scene, camera, get aliveCount(){return aliveCount;}, solids, terrainH};
+window.FR={killChar, startEmote, playerEmote, EMOTES, CITIES, MAP, STORM, stormTotal, zoneAt, lootSpots, chestSpots, BSTAT, get matchTime(){return matchTime;}, spectate:()=>{ /* tests : le joueur ne prend pas part à la partie (les bots seuls) */ player.alive=false; player.hp=0; player.phase='spect'; player.model.g.visible=false; aliveCount--; endShown=true; }, fpsGate, goMenu, get screenHz(){return screenHz;}, FPS_CAPS, HUD_PRESETS, get quality(){return quality;}, get Q(){return Q;}, applyLayout, get lobby(){return lobby;}, PROFILE, Profile, get matchMode(){return matchMode;}, get camPitch(){return camPitch;}, get sprintOn(){return sprintOn;}, setSprint:v=>{sprintOn=v;}, placementProblem, computePlacement, dirFromYaw, get camYaw(){return camYaw;}, SET, openSettings, closeSettings, openHudEditor, renderTab, get paused(){return paused;}, THREE, ASSETS, selectSlot, swapTake, giveWeapon, beginSwitch, get nearItem(){return nearItem;}, setAds:v=>{ads=v;}, startEdit, confirmEdit, resetEdit, rayCast, crouchPress, get editing(){return editing;}, get state(){return state;}, get player(){return player;}, bots, chars, items, chests, pieces, housesInfo, doors:DOORS, setDoor, interact, hasLOS, findCover, storm, bus, startMatch, update, jumpFromBus:()=>jumpFromBus(player), tryBuild, setBuildType, toggleBuild, warmGPU, AMB, get TERRAIN(){return TERRAIN;}, get TERRAIN_MAT0(){return TERRAIN_MAT0;}, setQuality, qBox, boxGrounded, boxTouch, checkIntegrity, destroyPiece, pieceDown, pieceUp, damagePiece, editPreset, quickSwap, BUILD, setSet:(k,v)=>{ SET[k]=v; refreshBuildUI(); }, dropWeapon, spawnItem, items, WEAP, ammoOf, get buildRot(){return buildRot;}, spaceFreeAt:(x,z,y0,y1,r)=>spaceFree(x,z,y0,y1,r), get buildMode(){return buildMode;}, get pieceHeld(){return pieceHeld;}, pieceList, PINST, setFiring:v=>{firing=v;}, setCam:(y,p)=>{camYaw=y;camPitch=p;}, keys, renderer, scene, camera, get aliveCount(){return aliveCount;}, solids, terrainH};
 </script>
 </body>
 </html>
