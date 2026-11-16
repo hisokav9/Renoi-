@@ -1,5 +1,67 @@
 # Fada Royale — Journal des modifications
 
+# v1.7 — Armes en main, changement d'arme, construction
+
+Base : v1.6.1 (commit `a418d73`, sauvegarde avant modification). Demande : « mission 1.7 » (prise des armes et du sabre, changement d'arme, construction à la Fortnite, animations, caméra, contrôles tactiles, Android). Audit préalable : `FADA_ROYALE_V17_AUDIT.md`. Mesures : `FADA_ROYALE_V1_TEST_REPORT.md`.
+**Le « sabre » de la demande est la daba** : il n'y a pas de sabre dans le jeu, la daba est l'arme de mêlée (case RÉCOLTE).
+
+## 1. Prise en main des armes
+
+| | |
+|---|---|
+| **Bug A1 — daba qui flotte** | La paume était 17 cm au-delà du bout du manche (mesuré). Cause : décalage de 0,3 m dans le calcul de la prise (`dabaOff`). La daba n'est plus collée à l'os de la main : elle est tenue comme les autres armes (cadre de prise + main droite placée sur le manche par IK). Paume sur le manche dans toutes les situations (test `prise.cjs`). |
+| **Bug A2 — coup de daba vers l'arrière** | Pendant le coup, la pointe de la daba pointait vers l'arrière (−0,6 à −1,0). Coup refait : levée du bras au-dessus de l'épaule droite (daba en arrière), puis frappe vers l'avant et le bas ; à l'impact le manche est à l'horizontale et la lame tombe sur la cible (pointe vers l'avant : 0,7 au moment du coup, 0,83 juste après ; avant : −0,6 à −1,0). Le buste accompagne (léger recul puis penché). |
+| **Bug A3 — dégâts de la daba à l'appui** | Les dégâts tombaient avant le geste. Ils tombent maintenant au moment où la lame frappe (0,27 à 0,3 s après l'appui). |
+| **Bug A4 — armes invisibles** | Depuis la caméra de jeu (derrière l'épaule), le revolver et les armes longues étaient cachés par le corps. Les armes sont tenues à partir de l'articulation de l'épaule droite : armes longues épaulées (crosse au creux de l'épaule, mesurée sur chaque modèle), un peu sur la droite et parallèles à la visée (la perspective les fait pointer vers le réticule), buste de profil comme un vrai tireur. On voit la crosse et le boîtier en combat, l'arme à côté de la tête en visée. |
+| **Système de prise commun (A5)** | Table par catégorie (`HOLD` dans `src/core/weapon-handling.js`) : arme basse (exploration), combat, visée, sprint ; pour chacune : position par rapport à l'épaule, inclinaison, part de la visée suivie, torsion du buste, position de l'arme. Par arme (`GRIP`) : catégorie, nombre de mains, catégorie de changement. Points d'appui des mains mesurés sur chaque modèle (`ANCH`, calés par `src/core/weapons.js`). |
+| **Bras courts (Guerrière)** | Ses bras font 0,41 m (épaule → poignet), le Boss 0,52 m : sa main gauche flottait sous le garde-main. Chaque main est ramenée à la portée réelle de son bras : la main gauche glisse sur le garde-main vers la poignée, et si même la poignée est trop loin l'arme se rapproche d'elle (15 cm au plus) ; si la poignée est hors de portée de la main droite, l'arme recule vers l'épaule. |
+| **Coude** | Quand la main passe au-dessus de l'épaule (coup de daba, arme rangée dans le dos), le coude ne bascule plus d'un coup (plan du coude adapté à la hauteur de la main, lissé). |
+| **Fichiers** | `index.html` : `animRealAnim()` (bloc de l'arme, IK des mains), `armReach()`, `buttOf()`, `ensureWeapon()`, `meleeHit()`, `fireGun()` ; `src/core/weapon-handling.js` (nouveau) |
+
+## 2. Changement d'arme
+
+| | |
+|---|---|
+| **Avant** | L'arme changeait à mi-chemin dans une pose « rangée » flottante ; un second changement repartait de zéro. |
+| **Étapes** | 1) l'arme en main part à son étui (armes longues dans le dos derrière l'épaule droite, canon en haut ; revolver et daba à la hanche) ; 2) si l'étui de la nouvelle arme est ailleurs, la main vide y va (transition du bras, 0,14 s) ; 3) la nouvelle arme sort de son étui ; 4) elle monte en position ; la main gauche lâche au début et revient à la fin. Durées par catégorie (rangement / sortie) : revolver 0,12 / 0,2 s, armes longues 0,16 / 0,26, sniper 0,18 / 0,32, mitrailleuse 0,24 / 0,4, daba 0,12 / 0,18. Changement complet : 0,43 à 0,7 s selon les armes. |
+| **Interruption** | Redemander l'arme qu'on range la fait ressortir depuis où elle est (0,17 s au lieu de 0,5) ; changer encore pendant la sortie range l'arme depuis sa position. On peut tirer dès la fin de la sortie (85 %). |
+| **Bug — bots bloqués** | Le temps de changement n'était décompté que dans l'animation : un bot non dessiné (loin de la caméra) qui changeait d'arme ne pouvait plus jamais tirer. Le décompte est maintenant dans la logique (`updateTimers`). |
+| **Sortie du sprint** | Le premier tir attend que l'arme remonte (0,16 s ; avant, la balle partait arme en travers). |
+| **Arme basse** | Contre un mur ou un obstacle à moins d'une longueur d'arme, l'arme s'abaisse (le canon ne traverse plus les murs). En glissade, l'arme reste devant soi. Au tir, le canon se relève selon le recul de l'arme. |
+| **Rechargement** | Les chorégraphies existantes (v1.1) gardées et vérifiées avec la nouvelle prise (mains sur l'arme à mi-rechargement : test `prise.cjs`). |
+| **Fichiers** | `index.html` : `beginSwitch()`, `updateSwitch()`, `swRemain()`, `updateTimers()`, `playerFire()`, `updatePlayer()`, `animRealAnim()` ; `src/core/weapon-handling.js` (`SWITCH_T`, `STOW`, `SW_ARM`) |
+
+## 3. Construction
+
+| | |
+|---|---|
+| **Fantôme** | Il suit déjà la direction de la caméra, et l'inclinaison choisit le niveau (au-dessus, devant, sous les pieds), comme dans les jeux du genre : la pièce va dans la case voisine que l'on regarde. On n'a pas ajouté de pose « au loin » : elle aurait cassé les règles de montée rapide (v1.4, v1.5) testées par `build.cjs` et `support.cjs`. Fantôme rouge si la place est prise, si quelqu'un est dans le passage, si la pièce serait enterrée ou ne tiendrait sur rien (existant). |
+| **Rotation** | Touche R en construction (le rechargement reste sur R hors construction), bouton TOURNER sur téléphone : quart de tour de la rampe ou du mur. |
+| **Matérialisation** | Contour lumineux des arêtes qui s'efface pendant la pose, poussière à la base, éclair et petit son à la fin (en plus de la pièce qui grandit et se remplit, existant). |
+| **Impacts** | La pièce touchée tremble (≈ 3 % pendant 0,14 s) puis retrouve exactement sa place ; plus d'éclats, son d'impact ; l'assombrissement selon les points de vie existait. |
+| **Édition** | Raccourcis PORTE, FENÊTRE, DEMI-MUR (boutons à gauche du réticule, touches 1 à 3) ; les rampes s'éditent (choisir les cases du côté qui monte : la rampe se retourne). Murs 3×3 et sols 2×2 : existants. Valider, annuler, réinitialiser : existants. |
+| **Destruction** | Vérifiée : plus aucune collision ni dessin à la place d'une pièce détruite (mur entier et mur édité), on passe à travers ; effondrement de ce qui ne tient plus (v1.5). |
+| **Mémoire** | La matière propre à chaque pièce est libérée quand la pièce terminée passe en instance (recréée si on l'édite). |
+| **Bug trouvé pendant les tests** | Ce changement faisait planter REJOUER (« dispose » sur une matière déjà libérée) : la partie suivante gardait des pièces. Corrigé dans `clearMatch()` (test `flows.cjs`). |
+| **Fichiers** | `index.html` : `buildDir()`, `rotateBuild()`, `createPiece()`, `dropOutline()`, `pinstAdd()`, `damagePiece()`, `wobblePiece()`, `editPreset()`, `rampSetDir()`, `startEdit()`, `confirmEdit()`, `hoverTile()`, `updateEdit()`, `clearMatch()` |
+
+## 4. Caméra, contrôles, Android
+
+| | |
+|---|---|
+| **Caméra** | En combat, un peu plus près (3,5 m au lieu de 3,9) et plus sur l'épaule (0,82 m) : l'arme se voit. Collisions par 3 rayons (au lieu d'un) : la caméra se rapproche tout de suite d'un obstacle et revient en douceur (avant : elle sautait). |
+| **Tactile** | Bouton ÉCHANGE (arme précédente) à droite des cases d'arme. Commandes testées à plusieurs doigts en même temps (`tactile.cjs`). |
+| **Mémoire** | `addRot()` (≈ 10 à 15 appels par perso et par image) ne crée plus d'objet à chaque appel. |
+| **Code** | Réglages de prise, d'étuis, de changement d'arme et du coup de daba regroupés dans `src/core/weapon-handling.js` ; doublon `warmGPU` retiré de `window.FR`. |
+
+## 5. Divers
+
+- Version 1.7 : titre, logo du lobby, nouveautés, `AndroidManifest.xml` (versionCode 18).
+- `documentation/PROMPTS_ASSETS.md` : prompts de 5 armes originales (sniper lourd, fusil d'assaut bullpup, fusil de précision, deux pompes) reprenant les familles des images envoyées, sans reprendre leur dessin.
+- Nouveaux tests : `prise.cjs`, `changement.cjs`, `construction.cjs`, `tactile.cjs`.
+
+---
+
 # v1.6.1 — Seulement le décor cohérent avec le jeu
 
 Demande du propriétaire : « ceux qui ne sont pas cohérents au jeu, comme la carte, ne les utilise pas ».

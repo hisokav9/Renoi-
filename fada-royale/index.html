@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>Fada Royale v1.6.1</title>
+<title>Fada Royale v1.7</title>
 <!-- three.js r160 est hébergé avec le jeu (dossier lib/) : plus besoin d'un CDN pour démarrer -->
 <script type="importmap">{"imports":{"three":"./lib/three/three.module.min.js","three/addons/":"./lib/three/addons/"}}</script>
 <script>
@@ -3110,6 +3110,7 @@ function update(dt){
   updateCollapse(dt);
   for(const p of pieceList){ if(p.inst!==null){ if(p.flash>0) p.flash=Math.max(0,p.flash-dt*6); pinstColor(p); if(p.hitT>0&&p.baseM) wobblePiece(p,dt); continue; }
     if(!p.edited&&!p.noInst&&p.build>=1&&p.anim>=1){ pinstAdd(p); if(p.inst!==null) continue; }
+    if(!p.mat){ p.mat=(p.type==='ramp'?MAT.pieceRamp:MAT.piece).clone(); p.panel.material=p.mat; } // sécurité : pièce sortie des instances (limite atteinte)
     if(p.anim<1){ p.anim=Math.min(1,p.anim+dt/0.16); setPieceScale(p,1-Math.pow(1-p.anim,3)); }
     if(p.build<1){ const db=dt/p.buildTime; p.build=Math.min(1,p.build+db); p.hp=Math.min(p.maxHp,p.hp+p.maxHp*0.9*db); p.mat.opacity=0.3+0.7*Math.pow(p.build,1.6); if(p.ol) p.ol.material.opacity=1-0.8*p.build;
       if(p.build>=1){ p.mat.transparent=false; p.mat.opacity=1; p.mat.needsUpdate=true; dropOutline(p); p.flash=Math.max(p.flash,0.55); const d=p.center.distanceTo(camera.position); if(d<25) tone(760,0.05,0.07/(1+d/8),'triangle'); } }
@@ -3252,7 +3253,7 @@ function heHit(x,y){ let best=null,ba=1e9; for(const id of heIds()){ const r=$(i
 addEventListener('beforeunload',e=>{ if((state==='play'||state==='bus')&&player&&player.alive&&!endShown){ e.preventDefault(); e.returnValue=''; } });
 function goMenu(){ state='menu'; if(lobby) lobby.show(); $('end').classList.add('hidden'); $('hud').classList.add('hidden'); $('touch').classList.add('hidden'); try{ document.exitPointerLock&&document.exitPointerLock(); }catch(e){} for(const c of chars) c.model.g.visible=false; bus.g.visible=false; resize(); }
 function clearMatch(){
-  for(const p of [...pieceList]){ p.alive=false; scene.remove(p.mesh); p.mat.dispose(); for(const so of p.solids) removeSolid(so); if(p.edited){ scene.remove(p.panel); p.panel.geometry.dispose(); } }
+  for(const p of [...pieceList]){ p.alive=false; scene.remove(p.mesh); if(p.mat) p.mat.dispose(); /* v1.7 : pièce en instance = plus de matière propre */ dropOutline(p); for(const so of p.solids) removeSolid(so); if(p.edited){ scene.remove(p.panel); p.panel.geometry.dispose(); } }
   editing=null; pinstClear(); collapseQ.length=0; integT=-1;
   pieceList.length=0; pieces.clear(); ramps.length=0;
   for(const it of items) scene.remove(it.g); items.length=0;

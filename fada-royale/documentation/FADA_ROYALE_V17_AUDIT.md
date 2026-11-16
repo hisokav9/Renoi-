@@ -53,3 +53,17 @@ Point de départ : v1.6.1 (commit `a418d73`, sauvegarde avant les modifications)
 3. Construction : fantôme qui suit la visée et rotation (B1), matérialisation (B2), édition (B3), impacts (B4), mémoire (B5).
 4. Caméra (C2), allocations (C1), contrôles tactiles (C3).
 5. Tests : nouveaux scénarios obligatoires + tous les tests existants ; APK.
+
+## 5. Après les corrections (v1.7)
+
+| # | État | Détail |
+|---|---|---|
+| A1, A2, A3 | Corrigé | Daba tenue par le manche (IK), coup par-dessus l'épaule vers l'avant, dégâts à l'impact (0,3 s) |
+| A4, A5 | Corrigé | Prise depuis l'épaule par catégorie (`HOLD`), armes visibles depuis la caméra |
+| A6 | Corrigé | Changement en étapes avec étuis et transition du bras ; reprise depuis la pose ; **bug trouvé en route** : bots non dessinés bloqués après un changement d'arme |
+| A7, A8 | Corrigé | Montée de l'arme avant le tir en sortie de sprint ; arme abaissée contre un obstacle |
+| B1 | En partie | Rotation ajoutée ; pose « au loin » non faite (règles de montée rapide) — voir feuille de route |
+| B2, B3, B4, B5 | Corrigé | Matérialisation, raccourcis et édition des rampes, tremblement, mémoire ; **bug introduit puis corrigé** : REJOUER (voir journal) |
+| C1, C2, C3 | Corrigé | `addRot`, caméra à 3 rayons, bouton ÉCHANGE |
+| C4 | Fait | Doublon retiré ; `animReal` gardé comme secours (sans clips d'animation) |
+| A9 (trouvé pendant les mesures) | Corrigé | Main gauche de la Guerrière qui n'atteignait pas l'arme (bras de 0,41 m) |

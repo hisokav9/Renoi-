@@ -255,7 +255,7 @@ export function createLobby(ctx) {
     <button data-p="profile">${ico('profile')}<span>Profil</span></button>
   </nav>
   <div class="lb-home" id="lbHome">
-    <div class="lb-logo"><div class="lb-flag"><i></i><i></i><i></i></div><h1>FADA<br>ROYALE</h1><p><b>v1.6.1</b>Le battle royale du Sahel</p></div>
+    <div class="lb-logo"><div class="lb-flag"><i></i><i></i><i></i></div><h1>FADA<br>ROYALE</h1><p><b>v1.7</b>Le battle royale du Sahel</p></div>
     <div class="lb-who"><small>Ton personnage</small><b id="lbCharName">—</b><span class="lb-hint">${ctx.IS_TOUCH ? 'Glisse pour le tourner · pince pour zoomer' : 'Glisse pour le tourner · molette pour zoomer'}</span></div>
     <div class="lb-playbox"><button class="lb-mode" id="lbModeBtn"><small>Mode</small><b id="lbModeName">Battle Royale · Solo</b>${ico('chev')}</button>
       <button class="lb-play" id="play">JOUER</button></div>
@@ -363,6 +363,12 @@ export function createLobby(ctx) {
   // --- événements
   function htmlEvents() {
     return `<div class="lb-ev"><b>Aucun événement en cours</b><p>Les événements (défis à durée limitée, récompenses spéciales) arriveront dans une prochaine version. Rien n’est simulé ici.</p></div>
+      <h3>Nouveautés de la v1.7 : armes en main et construction</h3><ul class="lb-list">
+      <li><b>Armes épaulées</b> à droite, visibles derrière ton perso ; arme basse en exploration, remontée pour viser, en travers au sprint, abaissée contre un mur.</li>
+      <li><b>Daba bien en main</b> : le coup part au-dessus de l’épaule et frappe devant toi, les dégâts tombent quand la lame touche.</li>
+      <li><b>Changement d’arme réaliste</b> : l’arme part dans ton dos ou à la hanche, la nouvelle en sort. Bouton <b>ÉCHANGE</b> pour revenir à l’arme précédente.</li>
+      <li><b>Construction</b> : bouton <b>TOURNER</b> (touche R) pour orienter la rampe ou le mur, pièces qui se matérialisent, qui tremblent sous les balles.</li>
+      <li><b>Édition</b> : boutons <b>PORTE</b>, <b>FENÊTRE</b>, <b>DEMI-MUR</b> ; les rampes s’éditent aussi (choisis le côté qui monte).</li></ul>
       <h3>Nouveautés de la v1.6 : un Niger plus vrai</h3><ul class="lb-list">
       <li><b>Nouveaux sols :</b> sable fin, dunes ridées, latérite rouge des villes du sud, herbe sèche, gravier de l’Aïr, terre craquelée au bord du lac (qualité Moyenne et Haute).</li>
       <li><b>Vrai ciel</b> du Sahel, qui se voile de poussière dans l’harmattan.</li>

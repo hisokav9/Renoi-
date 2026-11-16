@@ -1,4 +1,4 @@
-# Fada Royale — Feuille de route (mise à jour v1.6)
+# Fada Royale — Feuille de route (mise à jour v1.7)
 
 Classée par priorité. Chaque point dit pourquoi il compte et ce qu'il demande. Les points réglés sont indiqués avec leur version.
 
@@ -12,7 +12,7 @@ Classée par priorité. Chaque point dit pourquoi il compte et ce qu'il demande.
 
 4. **IA** : monter à l'étage des maisons (v1.1 : ils entrent par la porte mais restent au rez-de-chaussée), se hisser sur les rebords comme le joueur (v1.3 : le joueur seulement), utilisation des rampes et des escaliers de toit, ~~se mettre à couvert derrière les murets~~ (fait en v1.3 : pour recharger, se soigner ou quand ils sont touchés ; reste : tirer en sortant de l'abri, fermer les portes derrière eux), niveaux de difficulté (facile / normal / difficile) choisis dans le lobby, variété de comportements (prudent, agressif).
 5. **Combat** : ~~animations de rechargement par arme~~ (fait en v1.1), recul visuel de l'arme plus marqué, impacts sur les constructions, sons enregistrés au lieu de sons synthétisés.
-6. **Construction** : v1.4 : pièces toujours à l'écran, pose au toucher et en continu, mur au bout de la rampe pour monter, édition au relâchement, pièces en instances. Reste : visée de la grille au regard (comme les jeux du genre, au lieu de « case du joueur + direction »), virages à 90° en montant (enchaînement mur / sol / rampe en tournant), rotation des rampes, édition des rampes et des toits, modes d'entraînement à la construction (duel en boîte, parcours chronométré), touches modifiables et manette, aperçu fantôme plus lisible au soleil, sons de pose par matériau.
+6. **Construction** : v1.4 : pièces toujours à l'écran, pose au toucher et en continu, mur au bout de la rampe pour monter, édition au relâchement, pièces en instances. v1.7 : rotation (R / TOURNER), matérialisation, tremblement aux impacts, raccourcis porte / fenêtre / demi-mur, édition des rampes. Reste : pose « au loin » (à l'endroit visé jusqu'à 2 cases, sans casser la montée rapide), virages à 90° en montant (enchaînement mur / sol / rampe en tournant), édition des toits (cônes), fissures visibles selon les dégâts, modes d'entraînement à la construction (duel en boîte, parcours chronométré), touches modifiables et manette, aperçu fantôme plus lisible au soleil, sons de pose par matériau.
 7. **Animation de victoire** dans le lobby après un TOP 1 (aucun clip disponible : en ajouter un depuis une bibliothèque CC0).
 8. ~~**Transitions d'armes**~~ : rangement puis sortie animés en v1.1.
 8 ter. **Idées de l'autre version (`Fada_Royale_4.html`) pas encore reprises** : motos kabou-kabou, grenade à souffle (projette sans blesser), points faibles à la pioche (récolte plus rapide), forges d'amélioration d'armes, caisses à fouiller, raretés d'armes, touches modifiables, rotation des rampes. v1.5 a repris : appui de construction mémorisé, effondrement, contour du fantôme, perso face à la caméra avec jambes vers la marche, saut tolérant.
@@ -20,6 +20,7 @@ Classée par priorité. Chaque point dit pourquoi il compte et ce qu'il demande.
 
 ## Priorité 3 — contenu et lobby
 
+8 quinquies. **Armes (v1.7)** : prise, changement d'arme et coup de daba refaits. Reste : vrai coup de crosse / mêlée avec une arme à feu, inspection d'arme au repos, chorégraphie de rechargement propre à la nouvelle prise épaulée (les gestes v1.1 marchent mais ont été réglés pour l'ancienne prise), main qui s'oriente sur la poignée (aujourd'hui seul le poignet est placé), armes originales des prompts `PROMPTS_ASSETS.md` §1 bis (sniper lourd, bullpup, fusil de précision, deux pompes). **À vérifier sur téléphone** : confort de la caméra plus proche en combat, taille du bouton TOURNER et des raccourcis d'édition.
 8 quater. **Décor (suite du pack v1.6)** : v1.6 a pris les 6 sols, les 2 ciels, 13 panoramas de villes, 11 animaux, 4 arbres et 5 rochers. À refaire pour pouvoir les utiliser : (a) la **carte** illustrée, régénérée en partant de `documentation/guides/carte_guide_sans_texte.jpg` pour qu'elle suive notre carte, puis mise sur la mini-carte ; (b) des **animaux en vrai volume avec squelette** et des clips (marche, broute) pour qu'ils se déplacent ; (c) un **acacia** et un **baobab** en volume (ceux du pack sont des plaques vus de côté) ; (d) piles de rochers, grès et termitières en volume, allégés (< 2 000 triangles). Aussi : maisons du pack (prompts prêts dans `PROMPTS_DECOR.md`, pas encore générées). v1.6.1 : les images de ville qui ne ressemblaient pas au jeu ont été retirées (Niamey, Tahoua, Tillabéri, Diffa, lac Tchad) ; pour en remettre, les régénérer en décrivant ce que montre le jeu (pont plat à Niamey, ville plate à Tahoua, cases rondes à Tillabéri, lac bordé de palmiers).
 
 9. **Mode Entraînement enrichi** : parcours de construction, cibles mobiles, chronomètre.
@@ -29,7 +30,7 @@ Classée par priorité. Chaque point dit pourquoi il compte et ce qu'il demande.
 
 ## Priorité 4 — architecture
 
-13. **Découpage progressif d'`index.html`** (≈ 2 400 lignes) dans `src/`, système par système, en gardant les tests verts à chaque étape. Ordre conseillé : `world/` (terrain, villes, végétation), `building/`, `combat/`, `enemies/` (IA), `audio/`, `interface/` (HUD, paramètres). Le lobby (`src/lobby/`) et le profil (`src/core/`) montrent déjà le principe : un module, une interface explicite.
+13. **Découpage progressif d'`index.html`** (≈ 3 400 lignes ; v1.7 : réglages de prise et de changement d'arme sortis dans `src/core/weapon-handling.js`) dans `src/`, système par système, en gardant les tests verts à chaque étape. Ordre conseillé : `world/` (terrain, villes, végétation), `building/`, `combat/`, `enemies/` (IA), `audio/`, `interface/` (HUD, paramètres). Le lobby (`src/lobby/`) et le profil (`src/core/`) montrent déjà le principe : un module, une interface explicite.
 14. **Modèles en fichiers `.glb`** au lieu du base64 dans du JS : ≈ 25 % de téléchargement en moins, décodage plus rapide.
 15. ~~**Polices auto-hébergées**~~ : fait en v1.1 (`src/fonts/`).
 

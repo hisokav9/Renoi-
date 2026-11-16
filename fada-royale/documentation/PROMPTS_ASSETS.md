@@ -45,6 +45,20 @@ Les images des 7 armes sont faites (merci). Une image n'est pas encore un modèl
 | Revolver | Le barillet est dessiné **ouvert** : en 3D, l'arme resterait ouverte en permanence. Il faut le revolver fermé, et le barillet seul à part (pour l'animation de rechargement). | Revolver : `Low-poly game-ready six-shot revolver, same design as the reference, cylinder CLOSED inside the frame, steel frame with worn bluing, wooden grip, side view, plain light grey background, no logos, no text` · Barillet seul : `Low-poly game prop, a single six-shot revolver cylinder with its crane arm, worn blued steel, three-quarter view, plain light grey background` |
 | Daba | L'image montre un **couperet** (lame dans l'axe du manche). Une daba est une **houe** : lame plate fixée en travers du manche. Le couperet peut rester si tu préfères (un coupe-coupe marche aussi pour récolter). | `Low-poly game-ready Sahelian daba hoe, short curved wooden handle with leather wrap, wide flat hand-forged iron blade fixed PERPENDICULAR to the handle like a hoe, side view, plain light grey background, PBR textures` |
 
+## 1 bis. Nouvelles armes (v1.7) — idées de catégories, design original
+
+Les images envoyées le 16/11 sont des rendus officiels de Fortnite (sniper lourd, fusil d'assaut, pompes) : ce sont des créations d'Epic Games, on ne les met **pas** dans le jeu (droits d'auteur, et Fada Royale garde son identité). On reprend seulement **les familles d'armes**, avec un dessin propre à Fada Royale : métal usé par le sable, bois, cuir, cordelettes, morceaux de tissu wax noués, peinture couleur latérite.
+
+Mêmes règles que plus haut : vue de profil, fond gris clair uni, sans logo ni texte ; la pièce détachable (chargeur, caisse) en image séparée. Une fois en 3D (étape 2), chaque arme se branche sur la prise de la v1.7 par sa catégorie (`src/core/weapon-handling.js`).
+
+| Arme (catégorie de prise) | Prompt |
+|---|---|
+| Fusil lourd « Ténéré » (sniper lourd, `sniper`) | `Low-poly game-ready heavy anti-materiel sniper rifle, ORIGINAL design, long fluted barrel with a wide two-port muzzle brake, olive green and sand-worn steel receiver, leather cheek pad stitched on the stock, folding bipod, large scope wrapped with a strip of indigo cloth, detachable box magazine as a separate part, 1.4 m long, side view, plain light grey background, no logos, no text` |
+| Fusil d'assaut « Sahel » (`long`) | `Low-poly game-ready bullpup assault rifle, ORIGINAL design, magazine behind the pistol grip, laterite red painted polymer body with sand scratches, carry handle with rear sight, short suppressor, sling made of braided leather, curved magazine as a separate part, 0.75 m long, side view, plain light grey background, no logos, no text` |
+| Fusil tactique « Aïr » (tir précis, `long`) | `Low-poly game-ready designated marksman rifle, ORIGINAL design, tan polymer and dark steel, free-floating handguard with vents, small 4x scope, adjustable stock with a wax fabric wrap, straight 20-round magazine as a separate part, 1.0 m long, side view, plain light grey background, no logos, no text` |
+| Pompe « Kouré » (pompe semi-automatique, `long`) | `Low-poly game-ready semi-automatic tactical shotgun, ORIGINAL design, black steel receiver, olive green fore-end with deep grooves, tube magazine under a short wide barrel, folding skeleton stock, brass shell holder strip on the side, 0.95 m long, side view, plain light grey background, no logos, no text` |
+| Pompe « Zinder » (pompe à bois, `long`) | `Low-poly game-ready pump-action shotgun, ORIGINAL design, hand-carved dark wood stock with geometric Hausa patterns, blued steel barrel with a bead sight, pump fore-end as a separate part, 1.0 m long, side view, plain light grey background, no logos, no text` |
+
 ## 2. Accessoires des animations (kilishi, thé)
 
 Aujourd'hui ce sont des formes simples dessinées par le code. Format : GLB, moins de 600 triangles, texture 512×512.

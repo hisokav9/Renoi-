@@ -1,5 +1,73 @@
 # Fada Royale — Rapport de tests
 
+# v1.7
+
+Mêmes conditions que la v1.6 (Chromium sans écran, rendu logiciel SwiftShader, réseau externe coupé, boucle figée). **Pas de test sur un vrai téléphone** : aucun appareil ni émulateur Android dans l'environnement. Les tests tactiles envoient de vrais événements tactiles multi-doigts par le protocole de Chrome (Pixel 7 paysage simulé).
+
+## Tests obligatoires de la mission
+
+| Scénario demandé | Test | Résultat |
+|---|---|---|
+| Équiper le sabre (la daba) et effectuer plusieurs attaques | `changement.cjs` §9, `prise.cjs` | 4 coups sur 4 touchent un mannequin placé sous le réticule ; dégâts 0,3 s après l'appui (au moment où la lame frappe) ; main sur le manche pendant tout le coup ; pointe vers l'arrière à la levée (−0,43), vers l'avant au coup (0,7) et après (0,83) |
+| Changer rapidement entre toutes les armes | `changement.cjs` §1-3 | 10 changements en 1 s : pas de blocage, l'arme affichée = l'arme choisie ; 5 paires d'armes : jamais deux armes visibles, aucun saut isolé de la main (geste le plus rapide 4,6 à 7,4 m/s), échange à l'étui (0,47 à 0,65 m de la position de tir) ; demi-tour repris depuis la pose (0,17 s au lieu de 0,5) |
+| Passer de la course au tir | `changement.cjs` §5, `animtest.cjs` | Premier tir 0,2 s après l'appui en sprint (le temps que l'arme remonte) ; « course en tirant » : buste ≤ 4° par image, aucun NaN |
+| Construire quatre structures successivement | `construction.cjs` §1 | Mur, rampe, sol, toit posés à la suite ; contour de matérialisation pendant la pose, retiré à la fin ; 4 pièces passées en instance, 4 matières libérées |
+| Modifier un mur | `construction.cjs` §3, `build.cjs` | PORTE : cases 1 et 4 retirées, 7 collisions, on passe ; FENÊTRE : case 4 ; DEMI-MUR : cases 6, 7, 8 ; édition au doigt (v1.4) identique |
+| Détruire une construction | `construction.cjs` §5-6, `support.cjs` | 0 collision restante (mur entier et mur édité), on passe, instance retirée ; impact : la pièce tremble puis revient exactement ; effondrement d'une tour identique à la v1.5 |
+| Sauter pendant un changement d'arme | `changement.cjs` §6 | Changement commencé en l'air, terminé, revolver en main à la réception |
+| Utiliser les contrôles tactiles simultanément | `tactile.cjs` | 3 doigts (joystick + viser + TIRER) : +4,2 m, caméra tournée de 0,36 rad, 6 balles ; doigts levés dans le désordre : chaque commande s'arrête seule ; construction en courant : 2 pièces, +5,1 m, caméra tournée ; changement d'arme en courant (+4,4 m) puis ÉCHANGE : retour au fusil |
+| Effectuer une partie complète sans crash | `sim.cjs` | 3 parties complètes sur le code final (fin à 257, 301 et 311 s) : 0 erreur, 0 NaN |
+
+## Prise en main (`prise.cjs`, nouveau) : 86 situations mesurées
+
+Boss et Guerrière × 7 armes × repos, course, sprint, combat, visée, rechargement (daba : repos, course, sprint, 4 moments du coup).
+
+| Mesure | v1.6.1 | v1.7 |
+|---|---|---|
+| Daba : paume par rapport au manche | 17 cm au-delà du bout du manche | sur le manche (z −0,04 à 0,04) |
+| Daba : pointe pendant le coup | vers l'arrière (−0,6 à −1,0) | levée −0,43, coup 0,7, après 0,83 |
+| Guerrière : main gauche sur l'arme | jusqu'à 7 à 12 cm de vide (sa main n'atteint pas le garde-main) | 0 situation au-delà de 3 cm |
+| Canon en combat et en visée | — | 1,00 vers l'avant (toutes armes) |
+| Arme dans le buste (< 7 cm de l'axe du corps) | — | 0 situation (sprint corrigé : 4 à 6 cm au premier essai) |
+| Arme visible depuis la caméra de jeu (images) | non (cachée par le corps) | oui : crosse et boîtier en combat, arme à côté de la tête en visée |
+
+**Défauts trouvés et corrigés pendant les tests**
+- Changement d'arme dos ↔ hanche : la main sautait de 37 à 53 cm en une image → étape « transition du bras ».
+- Début de changement : passage sans transition de la pose « basse » à la pose « combat » → lissage gardé pendant le changement.
+- Glissade avec le revolver : le bras basculait de 80° en une image (épaule à 50 cm du sol, cible de la main sur l'épaule) → arme tenue devant soi en glissade.
+- Coup de daba : coude qui basculait au passage au-dessus de l'épaule (59° en une image) → plan du coude adapté et lissé ; descente un peu moins rapide.
+- REJOUER après des constructions : erreur et pièces de la partie précédente restées → corrigé (voir journal).
+- Deux erreurs d'écriture de ma part (un commentaire qui masquait la fin d'une ligne de code) : le jeu ne se chargeait plus, vu tout de suite par le test de chargement ; toutes les lignes modifiées ont ensuite été relues.
+
+## Banc d'animation (`animtest.cjs`, 14 situations, 60 images/s)
+
+| | Boss : buste / bras (max par image) | Guerrière |
+|---|---|---|
+| Course, sprint, cercle, caméra rapide, pas chassés, marche arrière, arrêt | 3-5° / 7-14° | 3-4° / 7-14° |
+| Course en visant / en tirant | 3-4° / 16-17° | 4° / 13-21° |
+| Course puis saut | 5° / 36° | 5° / 36° (identique à la v1.6) |
+| Course puis glissade | 10° / 28° | 10° / 30° |
+| Changement d'arme en courant | 12° / 30° | 23° / 37° |
+| Coups de daba en courant | 7° / 39° | 6° / 37° |
+
+Aucun NaN, quaternions normés partout. Les valeurs de 30 à 39° par image sont des gestes rapides (changement d'arme, coup de daba), sans saut isolé.
+
+## Non-régression
+
+| Test | Résultat v1.7 |
+|---|---|
+| `build.cjs` | Identique à la v1.4-v1.6 : montée +60,7 m en 10 s, pose en continu, boîte, édition, clavier, Entraînement, 46 appels avec 160 pièces, barre de 4 pièces sans chevauchement |
+| `support.cjs` | Identique à la v1.5 |
+| `flows.cjs` ordinateur et téléphone | Tout passe (tir, armes, lunette, construction, édition, kilishi 75 PV, pause, fin, rejouer avec 0 pièce restante, retour) |
+| `houses.cjs` | Identique (porte, escalier, pas de grimpe, rebord, caméra 0°, muret, 12 bots sur 12 entrent) |
+| `lobbytest.cjs` ordinateur et téléphone, `fixes2.cjs`, `ddatest.cjs`, `decals.cjs`, `hud.cjs` | Tout passe ; 0 différence sur 3 000 rayons ; 10 impacts pour 10 balles |
+| `cover.cjs` | 10 sur 12 puis 8 sur 10 (la v1.6.1 relancée en même temps : 12 sur 12 ; au rapport v1.6 : 11 sur 12). Le nombre d'essais et le hasard varient d'un lancement à l'autre ; la v1.7 ne touche pas à la recherche d'abri des bots. À surveiller. |
+| `decor.cjs` | 0 programme GPU compilé en partie ; mêmes appels et triangles qu'en v1.6 |
+| Calcul par image, 20 persos proches (Moyenne) | 3,5 à 5,4 ms (v1.6.1 : 4,7 à 5,2 ms) ; mémoire allouée ≈ 2 Ko par image dans les deux versions (profileur de tas de Chrome) |
+| APK 1.7 | Signature v2 vérifiée, même certificat que la 1.0 à 1.6.1 (`3DB2BF18…`), version 1.7 (code 18), 11,8 Mo ; jeu extrait de l'APK et servi comme dans l'application, hors ligne : 75 fichiers servis, 0 introuvable, 0 erreur JavaScript, partie lancée |
+
+---
+
 # v1.6.1
 
 | Vérification | Résultat |

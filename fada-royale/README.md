@@ -1,4 +1,4 @@
-# Fada Royale — v1.6.1
+# Fada Royale — v1.7
 
 Battle royale du Sahel en 3D (three.js), jouable dans le navigateur sur PC et téléphone.
 20 joueurs (toi + 19 bots), taxi-brousse volant, harmattan qui se resserre, construction en banco, carte du Niger de 480 m de côté.
@@ -23,7 +23,8 @@ Options dans l'adresse :
 
 ## Ce qu'il y a dedans
 
-- **Nouveau en v1.6 (décor réaliste)** : sols photo mélangés selon les zones (sable, dunes ridées, latérite, herbe sèche, gravier de l'Aïr, terre craquelée), vrai ciel du Sahel et ciel d'harmattan pendant la tempête, image de la ville à l'arrivée dans 9 zones (v1.6.1 : seulement celles qui ressemblent au jeu), 51 animaux (girafes, dromadaires, zébus, chèvres, moutons, ânes, pintades, éléphants, hippos, vautours), palmiers doum et dattiers, neems et karités, rochers de granite. Tiré d'un pack généré à partir de `documentation/PROMPTS_DECOR.md`.
+- **Nouveau en v1.7 (armes en main, construction)** : armes épaulées à droite et visibles derrière le perso (arme basse, combat, visée, sprint, abaissée contre un mur), daba tenue par le manche avec un vrai coup par-dessus l'épaule, changement d'arme en étapes (étui dans le dos ou à la hanche) et bouton ÉCHANGE, sortie de sprint avant le tir, rotation des pièces (R / TOURNER), matérialisation et tremblement des pièces, raccourcis PORTE / FENÊTRE / DEMI-MUR et édition des rampes, caméra plus proche en combat. Audit : `documentation/FADA_ROYALE_V17_AUDIT.md`.
+- **v1.6 (décor réaliste)** : sols photo mélangés selon les zones (sable, dunes ridées, latérite, herbe sèche, gravier de l'Aïr, terre craquelée), vrai ciel du Sahel et ciel d'harmattan pendant la tempête, image de la ville à l'arrivée dans 9 zones (v1.6.1 : seulement celles qui ressemblent au jeu), 51 animaux (girafes, dromadaires, zébus, chèvres, moutons, ânes, pintades, éléphants, hippos, vautours), palmiers doum et dattiers, neems et karités, rochers de granite. Tiré d'un pack généré à partir de `documentation/PROMPTS_DECOR.md`.
 - **v1.5** : plus de mur dans le vide en haut des rampes (une pièce doit tenir sur quelque chose), effondrement de ce qui n'est plus relié au sol, appui de construction mémorisé (mur et rampe dans n'importe quel ordre), perso toujours face à la caméra avec les jambes vers la marche (réglable), saut tolérant au bord et juste avant d'atterrir. Idées reprises d'une autre version du jeu.
 - **v1.4 (construction rapide)** : les 4 pièces toujours à l'écran (appui = pose, doigt gardé = pose en continu), le mur se place au bout de la rampe pour monter vite, édition validée en relâchant, banco illimité et effacement des constructions à l'Entraînement, onglet de réglages Construction, limite d'images, pièces dessinées en instances (fluide avec des centaines de pièces).
 - **v1.3** : le perso se tourne avec la caméra même à l'arrêt ; plus de grimpe le long des murs, on se hisse seulement sur un rebord à portée de main (muret, mur, toit) ; portes de maisons qui s'ouvrent et se ferment (E ou bouton OUVRIR LA PORTE), ouvertes aussi par les bots ; bots qui se mettent à couvert pour recharger ou se soigner ; plus d'à-coup à la première sortie d'une arme, moins d'appels de dessin en Basse.
@@ -42,6 +43,7 @@ Options dans l'adresse :
 | `src/lobby/` | Lobby 3D et ses menus (`lobby.js`, `lobby.css`) |
 | `src/core/profile.js` | Profil local : pseudo, statistiques, niveau, cauris, missions, boutique |
 | `src/core/weapons.js` | Calage des armes 3D : poignée, canon à l'horizontale, points d'appui des mains |
+| `src/core/weapon-handling.js` | v1.7 : prise des armes par catégorie, étuis, durées de changement d'arme, coup de daba |
 | `assets/armes/`, `assets/objets/` | Modèles 3D des armes, chargeurs, kilishi, verre de thé, théière (GLB) |
 | `assets/textures/`, `assets/images/` | Textures (sol, banco, enduit, wax), illustration de l'écran de chargement ; v1.6 : 6 sols (`textures/sols/`), panoramas des villes (`images/lieux/`) |
 | `assets/decor/` | v1.6 : ciels, animaux, arbres et rochers du pack de décor (GLB, JPG) |
@@ -54,7 +56,7 @@ Options dans l'adresse :
 
 ## Documentation
 
-- `documentation/FADA_ROYALE_V1_CHANGELOG.md` commence par la v1.6 (décor réaliste), puis la v1.5 (mur dans le vide, idées de l'autre version), la v1.4 (construction rapide), puis la v1.3 (caméra, se hisser, portes, couvert des bots, fluidité), la v1.2, la v1.1 et la v1.0.
+- `documentation/FADA_ROYALE_V1_CHANGELOG.md` commence par la v1.7 (armes en main, construction), puis la v1.6 (décor réaliste), la v1.5 (mur dans le vide, idées de l'autre version), la v1.4 (construction rapide), puis la v1.3 (caméra, se hisser, portes, couvert des bots, fluidité), la v1.2, la v1.1 et la v1.0.
 - `documentation/PROMPTS_ASSETS.md` : prompts pour générer les modèles 3D et images qui manquent (armes sans problème de licence, accessoires, persos, textures).
 - `documentation/PROMPTS_DECOR.md` : prompts pour un décor réaliste (kits de maisons, arbres, animaux, rochers, sols, ciel, carte illustrée, bannières des villes) ; `documentation/guides/` : vue du ciel de la vraie carte, avec et sans noms.
 
