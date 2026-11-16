@@ -2450,10 +2450,10 @@ function botThink(b){
   const danger = b.inStorm || (storm.state==='wait'&&dSafe>nextR*0.85&&storm.timer<runT+P.rotate) || (storm.state==='shrink'&&dSafe>nextR*0.85);
   if(danger&&!b.flee&&!b.inStorm) BSTAT.rotations++;
   // v2.0 : après l'atterrissage, le bot pille d'abord (perception réduite tant qu'on ne le touche pas) ; en fin de partie, il tient une position
-  if(b.landedAt==null) b.landedAt=matchTime; const looting=matchTime<b.landedAt+b.lootT&&!((b.hurtT||0)>0)&&!b.target, endgame=aliveCount<=10;
+  if(b.landedAt==null) b.landedAt=matchTime; const looting=matchTime<b.landedAt+b.lootT&&!((b.hurtT||0)>0)&&!b.target, endgame=aliveCount<=12, wary=endgame&&!((b.hurtT||0)>0)&&!b.target; // fin de partie : prudent (ne cherche pas les autres bots au loin)
   // cible : il faut la percevoir (devant soi à ±70°, tout près, ou entendue en train de tirer), puis la voir (ligne de vue)
   const fx=-Math.sin(b.yaw), fz=-Math.cos(b.yaw);
-  let best=null,bd=1e9; for(const c of chars){ if(c===b||!c.alive||c.phase!=='ground') continue; const dx=c.pos.x-b.pos.x, dz=c.pos.z-b.pos.z, dh=Math.hypot(dx,dz); const d=dh+Math.abs(c.pos.y-b.pos.y); const lim=(c===player?56:38)*P.sight*(looting&&d>12?0.55:1); if(d>=lim||d>=bd) continue;
+  let best=null,bd=1e9; for(const c of chars){ if(c===b||!c.alive||c.phase!=='ground') continue; const dx=c.pos.x-b.pos.x, dz=c.pos.z-b.pos.z, dh=Math.hypot(dx,dz); const d=dh+Math.abs(c.pos.y-b.pos.y); const lim=(c===player?56:38)*P.sight*(looting&&d>12?0.55:wary&&c!==player?0.75:1); if(d>=lim||d>=bd) continue;
     const front=dh<0.01||(dx*fx+dz*fz)/dh>0.34, heard=c.noiseT>0&&d<45*P.sight; if(!(front||heard||dh<7||c===b.target)) continue; bd=d; best=c; }
   b.canSee=false; b.blocker=null;
   if(best) botAutoWeapon(b,bd);
@@ -2500,7 +2500,7 @@ function botShoot(b,target){
   if(Math.random()>p){ _m.x+=rnd(-1,1)*rnd(0.8,2); _m.y+=rnd(-0.5,1.4); _m.z+=rnd(-1,1)*rnd(0.8,2); }
   _d.subVectors(_m,_o).normalize(); const h=rayCast(_o,_d,B.shotgun?40:B.sniper?320:150,b);
   const pt=h.p.clone(); BSTAT.shots++; BSTAT.engD+=d; if(h.type==='char') BSTAT.hits++;
-  if(h.type==='char'){ let dmg = (B.shotgun ? (d<6?48:d<12?30:14)*(w==='pompet'?0.62:1) : B.dmg)*rarMul(w,curRar(b)).dmg; if(h.head) dmg*=B.sniper?2:1.5; if(!h.obj.isPlayer) dmg*=0.55; damageChar(h.obj,dmg,b,h.head,w,pt); }
+  if(h.type==='char'){ let dmg = (B.shotgun ? (d<6?48:d<12?30:14)*(w==='pompet'?0.62:1) : B.dmg)*rarMul(w,curRar(b)).dmg; if(h.head) dmg*=B.sniper?2:1.5; if(!h.obj.isPlayer) dmg*=0.45; /* v2.0 : entre bots ×0,45 (avant 0,55) : parties plus longues ; le joueur subit les mêmes dégâts qu’avant */ damageChar(h.obj,dmg,b,h.head,w,pt); }
   else if(h.type==='piece') damagePiece(h.obj,B.shotgun?45:B.sniper?60:20,'bot');
   const dc=b.pos.distanceTo(camera.position);
   if(dc<110){ tracer(muzzle(b,_t),pt,0xffd9a0); if(h.type&&dc<60) for(let k=0;k<2;k++) spawnParticle(pt.x,pt.y,pt.z,rnd(-1.5,1.5),rnd(0.5,2.5),rnd(-1.5,1.5),h.type==='char'?0xffe28a:0xd9b07a,0.4,0.8); }
