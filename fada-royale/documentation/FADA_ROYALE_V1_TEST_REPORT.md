@@ -62,6 +62,16 @@ Passent sans changement : `arsenal`, `construction2`, `graphismes`, `bots`, `emo
 - `flows.cjs` sur ordinateur s'est arrêté une fois sur un délai de capture d'écran dépassé (30 s), ses vérifications étant déjà passées : d'autres captures tournaient en même temps sur la machine. Relancé seul : il passe.
 - `cover.cjs` : 10 bots sur 12 se mettent à couvert et y restent, comme en v2.0.
 
+## APK 2.0.1
+
+| Vérification | Résultat |
+|---|---|
+| Signature | v2 vérifiée ; certificat `3DB2BF18C0ABE4BE…`, **le même que les versions précédentes** : s'installe par-dessus la 2.0 |
+| Manifeste | `versionCode` 20, `versionName` 2.0.1 |
+| Contenu | Jeu complet dans `assets/www` (panorama du lobby compris, identique au fichier du dépôt) ; ni tests, ni documentation, ni clé |
+| Simulation de la WebView Android (APK décompressé, même adresse `https://appassets.androidplatform.net` que sur le téléphone, commandes tactiles) | 80 fichiers servis, aucun introuvable, lobby avec le panorama affiché, partie lancée (taxi-brousse), aucune erreur JavaScript |
+| Taille | 12,2 Mo (2.0 : 11,8 Mo ; le panorama pèse 0,36 Mo) |
+
 # v2.0
 
 Mêmes conditions que les versions précédentes : Chromium sans écran, rendu logiciel (SwiftShader), réseau externe coupé, boucle du jeu figée et avancée image par image par les tests. **Aucun test sur un vrai téléphone** (pas d'appareil ni d'émulateur Android ici) : les tests « téléphone » émulent un Pixel 7 (écran, toucher) et, pour les mesures de calcul, ralentissent le processeur ×4 (`perf_mobile.cjs`, la même approximation que Lighthouse). **Les FPS sur Android ne sont pas garantis** ; le rendu (GPU) n'est pas mesurable ici.
