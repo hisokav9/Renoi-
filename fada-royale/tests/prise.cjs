@@ -16,7 +16,7 @@ const { chromium } = require('playwright'); const [,, base] = process.argv;
       const step = (n, f) => { for (let i = 0; i < n; i++) { if (f) f(i); FR.update(1 / 30); } };
       const open = (x, z) => !FR.solids.some(s => s.maxX > x - 8 && s.minX < x + 8 && s.maxZ > z - 8 && s.minZ < z + 8);
       let spot = null; for (let r = 0; r < 200 && !spot; r += 6) for (let a = 0; a < 6.28 && !spot; a += 0.5) { const x = 60 + Math.cos(a) * r, z = -40 + Math.sin(a) * r; if (open(x, z)) spot = [x, z]; }
-      pl.slots = ['revolver', 'mitraillette', 'fusil', 'pompe', 'sniper']; pl.ammo = 300; for (const w of ['revolver', 'fusil', 'pompe', 'sniper', 'mitrailleuse', 'mitraillette']) pl.mag[w] = 1;
+      pl.slots = ['revolver', 'mitraillette', 'fusil', 'pompe', 'sniper']; pl.ammo = 300; for (const w of ['revolver', 'fusil', 'pompe', 'sniper', 'mitrailleuse', 'mitraillette', 'tactique', 'pompet']) pl.mag[w] = 1;
       const m = pl.model, A = new T.Vector3(), Bv = new T.Vector3(), out = [];
       const meas = (w, st) => { const g = m.g; g.updateMatrixWorld(true); const an = m.an, wo = m.w[w]; if (!wo || !wo.visible) { out.push({ w, st, vis: false }); return; }
         const res = side => { const tl = side === 'R' ? an.tRl : an.tLl; if (!tl) return null; const t = g.localToWorld(tl.clone()); m.bones[side === 'R' ? 'RightHand' : 'LeftHand'].getWorldPosition(A); return A.distanceTo(t); };
@@ -28,8 +28,8 @@ const { chromium } = require('playwright'); const [,, base] = process.argv;
         if (w === 'daba') { m.bones.RightHand.getWorldPosition(A); m.bones.RightForeArm.getWorldPosition(Bv); const palm = A.clone().addScaledVector(A.clone().sub(Bv).normalize(), 0.08); const lp = wo.worldToLocal(palm); o.manche = +lp.z.toFixed(2); o.mancheEcart = +Math.hypot(lp.x, lp.y).toFixed(2); }
         out.push(o); };
       const reset = () => { const [x, z] = spot; pl.pos.set(x, FR.terrainH(x, z) + 0.05, z); pl.vel.set(0, 0, 0); pl.yaw = 0; FR.setCam(0, -0.05); FR.keys.KeyW = false; FR.setFiring(false); FR.setAds(false); FR.setSprint(false); pl.combatT = 0; };
-      const slotOf = w => w === 'daba' ? 0 : w === 'mitrailleuse' ? (pl.slots[4] = 'mitrailleuse', 5) : pl.slots.indexOf(w) + 1;
-      for (const w of ['daba', 'revolver', 'mitraillette', 'fusil', 'pompe', 'sniper', 'mitrailleuse']) {
+      const slotOf = w => w === 'daba' ? 0 : ['mitrailleuse', 'tactique', 'pompet'].includes(w) ? (pl.slots[4] = w, 5) : pl.slots.indexOf(w) + 1;
+      for (const w of ['daba', 'revolver', 'mitraillette', 'fusil', 'tactique', 'pompe', 'pompet', 'sniper', 'mitrailleuse']) {
         pl.slots[4] = 'sniper'; reset(); FR.selectSlot(0); step(2); FR.selectSlot(slotOf(w)); step(40);
         meas(w, 'repos'); step(20, () => { FR.keys.KeyW = true; }); meas(w, 'course'); FR.keys.KeyW = false;
         FR.setSprint(true); step(25, () => { FR.keys.KeyW = true; }); meas(w, 'sprint'); FR.setSprint(false); FR.keys.KeyW = false; step(15);

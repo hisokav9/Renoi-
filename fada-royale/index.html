@@ -89,8 +89,8 @@ body.touch #zone.pic{top:3%}body.touch #zone.pic .zimg{width:min(400px,42vw)}bod
 .bar em{position:absolute;top:0;bottom:0;width:2px;background:rgba(0,0,0,.45)}
 #row{display:flex;gap:6px;align-items:flex-end}
 #slots{display:flex;gap:6px;pointer-events:auto}
-#bSwap{pointer-events:auto;width:46px;height:58px;margin-left:6px;border-radius:9px;background:linear-gradient(180deg,rgba(44,31,18,.74),rgba(14,10,6,.8));border:1px solid var(--line);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:#fff7ea}
-#bSwap .ic{width:22px;height:22px;stroke-width:2.2}#bSwap small{font:800 8px Rubik}
+#bSwap,#bDrop{pointer-events:auto;width:46px;height:58px;margin-left:6px;border-radius:9px;background:linear-gradient(180deg,rgba(44,31,18,.74),rgba(14,10,6,.8));border:1px solid var(--line);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:#fff7ea}
+#bSwap .ic,#bDrop .ic{width:22px;height:22px;stroke-width:2.2}#bSwap small,#bDrop small{font:800 8px Rubik}#bDrop{margin-left:4px}#bDrop.off{opacity:.35}
 .slot{position:relative;width:80px;height:58px;border-radius:9px;background:linear-gradient(180deg,rgba(44,31,18,.74),rgba(14,10,6,.8));border:1px solid var(--line);border-bottom:3px solid rgba(255,255,255,.22);display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding:0 4px 4px;color:#fff7ea;text-shadow:0 1px 2px #000;transition:transform .12s,background .12s}
 .slot img{position:absolute;left:7px;top:7px;width:calc(100% - 14px);height:26px;object-fit:contain;filter:drop-shadow(0 1px 1px rgba(0,0,0,.6))}
 .slot img[src=""],.slot.off img{display:none}
@@ -270,6 +270,7 @@ body.editing-hud #joy{opacity:.7!important}
 <symbol id="i-sprint" viewBox="0 0 24 24"><path d="M4.5 6l6 6-6 6M12.5 6l6 6-6 6"/></symbol>
 <symbol id="i-scope" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 4v5M12 15v5M4 12h5M15 12h5"/></symbol>
 <symbol id="i-pencil" viewBox="0 0 24 24"><path d="M4 20l1.1-4.4L16.2 4.5a2 2 0 0 1 2.8 0l.5.5a2 2 0 0 1 0 2.8L8.4 18.9z"/><path d="M14.4 6.3l3.3 3.3"/></symbol>
+<symbol id="i-drop" viewBox="0 0 24 24"><path d="M12 4v11M7.5 10.5L12 15l4.5-4.5M5 19.5h14"/></symbol>
 <symbol id="i-swap" viewBox="0 0 24 24"><path d="M4 8h13l-3.5-3.5M20 16H7l3.5 3.5"/></symbol>
 <symbol id="i-undo" viewBox="0 0 24 24"><path d="M8.5 5.5L4 10l4.5 4.5"/><path d="M4 10h10a5.5 5.5 0 0 1 0 11h-3"/></symbol>
 <symbol id="i-check" viewBox="0 0 24 24"><path d="M4.5 12.8l4.8 4.8L19.5 6.8"/></symbol>
@@ -335,6 +336,7 @@ body.editing-hud #joy{opacity:.7!important}
         <div class="slot off" data-s="5"><kbd>6</kbd><img alt="" src=""><b></b><span></span></div>
       </div>
       <div id="bSwap" title="Arme précédente"><svg class="ic"><use href="#i-swap"/></svg><small>ÉCHANGE</small></div>
+      <div id="bDrop" title="Lâcher l'arme (G)"><svg class="ic"><use href="#i-drop"/></svg><small>LÂCHER</small></div>
     </div>
   </div>
   <div id="mats">
@@ -390,6 +392,9 @@ import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 import {createLobby} from './src/lobby/lobby.js';
 import * as Profile from './src/core/profile.js';
 import {WEAPONS as WMODELS, fitWeapon, fitPiece} from './src/core/weapons.js';
+import {PROC_WEAPONS, buildProcWeapon} from './src/core/weapon-models.js'; // v2.0 : armes modélisées dans le code
+import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
+import {WEAP, GUNS, RARITY, RAR_COL, RAR_CSS, AMMO, AMMO_TYPES, randGun, rollRarity, rarMul, ammoOf} from './src/core/arsenal.js'; // v2.0 : catalogue des armes
 import {GRIP, HOLD, STOW, SWITCH_T, SW_ARM, swTimes, stowOf, DABA_K, DABA_HIT, dabaKey} from './src/core/weapon-handling.js'; // v1.7 : prise et changement d'arme
 
 /* =====================================================================
@@ -1242,6 +1247,8 @@ function buildWeapon(kind){
   else if(kind==='revolver'){ add(BOX(0.05,0.08,0.26),lam(0x2b2b2b),0,0.02,-0.1); add(BOX(0.05,0.14,0.06),lam(0x7a4a22),0,-0.07,0.03,0.3); }
   else if(kind==='mitraillette'){ add(BOX(0.07,0.1,0.45),lam(0x2b2b2b),0,0,-0.1); add(BOX(0.05,0.18,0.06),lam(0x1d1d1d),0,-0.12,-0.12,0.15); add(BOX(0.05,0.12,0.05),lam(0x1d1d1d),0,-0.08,0.04); }
   else if(kind==='mitrailleuse'){ add(BOX(0.1,0.13,0.8),lam(0x2e3328),0,0,-0.15); add(BOX(0.12,0.14,0.14),lam(0x4a5238),0,-0.12,-0.05); add(BOX(0.07,0.12,0.25),lam(0x2b2b2b),0,-0.02,0.32); }
+  else if(kind==='tactique'){ add(BOX(0.06,0.09,0.66),lam(0xb89c6c),0,0.02,-0.15); add(BOX(0.04,0.04,0.3),lam(0x2b2d30),0,0.04,-0.6); add(BOX(0.04,0.16,0.07),lam(0x17181a),0,-0.1,-0.12,0.12); add(BOX(0.05,0.1,0.22),lam(0xb89c6c),0,0,0.25); }
+  else if(kind==='pompet'){ add(BOX(0.06,0.09,0.3),lam(0x17181a),0,0.02,-0.08); add(BOX(0.04,0.06,0.62),lam(0x2b2d30),0,0.04,-0.53); add(BOX(0.06,0.06,0.22),lam(0x343a2c),0,0.01,-0.42); add(BOX(0.04,0.11,0.24),lam(0x17181a),0,0.01,0.2); }
   else if(kind==='sniper'){ add(BOX(0.07,0.09,1.0),lam(0x23262a),0,0,-0.25); add(new THREE.CylinderGeometry(0.04,0.04,0.3,8),lam(0x111111),0,0.09,-0.1,Math.PI/2); add(BOX(0.08,0.14,0.3),lam(0x5a4632),0,-0.03,0.35); }
   else { const h=add(new THREE.CylinderGeometry(0.03,0.035,0.95,6),lam(0x8a5a2b),0,0,0,Math.PI/2); add(BOX(0.3,0.03,0.2),lam(0x9aa0a6),0,-0.08,-0.45); }
   return g;
@@ -1344,6 +1351,8 @@ function unifySkeleton(sc){ sc.updateMatrixWorld(true); let main=null; sc.traver
 async function loadAssets(){
   const ld=new GLTFLoader(); ld.setMeshoptDecoder(MeshoptDecoder);
   // v1.2 : armes créées pour le jeu (assets/armes/*.glb, calées par src/core/weapons.js) ; le revolver garde l'ancien modèle
+  for(const n of PROC_WEAPONS){ const f=buildProcWeapon(THREE,mergeGeometries,n); f.object.traverse(o=>{ if(o.isMesh){ o.castShadow=true; o.receiveShadow=false; } });
+    ASSETS.w[n]={scene:f.object,muzzle:f.muzzle,muzzleY:f.muzzleY,...buttOf(f.object)}; ANCH[n]=Object.assign(ANCH[n]||{},f.anchors); }
   const jobs=[...Object.keys(WMODELS).map(n=>['wn',n]),['w','revolver'],['o','kilishi'],['o','verre-the'],['o','theiere'],['c','boss'],['c','guerriere'],['anim','boss'],['anim','guerriere']]; let done=0;
   const b64=s2=>{ const bin=atob(s2); const u=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) u[i]=bin.charCodeAt(i); return u.buffer; };
   await Promise.all(jobs.map(async([t,n])=>{ try{
@@ -1487,6 +1496,7 @@ function ikArm(m,side,T,pole){ const a=m.bones[side+'Arm'], b=m.bones[side+'Fore
 /* ---------- objets : butin, coffres ---------- */
 const ITEM_COL={ammo:0xffffff,kilishi:0x7be36a,the:0x5ec8ff,banco:0xffa24a};
 const ITEM_NAME={ammo:'Munitions',kilishi:'Kilishi',the:'Thé à la menthe',banco:'Banco'};
+const itemName=it=>it.kind==='ammo'?AMMO[it.atype||'medium'].name:it.kind.startsWith('w:')?WEAP[it.kind.slice(2)].name:ITEM_NAME[it.kind];
 function itemProto(kind){
   const g=new THREE.Group(); const add=(geo,hex,x,y,z,ry=0)=>{ const m=new THREE.Mesh(geo,lam(hex)); m.position.set(x,y,z); m.rotation.y=ry; g.add(m); return m; };
   if(kind==='ammo'){ add(BOX(0.45,0.28,0.32),0x5d7f34,0,0,0); add(BOX(0.46,0.06,0.33),0xe0b83a,0,0.05,0); }
@@ -1500,14 +1510,25 @@ const PROTO={}; for(const k of Object.keys(ITEM_COL)) PROTO[k]=itemProto(k);
 const beamGeo=new THREE.CylinderGeometry(0.05,0.05,2.6,6,1,true); beamGeo.translate(0,1.3,0);
 const beamMat={}; for(const k in ITEM_COL) beamMat[k]=new THREE.MeshBasicMaterial({color:ITEM_COL[k],transparent:true,opacity:0.45,blending:THREE.AdditiveBlending,depthWrite:false});
 function getProto(kind){ if(PROTO[kind]) return PROTO[kind]; const t=kind.slice(2); const g=new THREE.Group(); const o=makeGunObj(t); o.rotation.set(0,Math.PI/2,0.25); o.scale.setScalar(1.15); g.add(o); PROTO[kind]=g; return g; }
-function getBeam(kind){ if(beamMat[kind]) return beamMat[kind]; const r=WEAP[kind.slice(2)].rar; beamMat[kind]=new THREE.MeshBasicMaterial({color:RAR_COL[r],transparent:true,opacity:0.55,blending:THREE.AdditiveBlending,depthWrite:false}); return beamMat[kind]; }
+// v2.0 : faisceau de la couleur de la rareté (armes) ou du type de munitions (caisses)
+function getBeam(kind,extra){ const key=kind.startsWith('w:')?'r'+(extra&&extra.rar!=null?extra.rar:WEAP[kind.slice(2)].rar):kind==='ammo'?'a'+((extra&&extra.atype)||'medium'):kind; if(beamMat[key]) return beamMat[key];
+  const col=key[0]==='r'&&kind.startsWith('w:')?RAR_COL[+key.slice(1)]:kind==='ammo'?AMMO[key.slice(1)].col:ITEM_COL[kind]; beamMat[key]=new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:kind.startsWith('w:')?0.55:0.45,blending:THREE.AdditiveBlending,depthWrite:false}); return beamMat[key]; }
 const items=[];
-function spawnItem(kind,x,y,z,amount,pop){
-  const g=new THREE.Group(); const m=getProto(kind).clone(); g.add(m); const beam=new THREE.Mesh(beamGeo,getBeam(kind)); if(kind.startsWith('w:')) beam.scale.set(1.6,1.3,1.6); g.add(beam);
+// extra (v2.0) : {rar, mag} pour une arme (rareté, balles dans le chargeur), {atype} pour une caisse de munitions
+function spawnItem(kind,x,y,z,amount,pop,extra){
+  const g=new THREE.Group(); const m=getProto(kind).clone(); g.add(m); const beam=new THREE.Mesh(beamGeo,getBeam(kind,extra)); if(kind.startsWith('w:')) beam.scale.set(1.6,1.3,1.6); g.add(beam);
+  const gun=kind.startsWith('w:'), rar=gun?(extra&&extra.rar!=null?extra.rar:WEAP[kind.slice(2)].rar):0;
+  if(gun){ const ring=new THREE.Mesh(RING_GEO,ringMat(rar)); ring.rotation.x=-Math.PI/2; ring.position.y=0.04; g.add(ring); } // anneau au sol de la couleur de la rareté
+  if(kind==='ammo'){ const at=(extra&&extra.atype)||'medium'; m.traverse(o=>{ if(o.isMesh&&o.material&&o.material.color&&o.position.y>0.03) o.material=ammoBandMat(at); }); }
   g.position.set(x,y,z); scene.add(g);
-  const it={kind,amount:amount||(kind==='ammo'?30:kind==='banco'?30:1),g,m,x,y,z,vy:pop?rnd(4,6):0,vx:pop?rnd(-2,2):0,vz:pop?rnd(-2,2):0,alive:true,ph:Math.random()*6,noPick:0};
+  const it={kind,amount:amount||(kind==='ammo'?AMMO[(extra&&extra.atype)||'medium'].box:kind==='banco'?30:1),g,m,x,y,z,vy:pop?rnd(4,6):0,vx:pop?rnd(-2,2):0,vz:pop?rnd(-2,2):0,alive:true,ph:Math.random()*6,noPick:0,
+    rar, mag:gun&&extra&&extra.mag!=null?extra.mag:null, atype:kind==='ammo'?((extra&&extra.atype)||'medium'):null};
   items.push(it); return it;
 }
+// v2.0 : anneau de rareté (géométrie et matières partagées : pas d'objet créé par arme), bande colorée des caisses de munitions
+const RING_GEO=new THREE.RingGeometry(0.42,0.62,24), RING_MAT={}, BAND_MAT={};
+function ringMat(r){ return RING_MAT[r]||(RING_MAT[r]=new THREE.MeshBasicMaterial({color:RAR_COL[r],transparent:true,opacity:r>=4?0.85:0.6,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide})); }
+function ammoBandMat(t){ return BAND_MAT[t]||(BAND_MAT[t]=lam(AMMO[t].col)); }
 function removeItem(it){ it.alive=false; scene.remove(it.g); }
 const glowTex=canvasTex(64,64,(g)=>{ const gr=g.createRadialGradient(32,32,0,32,32,32); gr.addColorStop(0,'rgba(255,230,120,.9)'); gr.addColorStop(1,'rgba(255,200,60,0)'); g.fillStyle=gr; g.fillRect(0,0,64,64); },false);
 const glowMat=new THREE.SpriteMaterial({map:glowTex,blending:THREE.AdditiveBlending,depthWrite:false,transparent:true});
@@ -1972,6 +1993,8 @@ function sfxShot(kind,d){ if(!actx) return; const v=1/(1+d/18); if(v<0.06) retur
   else if(kind==='revolver'){ noiseBurst(0.8*v,1800,0.22); tone(120,0.16,0.4*v,'sine',50); }
   else if(kind==='mitraillette'){ noiseBurst(0.4*v,3200,0.07); tone(210,0.05,0.15*v,'square',90); }
   else if(kind==='mitrailleuse'){ noiseBurst(0.65*v,1700,0.13); tone(105,0.09,0.3*v,'square',50); }
+  else if(kind==='tactique'){ noiseBurst(0.7*v,2100,0.14); tone(130,0.1,0.32*v,'square',55); } // v2.0 : coup sec, plus grave que le fusil d'assaut
+  else if(kind==='pompet'){ noiseBurst(0.8*v,1100,0.24); tone(100,0.16,0.42*v,'sine',45); } // v2.0 : pompe tactique, plus court que le pompe
   else { noiseBurst(0.55*v,2400,0.1); tone(160,0.07,0.22*v,'square',60); } }
 const sfxHit=h=>tone(h?1500:1000,0.06,0.16,'square');
 const sfxBuild=d=>{ const v=1/(1+d/15); if(v<0.08) return; tone(210,0.14,0.45*v,'sine',70); noiseBurst(0.25*v,500,0.1); };
@@ -1987,18 +2010,10 @@ const sfxSlide=()=>noiseBurst(0.3,650,0.65,'bandpass',0.5);
 /* =====================================================================
    ARMES & JOUEURS
    ===================================================================== */
-const WEAP={
-  daba:{name:'Daba',sn:'DABA',melee:true,rate:0.45,rar:0},
-  revolver:{name:'Revolver',sn:'COLT',dmg:40,head:2,rate:0.42,mag:6,reload:2.0,spread:0.007,range:140,piece:35,bloom:0.3,kick:0.03,rar:1,fore:-0.02,bot:{dmg:15,cd:[0.55,0.95],acc:1.05}},
-  mitraillette:{name:'Mitraillette',sn:'MITRA',dmg:14,head:1.6,rate:0.075,mag:30,reload:1.8,spread:0.022,range:85,piece:16,bloom:0.07,kick:0.005,rar:1,fore:0.2,bot:{dmg:6,cd:0.085,burst:[6,10],pause:[0.6,1.2],acc:0.9}},
-  fusil:{name:"Fusil d'assaut",sn:'FUSIL',dmg:25,head:1.6,rate:0.13,mag:30,reload:1.9,spread:0.011,range:170,piece:30,bloom:0.12,kick:0.007,rar:2,fore:0.3,bot:{dmg:11,cd:0.16,burst:[3,6],pause:[0.8,1.6],acc:1}},
-  pompe:{name:'Pompe',sn:'POMPE',dmg:11,pellets:9,head:1.5,rate:0.85,mag:5,reload:2.2,spread:0.075,range:55,piece:12,bloom:0,kick:0.035,rar:2,fore:0.33,bot:{shotgun:true,cd:[0.9,1.3]}},
-  mitrailleuse:{name:'Mitrailleuse',sn:'MINIMI',dmg:22,head:1.5,rate:0.1,mag:80,reload:4.0,spread:0.019,range:150,piece:34,bloom:0.05,kick:0.009,rar:3,fore:0.28,slow:0.85,bot:{dmg:9,cd:0.1,burst:[8,14],pause:[0.9,1.6],acc:0.95}},
-  sniper:{name:'Sniper',sn:'SNIPER',dmg:95,head:2.5,rate:1.5,mag:5,reload:2.8,spread:0.05,adsSpread:0.0006,range:450,piece:70,bloom:0,kick:0.05,rar:4,fore:0.36,scope:true,bot:{dmg:45,cd:[1.8,2.8],sniper:true}},
-};
-const GUNS=['revolver','mitraillette','fusil','pompe','mitrailleuse','sniper'];
-const RAR_COL=[0x9aa0a6,0x63c74d,0x3d8bff,0xb65cff,0xffb300], RAR_CSS=['#9aa0a6','#63c74d','#3d8bff','#b65cff','#ffb300'];
-function randGun(boost=0){ const w=[24-boost*8,22-boost*4,22,16+boost*2,9+boost*4,7+boost*4]; let r=Math.random()*w.reduce((a,b)=>a+b); for(let i=0;i<6;i++){ r-=w[i]; if(r<=0) return GUNS[i]; } return 'fusil'; }
+// v2.0 : armes, raretés et munitions dans src/core/arsenal.js (catalogue unique)
+const curRar=c=>c.sel>0&&c.srar?(c.srar[c.sel-1]??WEAP[c.cur].rar):0; // rareté de l'arme en main
+const ammoLeft=(c,t)=>{ const k=ammoOf(t); return k?(c.ammoT[k]||0):0; };
+const useAmmo=(c,t,n)=>{ const k=ammoOf(t); if(k&&c.isPlayer) c.ammoT[k]=Math.max(0,(c.ammoT[k]||0)-n); };
 function setSel(c,i){ c.sel=i; c.cur = i===0 ? 'daba' : (c.slots[i-1]||'daba'); }
 /* v1.7 : changement d'arme en deux étapes : 1) l'arme affichée (swFrom) est rangée (dans le dos, à la hanche) ; 2) la nouvelle (cur)
    sort de son étui jusqu'à la position de tir. Durées par catégorie [rangement, sortie] (s). Une nouvelle demande pendant le changement
@@ -2017,16 +2032,25 @@ function updateSwitch(c,dt){ if(!c.swPh) return;
   else if(c.swPh===3){ c.swU+=dt/SW_ARM; if(c.swU>=1){ c.swPh=2; c.swU=0; } }
   else { c.swU+=dt/swTimes(c.cur)[1]; if(c.swU>=1){ c.swPh=0; c.swU=0; c.swFrom=null; } }
   swRemain(c); }
-function giveWeapon(c,type){
-  if(c.slots.includes(type)){ if(c.ammo>=300) return false; c.ammo=Math.min(300,c.ammo+20); return true; }
+/* v2.0 : rar = rareté de l'arme ramassée, mag = balles dans son chargeur (arme lâchée : on retrouve son chargeur).
+   Même arme déjà en main : meilleure rareté → on échange (l'ancienne tombe au sol) ; sinon le joueur la laisse (on peut l'échanger
+   avec E / PRENDRE) et un bot la transforme en munitions. Renvoie false si rien n'est pris. */
+function giveWeapon(c,type,rar,mag){ rar=rar??WEAP[type].rar; mag=mag??WEAP[type].mag;
+  const have=c.slots.indexOf(type);
+  if(have>=0){ if(rar>c.srar[have]){ if(c.isPlayer) dropAt(c,'w:'+type,{rar:c.srar[have],mag:c.mag[type]}); c.srar[have]=rar; c.mag[type]=mag; return true; } return !c.isPlayer; }
   let e=c.slots.indexOf(null); if(!c.isPlayer&&e>=2) e=-1;
-  if(e>=0){ c.slots[e]=type; c.mag[type]=WEAP[type].mag; if(c.isPlayer){ if(c.sel===0||!c.slots[c.sel-1]){ const from=c.cur; setSel(c,e+1); beginSwitch(c,from); } } else botAutoWeapon(c,30); return true; }
+  if(e>=0){ c.slots[e]=type; c.srar[e]=rar; c.mag[type]=mag; if(c.isPlayer){ if(c.sel===0||!c.slots[c.sel-1]){ const from=c.cur; setSel(c,e+1); beginSwitch(c,from); } } else botAutoWeapon(c,30); return true; }
   if(c.isPlayer) return false;
-  let worst=WEAP[c.slots[0]].rar<=WEAP[c.slots[1]].rar?0:1;
-  if(WEAP[type].rar>WEAP[c.slots[worst]].rar){ c.slots[worst]=type; c.mag[type]=WEAP[type].mag; botAutoWeapon(c,30); return true; }
+  const sc=i=>WEAP[c.slots[i]].rar+c.srar[i]*0.5; let worst=sc(0)<=sc(1)?0:1;
+  if(WEAP[type].rar+rar*0.5>sc(worst)){ delete c.mag[c.slots[worst]]; c.slots[worst]=type; c.srar[worst]=rar; c.mag[type]=mag; botAutoWeapon(c,30); return true; }
   return false;
 }
-function botAutoWeapon(b,d){ let best=null,sc=-99; for(const t of b.slots){ if(!t) continue; let s2=WEAP[t].rar; if(t==='pompe') s2+= d<10?5:-3; if(t==='sniper') s2+= d>50?4:-3; if(t==='mitraillette'&&d<20) s2+=1; if(s2>sc){ sc=s2; best=t; } }
+function dropAt(c,kind,extra){ const it=spawnItem(kind,c.pos.x,c.pos.y+0.4,c.pos.z,extra&&extra.amount||1,true,extra); it.noPick=1.5; return it; }
+// v2.0 : lâcher l'arme en main (elle garde sa rareté et son chargeur), touche G ou bouton LÂCHER
+function dropWeapon(){ const p=player; if(!p||!p.alive||p.phase!=='ground'||p.sel===0) return; const i=p.sel-1, t=p.slots[i]; if(!t) return;
+  dropAt(p,'w:'+t,{rar:p.srar[i],mag:p.mag[t]}); p.slots[i]=null; delete p.mag[t]; const from=t; p.prevSel=0; setSel(p,0); beginSwitch(p,from); p.reloadT=0; sfxPick();
+  showMsg('ARME LÂCHÉE',WEAP[t].name,0.8); }
+function botAutoWeapon(b,d){ let best=null,sc=-99; for(const t of b.slots){ if(!t) continue; let s2=WEAP[t].rar+b.srar[b.slots.indexOf(t)]*0.3; if(t==='pompe'||t==='pompet') s2+= d<10?5:-3; if(t==='sniper') s2+= d>50?4:-3; if(t==='mitraillette'&&d<20) s2+=1; if(s2>sc){ sc=s2; best=t; } }
   if(best&&b.cur!==best){ const from=b.cur; setSel(b,b.slots.indexOf(best)+1); beginSwitch(b,from); } }
 const NAMES=['Moussa','Aïcha','Ousmane','Mariama','Hadiza','Ibrahim','Zeinabou','Amadou','Rahila','Souleymane','Fati','Hassane','Habsatou','Boubacar','Ramatou','Idrissa','Safiatou','Issa','Balkissa','Yacouba','Nafissa','Harouna','Mariam','Seydou','Bintou'];
 const chars=[]; let player=null; const bots=[];
@@ -2035,8 +2059,8 @@ class Char{
   setSkin(s){ const k=modelKey(s,this.isPlayer); if(k===this.mkey) return; scene.remove(this.model.g); this.skin=s; this.model=makeModel(s,this.isPlayer); this.mkey=k; scene.add(this.model.g); }
   reset(){ this.hp=100; this.shield=0; this.alive=true; this.phase='bus'; this.grounded=false; this.vel.set(0,0,0);
     this.cover=null; this.inCover=false; this.coverCrouch=false; this.coverBan=null; this.coverBanT=0; this.coverNoneT=0;   // v1.3 : abri (le chrono de partie repart à 0)
-    this.slots=[null,null,null,null,null]; this.mag={}; this.ammo=this.isPlayer?60:999;
-    { const t=this.isPlayer?'revolver':pick(['revolver','revolver','mitraillette','fusil','fusil','pompe']); this.slots[0]=t; this.mag[t]=WEAP[t].mag; setSel(this,1); }
+    this.slots=[null,null,null,null,null]; this.srar=[0,0,0,0,0]; this.mag={}; this.ammoT=this.isPlayer?{light:60,medium:30,heavy:4,shells:10}:{light:999,medium:999,heavy:999,shells:999};
+    { const t=this.isPlayer?'revolver':pick(['revolver','revolver','mitraillette','fusil','fusil','pompe']); this.slots[0]=t; this.srar[0]=this.isPlayer?0:rollRarity(t); this.mag[t]=WEAP[t].mag; setSel(this,1); }
     this.banco=this.isPlayer?60:rint(30,70); this.kilishi=this.isPlayer?1:rint(0,1); this.the=0; this.kills=0;
     this.fireCD=0; this.buildCD=0; this.noiseT=0; this.reloadT=0; this.useT=0; this.useKind=null; this.useMax=1; this.mantle=null; this.jumpHeld=false; this.swingT=0; this.anim=0; this.onRamp=null; this.lastHitBy=null;
     this.boltT=0; this.pumpT=0; this.switchDur=0; this.switchFrom=null; this.swPh=0; this.swU=0; this.swFrom=null; this.raiseT=0; this.meleeAt=0; this.reloadDur=0; this.reloadShells=0; this.reloadDone=0; this.combatT=0;
@@ -2044,21 +2068,26 @@ class Char{
     this.target=null; this.moveTarget=null; this.thinkT=Math.random()*0.3; this.reactT=0; this.burst=0; this.strafe=Math.random()<0.5?1:-1; this.strafeT=0; this.stuck=0; this.lastPos=V(); this.seeT=0; this.blocker=null; this.canSee=false; this.wantJump=false; this.jumpAt=0; this.landTarget=null; this.rank=0; this.calmT=0; this.killer=null; this.inStorm=false; this.stormAcc=0; this.detourT=0;
     this.crouch=false; this.slideT=0; this.slideDir=V(); this.ck=0; this.landT=0; this.sprint=false; this.sprintCD=0; if(this.model.an) this.model.an=newAnState(); this.recoil=0; this.switchT=0; this.aimPitch=0; this.height=1.75; this.model.st={}; }
 }
-function startReload(c){ const w=WEAP[c.cur]; if(!c.alive||w.melee||c.reloadT>0||c.switchT>0||c.mag[c.cur]>=w.mag||c.ammo<=0) return;
-  if(c.cur==='pompe'){ const need=Math.min(w.mag-c.mag[c.cur],c.isPlayer?c.ammo:w.mag); c.reloadShells=need; c.reloadDone=0; c.reloadT=c.reloadDur=0.25+need*0.42+0.3; }
-  else c.reloadT=c.reloadDur=w.reload;
+/* v2.0 : munitions par type. c.ammo reste lisible (réserve du type de l'arme en main) ; l'écrire remplit tous les types
+   (compatibilité : entraînement, tests). Le jeu lui-même passe par ammoT / ammoLeft / useAmmo. */
+Object.defineProperty(Char.prototype,'ammo',{ get(){ return ammoLeft(this,this.cur); }, set(v){ if(!this.ammoT) this.ammoT={}; for(const k of AMMO_TYPES) this.ammoT[k]=v; } });
+function fillAmmo(c){ for(const k of AMMO_TYPES) c.ammoT[k]=AMMO[k].cap; }
+const SHELL_GUNS=new Set(['pompe','pompet']); // rechargement cartouche par cartouche
+function startReload(c){ const w=WEAP[c.cur]; if(!c.alive||w.melee||c.reloadT>0||c.switchT>0||c.mag[c.cur]>=w.mag||ammoLeft(c,c.cur)<=0) return; const rm=rarMul(c.cur,curRar(c)).reload;
+  if(SHELL_GUNS.has(c.cur)){ const need=Math.min(w.mag-c.mag[c.cur],c.isPlayer?ammoLeft(c,c.cur):w.mag); c.reloadShells=need; c.reloadDone=0; c.shellT=0.42*rm; c.reloadT=c.reloadDur=0.25+need*c.shellT+0.3; }
+  else c.reloadT=c.reloadDur=w.reload*rm;
   c.useT=0; c.boltT=0; c.pumpT=0; }
-function finishReload(c){ const w=WEAP[c.cur]; const need=w.mag-c.mag[c.cur]; const take=c.isPlayer?Math.min(need,c.ammo):need; c.mag[c.cur]+=take; if(c.isPlayer) c.ammo-=take; }
+function finishReload(c){ const w=WEAP[c.cur]; const need=w.mag-c.mag[c.cur]; const take=c.isPlayer?Math.min(need,ammoLeft(c,c.cur)):need; c.mag[c.cur]+=take; useAmmo(c,c.cur,take); }
 function useItem(c,kind){ if(!c||!c.alive||c.phase==='bus'||c.useT>0||c.reloadT>0) return; if(kind==='kilishi'&&(c.kilishi<=0||c.hp>=100)) return; if(kind==='the'&&(c.the<=0||c.shield>=75)) return; c.useKind=kind; c.useT=c.useMax=kind==='kilishi'?2.0:1.6; }
 function finishUse(c){ if(c.useKind==='kilishi'){ c.kilishi--; c.hp=Math.min(100,c.hp+25); } else { c.the--; c.shield=Math.min(75,c.shield+25); } if(c.isPlayer) sfxPick(); c.useKind=null; }
 function updateTimers(c,dt){
   c.fireCD-=dt; c.buildCD-=dt; c.hurtT-=dt; c.swingT-=dt; if(c.noiseT>0) c.noiseT-=dt; updateSwitch(c,dt); if(c.raiseT>0) c.raiseT-=dt;
   if(c.meleeAt>0){ c.meleeAt-=dt; if(c.meleeAt<=0&&c.isPlayer) meleeHit(c); }
   if(c.reloadT>0){ c.reloadT-=dt;
-    if(c.cur==='pompe'&&c.reloadShells){ // une cartouche glissée toutes les 0,42 s
-      const el=c.reloadDur-c.reloadT, want=Math.min(c.reloadShells,Math.max(0,Math.floor((el-0.61)/0.42)+1));
-      while(c.reloadDone<want){ c.reloadDone++; c.mag.pompe=Math.min(WEAP.pompe.mag,c.mag.pompe+1); if(c.isPlayer) c.ammo--; const d=c.pos.distanceTo(camera.position); if(d<30) sfxMech('shell',d); } }
-    if(c.reloadT<=0){ c.reloadT=0; if(c.cur==='pompe'&&c.reloadShells){ c.reloadShells=0; const d=c.pos.distanceTo(camera.position); if(d<30) sfxMech('pump',d); } else finishReload(c); } }
+    if(SHELL_GUNS.has(c.cur)&&c.reloadShells){ // une cartouche glissée toutes les 0,42 s (moins pour une rareté plus haute)
+      const st=c.shellT||0.42, el=c.reloadDur-c.reloadT, want=Math.min(c.reloadShells,Math.max(0,Math.floor((el-0.25-st*0.86)/st)+1));
+      while(c.reloadDone<want){ c.reloadDone++; c.mag[c.cur]=Math.min(WEAP[c.cur].mag,c.mag[c.cur]+1); useAmmo(c,c.cur,1); const d=c.pos.distanceTo(camera.position); if(d<30) sfxMech('shell',d); } }
+    if(c.reloadT<=0){ c.reloadT=0; if(SHELL_GUNS.has(c.cur)&&c.reloadShells){ c.reloadShells=0; const d=c.pos.distanceTo(camera.position); if(d<30) sfxMech(c.cur==='pompe'?'pump':'click',d); } else finishReload(c); } }
   if(c.boltT>0) c.boltT-=dt; if(c.pumpT>0) c.pumpT-=dt;
   if(c.useT>0){ c.useT-=dt; if(c.useT<=0) finishUse(c); }
 }
@@ -2090,11 +2119,11 @@ function killChar(t,att,wname){
   else feed(`<b>${t===player?'Toi':t.name}</b>${ico('wind')}<span>emporté par l'harmattan</span>`, t===player);
   // butin lâché
   const x=t.pos.x, y=t.pos.y+0.3, z=t.pos.z;
-  spawnItem('ammo',x,y,z,Math.max(20,Math.min(60,t.isPlayer?t.ammo:40)),true);
+  { const types=new Set(t.slots.filter(Boolean).map(ammoOf)); if(!types.size) types.add('medium'); for(const at of types) spawnItem('ammo',x,y,z,t.isPlayer?Math.max(AMMO[at].box,Math.min(AMMO[at].box*2,t.ammoT[at]||0)):AMMO[at].box*2,true,{atype:at}); }
   if(t.banco>0) spawnItem('banco',x,y,z,t.banco,true);
   if(t.kilishi>0) spawnItem('kilishi',x,y,z,t.kilishi,true);
   if(t.the>0) spawnItem('the',x,y,z,t.the,true);
-  for(const w of t.slots) if(w) spawnItem('w:'+w,x,y,z,1,true);
+  t.slots.forEach((w,i)=>{ if(w) spawnItem('w:'+w,x,y,z,1,true,{rar:t.srar[i],mag:t.mag[w]}); });
   for(let k=0;k<16;k++) spawnParticle(x+rnd(-0.4,0.4),y+rnd(0,1.6),z+rnd(-0.4,0.4),rnd(-3,3),rnd(1,5),rnd(-3,3),[0x7fd0ff,0xffffff,0xffd166][k%3],rnd(0.5,1),1,6);
   if(t===player){ deadT=0; }
   checkEnd();
@@ -2110,7 +2139,7 @@ function muzzle(c,out){ const wo=c.model.w&&c.model.w[c.cur]; if(wo&&wo.visible&
 let bloom=0;
 function playerFire(){
   const p=player, w=WEAP[p.cur];
-  if(p.reloadT>0&&p.cur==='pompe'&&p.mag.pompe>0){ p.reloadT=0; p.reloadShells=0; } // au pompe, on peut tirer pendant le rechargement balle par balle
+  if(p.reloadT>0&&SHELL_GUNS.has(p.cur)&&p.mag[p.cur]>0){ p.reloadT=0; p.reloadShells=0; } // aux pompes, on peut tirer pendant le rechargement cartouche par cartouche
   if(p.fireCD>0||p.reloadT>0||p.raiseT>0||(p.switchT>0&&!(p.swPh===2&&p.swU>0.85))) return; // v1.7 : on peut tirer à la fin de la sortie de l'arme
   if(p.useT>0){ p.useT=0; p.useKind=null; }
   updateCamVectors();
@@ -2128,9 +2157,9 @@ function meleeHit(p){ const w=WEAP.daba; if(!p.alive||p.cur!=='daba') return; up
       else if(h.type==='solid'&&h.obj.harvest){ const g=rint(7,10); p.banco=Math.min(500,p.banco+g); p.harvested+=g; damageNumber(pt,'+'+g+' banco','mat'); for(let k=0;k<6;k++) spawnParticle(pt.x,pt.y,pt.z,rnd(-2,2),rnd(1,4),rnd(-2,2),0xc98b55,0.6,1); tone(320,0.05,0.12,'triangle'); }
       else if(h.type==='terrain'){ for(let k=0;k<5;k++) spawnParticle(pt.x,pt.y,pt.z,rnd(-2,2),rnd(1,3),rnd(-2,2),0xe2c28c,0.5,1); } } } }
 function fireGun(p,w){
-  p.mag[p.cur]--; p.fireCD=w.rate; p.noiseT=1.5;
+  p.trigLatch=true; p.mag[p.cur]--; p.fireCD=w.rate; p.noiseT=1.5; const rm=rarMul(p.cur,curRar(p)); // v2.0 : la rareté change dégâts et précision
   const moving=Math.hypot(p.vel.x,p.vel.z)>1.5;
-  const spread=(w.scope&&ads)?w.adsSpread*(moving?4:1)*(p.grounded?1:6):w.spread*(moving?1.5:1)*(p.grounded?1:2)*(ads?0.45:1)*(p.crouch&&p.slideT<=0?0.6:1)*(1+bloom);
+  const spread=((w.scope&&ads)?w.adsSpread*(moving?4:1)*(p.grounded?1:6):w.spread*(moving?1.5:1)*(p.grounded?1:2)*(ads?0.45:1)*(p.crouch&&p.slideT<=0?0.6:1)*(1+bloom))*rm.spread;
   bloom=Math.min(1.5,bloom+(w.bloom||0));
   const mz=muzzle(p,V()); const pel=w.pellets||1; let anyChar=false;
   for(let i=0;i<pel;i++){
@@ -2142,29 +2171,31 @@ function fireGun(p,w){
       for(const c of chars){ if(c===p||!c.alive||c.phase==='bus') continue; _m.set(c.pos.x,c.pos.y+1.2,c.pos.z).sub(_o); const dist=_m.length(); if(dist>90||dist>h.t+2) continue; const a=Math.acos(clamp(_m.dot(_d)/dist,-1,1)); if(a<ba){ ba=a; best=c; } }
       if(best){ _m.set(best.pos.x,best.pos.y+1.2,best.pos.z).sub(_o).normalize(); const h2=rayCast(_o,_m,95,p); if(h2.type==='char'&&h2.obj===best){ tgt=best; pt=h2.p.clone(); h=h2; } }
     }
-    if(tgt){ const dist=pt.distanceTo(_o); let dmg=w.dmg*(head?w.head:1); if(p.cur==='pompe') dmg*=clamp(1-(dist-10)/30,0.25,1); else if(dist>70&&!w.scope) dmg*=0.8; damageChar(tgt,dmg,p,head,p.cur,pt); anyChar=true;
+    if(tgt){ const dist=pt.distanceTo(_o); let dmg=w.dmg*rm.dmg*(head?w.head:1); if(SHELL_GUNS.has(p.cur)) dmg*=clamp(1-(dist-10)/30,0.25,1); else if(dist>70&&!w.scope) dmg*=0.8; damageChar(tgt,dmg,p,head,p.cur,pt); anyChar=true;
       for(let k=0;k<4;k++) spawnParticle(pt.x,pt.y,pt.z,rnd(-2,2),rnd(0,3),rnd(-2,2),0xffe28a,0.3,0.8,6); }
-    else if(h.type==='piece'){ damagePiece(h.obj,w.piece); for(let k=0;k<5;k++) spawnParticle(pt.x,pt.y,pt.z,rnd(-2.5,2.5),rnd(0.5,3.5),rnd(-2.5,2.5),k%2?0xc7743f:0x6b3a1e,0.55,k<2?1.4:0.9); if(i===0) noiseBurst(0.06,900,0.05); }
+    else if(h.type==='piece'){ damagePiece(h.obj,w.piece*rm.dmg); for(let k=0;k<5;k++) spawnParticle(pt.x,pt.y,pt.z,rnd(-2.5,2.5),rnd(0.5,3.5),rnd(-2.5,2.5),k%2?0xc7743f:0x6b3a1e,0.55,k<2?1.4:0.9); if(i===0) noiseBurst(0.06,900,0.05); }
     else if(h.type){ const col=h.type==='terrain'?0xe2c28c:0xc98b55; for(let k=0;k<3;k++) spawnParticle(pt.x,pt.y,pt.z,rnd(-1.5,1.5),rnd(0.5,3),rnd(-1.5,1.5),col,0.5,0.9); if(h.type==='solid'&&i<2){ impactDecal(pt,h.obj); if(i===0) noiseBurst(0.07,2600,0.05,'highpass'); } }
     if(i<3) tracer(mz,pt);
   }
   sfxShot(p.cur,0); flash.position.copy(mz); flash.material.rotation=Math.random()*6.28; const fs=rnd(0.75,1.15)*(p.cur==='pompe'||p.cur==='sniper'?1.35:1); flash.scale.set(fs,fs,1); flash.visible=true; flashT=0.06; mLight.position.copy(mz); p.recoil=1;
   // douille éjectée vers la droite ; au sniper et au pompe elle sort au mouvement de culasse / de pompe (chorégraphie)
-  if(p.cur==='sniper') p.boltT=0.9; else if(p.cur==='pompe') p.pumpT=0.5;
+  if(p.cur==='sniper') p.boltT=0.9; else if(p.cur==='pompe') p.pumpT=0.5; // pompe tactique : semi-automatique, pas de coup de pompe
   else { const r=camRight; spawnParticle(mz.x-camFwd.x*0.3,mz.y+0.02,mz.z-camFwd.z*0.3,r.x*rnd(1.6,2.6)+rnd(-0.4,0.4),rnd(1.8,2.8),r.z*rnd(1.6,2.6)+rnd(-0.4,0.4),0xd8a840,0.9,0.42,16); } addShake(w.kick>0.02?0.06:0.012);
   camPitch=clamp(camPitch+w.kick*(ads?0.6:1),-1.25,1.15); camYaw+=rnd(-0.004,0.004);
-  if(p.mag[p.cur]===0&&p.ammo>0) setTimeout(()=>{ if(p.alive) startReload(p); },220);
+  if(p.mag[p.cur]===0&&ammoLeft(p,p.cur)>0) setTimeout(()=>{ if(p.alive) startReload(p); },220);
 }
 
 /* ---------- butin ---------- */
-const STACK_MAX={ammo:300,banco:500,kilishi:5,the:4};
+const STACK_MAX={banco:500,kilishi:5,the:4}; // munitions : plafonds par type dans AMMO (arsenal.js)
 function pickup(c,it){
   const k=it.kind, gun=k.startsWith('w:'); let took=1;
-  if(gun){ if(!giveWeapon(c,k.slice(2))) return false; removeItem(it); }
+  if(gun){ if(!giveWeapon(c,k.slice(2),it.rar,it.mag)) return false; removeItem(it); }
+  else if(k==='ammo'){ const at=it.atype||'medium'; if(!c.isPlayer){ removeItem(it); return true; } took=Math.min(it.amount,AMMO[at].cap-(c.ammoT[at]||0)); if(took<=0) return false; c.ammoT[at]+=took;
+    if(took<it.amount) it.amount-=took; else removeItem(it); }
   else { took=Math.min(it.amount,STACK_MAX[k]-c[k]); if(took<=0) return false; c[k]+=took;
     // on ne ramasse que ce qui rentre : le reste de la pile reste par terre
     if(took<it.amount) it.amount-=took; else removeItem(it); }
-  if(c===player){ sfxPick(); showMsg('+ '+(gun?WEAP[k.slice(2)].name:ITEM_NAME[k])+(took>1?' ×'+took:''),'',0.9); }
+  if(c===player){ sfxPick(); showMsg('+ '+itemName(it)+(took>1?' ×'+took:''),gun?'<span style="color:'+RAR_CSS[it.rar]+'">'+RARITY[it.rar].name+'</span>':'',0.9); }
   return true;
 }
 function updateItems(dt){
@@ -2174,17 +2205,20 @@ function updateItems(dt){
     const dc=Math.abs(it.x-camera.position.x)+Math.abs(it.z-camera.position.z); it.g.visible=dc<Q.itemVis; it.g.children[1].visible=dc<Q.beam; it.m.visible=dc<Q.itemMesh||!it.kind.startsWith('w:'); }
 }
 let nearItem=null;
-function tryPickups(c){ let near=null; for(const it of items){ if(!it.alive||it.noPick>0) continue; const dx=it.x-c.pos.x, dz=it.z-c.pos.z, dy=it.y-c.pos.y; if(dx*dx+dz*dz<2.6&&Math.abs(dy)<1.8){ if(!pickup(c,it)&&c===player&&it.kind.startsWith('w:')&&!c.slots.includes(it.kind.slice(2))) near=it; } } if(c===player) nearItem=near; }
+function tryPickups(c){ let near=null; for(const it of items){ if(!it.alive||it.noPick>0) continue; const dx=it.x-c.pos.x, dz=it.z-c.pos.z, dy=it.y-c.pos.y; if(dx*dx+dz*dz<2.6&&Math.abs(dy)<1.8){ if(!pickup(c,it)&&c===player&&it.kind.startsWith('w:')) near=it; } } if(c===player) nearItem=near; }
 // v1.3 : E / bouton : prendre l'arme proche, sinon ouvrir ou fermer la porte proche
 function interact(){ const p=player; if(!p||!p.alive||p.phase!=='ground') return; const d=doorNear(p);
   const di=d?Math.hypot(d.h.leaf.cx-p.pos.x,d.h.leaf.cz-p.pos.z):1e9, it=nearItem, ii=it&&it.alive?Math.hypot(it.x-p.pos.x,it.z-p.pos.z):1e9;
   if(ii<1e9&&ii<=di) return swapTake();
   if(d&&!setDoor(d,!d.open)) showMsg('LA PORTE EST BLOQUÉE','quelqu\'un est dans le passage',0.9); }
 function swapTake(){ const p=player, it=nearItem; if(!it||!it.alive||!p.alive||p.phase!=='ground') return; if(p.sel===0){ showMsg("CHOISIS UNE CASE D'ARME",'pour échanger',1); return; }
-  const type=it.kind.slice(2), old=p.slots[p.sel-1]; removeItem(it); p.slots[p.sel-1]=type; p.mag[type]=WEAP[type].mag; setSel(p,p.sel); beginSwitch(p,old);
-  const d=spawnItem('w:'+old,p.pos.x,p.pos.y+0.4,p.pos.z,1,true); d.noPick=1.5; nearItem=null; sfxPick(); showMsg('+ '+WEAP[type].name,'',0.9); }
-function openChest(ch,c){ ch.open=true; ch.t=0; c.chestsOpened++; const n=[ 'ammo', Math.random()<0.5?'kilishi':'the', 'w:'+randGun(1) ]; if(Math.random()<0.4) n.push('banco');
-  n.forEach(k=>spawnItem(k,ch.x,ch.y+0.6,ch.z,k==='ammo'?40:k==='banco'?40:1,true));
+  // v2.0 : la même arme ailleurs dans l'inventaire : on échange celle-là ; sinon l'arme en main. L'arme rendue garde rareté et chargeur.
+  const type=it.kind.slice(2), dup=p.slots.indexOf(type), i=dup>=0?dup:p.sel-1, old=p.slots[i], oldR=p.srar[i], oldM=p.mag[old]; removeItem(it);
+  if(old) delete p.mag[old]; p.slots[i]=type; p.srar[i]=it.rar; p.mag[type]=it.mag!=null?it.mag:WEAP[type].mag; const from=p.cur; setSel(p,i+1); beginSwitch(p,from);
+  if(old) dropAt(p,'w:'+old,{rar:oldR,mag:oldM}); nearItem=null; sfxPick(); showMsg('+ '+WEAP[type].name,'<span style="color:'+RAR_CSS[it.rar]+'">'+RARITY[it.rar].name+'</span>',0.9); }
+function openChest(ch,c){ ch.open=true; ch.t=0; c.chestsOpened++; const g=randGun(1), n=[ 'ammo', Math.random()<0.5?'kilishi':'the' ]; if(Math.random()<0.4) n.push('banco');
+  spawnItem('w:'+g,ch.x,ch.y+0.6,ch.z,1,true,{rar:rollRarity(g,1)}); // coffre : meilleure rareté
+  n.forEach(k=>spawnItem(k,ch.x,ch.y+0.6,ch.z,k==='ammo'?AMMO[ammoOf(g)].box*2:k==='banco'?40:1,true,k==='ammo'?{atype:ammoOf(g)}:null));
   if(c===player){ showMsg('COFFRE OUVERT','',1.1); tone(523,0.1,0.15,'triangle'); tone(784,0.15,0.15,'triangle',null,0.08); } }
 function updateChests(dt){ for(const ch of chests){ const dc=Math.abs(ch.x-camera.position.x)+Math.abs(ch.z-camera.position.z); ch.g.visible=dc<Q.chestVis; ch.glow.visible=!ch.open&&dc<Q.beam;
     if(ch.open){ ch.t+=dt; ch.lid.rotation.x=Math.min(1.9,ch.t*6); continue; } ch.glow.material.opacity=0.6+Math.sin(matchTime*4)*0.3;
@@ -2322,7 +2356,7 @@ function botShoot(b,target){
   if(Math.random()>p){ _m.x+=rnd(-1,1)*rnd(0.8,2); _m.y+=rnd(-0.5,1.4); _m.z+=rnd(-1,1)*rnd(0.8,2); }
   _d.subVectors(_m,_o).normalize(); const h=rayCast(_o,_d,B.shotgun?40:B.sniper?320:150,b);
   const pt=h.p.clone();
-  if(h.type==='char'){ let dmg = B.shotgun ? (d<6?48:d<12?30:14) : B.dmg; if(h.head) dmg*=B.sniper?2:1.5; if(!h.obj.isPlayer) dmg*=0.55; damageChar(h.obj,dmg,b,h.head,w,pt); }
+  if(h.type==='char'){ let dmg = (B.shotgun ? (d<6?48:d<12?30:14)*(w==='pompet'?0.62:1) : B.dmg)*rarMul(w,curRar(b)).dmg; if(h.head) dmg*=B.sniper?2:1.5; if(!h.obj.isPlayer) dmg*=0.55; damageChar(h.obj,dmg,b,h.head,w,pt); }
   else if(h.type==='piece') damagePiece(h.obj,B.shotgun?45:B.sniper?60:20);
   const dc=b.pos.distanceTo(camera.position);
   if(dc<110){ tracer(muzzle(b,_t),pt,0xffd9a0); if(h.type&&dc<60) for(let k=0;k<2;k++) spawnParticle(pt.x,pt.y,pt.z,rnd(-1.5,1.5),rnd(0.5,2.5),rnd(-1.5,1.5),h.type==='char'?0xffe28a:0xd9b07a,0.4,0.8); }
@@ -2478,6 +2512,7 @@ const RELOAD={
     {t:0.74,g:[0,0,0.15,0,0,0],L:'fore',R:'boltB'},{t:0.82,g:[0,0,0.15,0,0,0],L:'fore',R:'bolt'},{t:0.9,g:G0,L:'fore'},{t:1,g:G0,L:'fore'}]},
 };
 // après chaque tir : culasse du sniper (0,9 s), pompe du fusil à pompe (0,5 s)
+RELOAD.tactique=RELOAD.fusil; // v2.0 : même geste (chargeur, puis levier d'armement côté gauche)
 const BOLT={e:[[0.4,'boltopen+eject'],[0.62,'boltclose']],keys:[{t:0,g:G0,L:'fore'},{t:0.2,g:[0,0,0.12,0,0,0],L:'fore',R:'bolt'},{t:0.42,g:[0,0,0.12,0,0,0],L:'fore',R:'boltB'},{t:0.62,g:[0,0,0.12,0,0,0],L:'fore',R:'bolt'},{t:0.85,g:G0,L:'fore'},{t:1,g:G0,L:'fore'}]};
 const PUMP={e:[[0.3,'pump+eject']],keys:[{t:0,g:G0,L:'fore'},{t:0.35,g:[0.04,0,0,0,0,0.02],L:'foreB'},{t:0.7,g:G0,L:'fore'},{t:1,g:G0,L:'fore'}]};
 // soins : la main droite porte le kilishi / le verre à la bouche
@@ -2684,7 +2719,7 @@ function animRealAnim(c,dt){
   const S_=_samp; for(let k=0;k<6;k++) S_.g[k]=0; S_.LA=S_.LB=(Gp&&Gp.hands===1)?'cup':'fore'; S_.RA=S_.RB='grip'; S_.e=0; S_.p=S_.pR=null;
   let ch=null, chU=0, chId=null;
   if(gun&&!using&&!bm&&sw===0&&c.phase==='ground'){
-    if(c.reloadT>0&&c.reloadDur>0){ chU=1-c.reloadT/c.reloadDur; if(wType==='pompe'){ shellsSample(c,S_); chId='shells'; } else if(RELOAD[wType]){ ch=RELOAD[wType]; chId='r'+wType; } }
+    if(c.reloadT>0&&c.reloadDur>0){ chU=1-c.reloadT/c.reloadDur; if(SHELL_GUNS.has(wType)){ shellsSample(c,S_); chId='shells'; } else if(RELOAD[wType]){ ch=RELOAD[wType]; chId='r'+wType; } }
     else if(c.boltT>0){ ch=BOLT; chU=1-c.boltT/0.9; chId='bolt'; }
     else if(c.pumpT>0){ ch=PUMP; chU=1-c.pumpT/0.5; chId='pump'; }
     if(ch) sampleChoreo(ch,chU,S_);
@@ -2841,6 +2876,7 @@ addEventListener('keydown',e=>{ if(e.target&&e.target.tagName==='INPUT') return;
   if(e.code==='CapsLock'){ sprintOn=!sprintOn; }
   if(e.code==='KeyF') startEdit();
   if(e.code==='KeyX') resetEdit();
+  if(e.code==='KeyG') dropWeapon(); // v2.0
   if(e.code==='KeyH') useItem(player,'kilishi');
   if(e.code==='KeyT') useItem(player,'the');
 });
@@ -2900,6 +2936,7 @@ document.querySelectorAll('#pick button').forEach(b=>{ const t=b.dataset.p;
   b.addEventListener('touchstart',e=>{ e.preventDefault(); e.stopPropagation(); for(const tc of e.changedTouches) roles.set(tc.identifier,{role:'pick',p:t,el:b,x:tc.clientX,y:tc.clientY}); b.classList.add('act'); pieceDown(t,SET.tapBuild); },{passive:false});
   b.addEventListener('click',()=>{ if(!IS_TOUCH) pieceDown(t,false); }); });
 { const sb=$('bSwap'); const f=e=>{ e.preventDefault(); e.stopPropagation(); quickSwap(); }; sb.addEventListener('touchstart',f,{passive:false}); sb.addEventListener('click',f); }
+{ const db=$('bDrop'); const f=e=>{ e.preventDefault(); e.stopPropagation(); dropWeapon(); }; db.addEventListener('touchstart',f,{passive:false}); db.addEventListener('click',f); }
 document.querySelectorAll('#editPre button').forEach(b=>{ const f=e=>{ e.preventDefault(); e.stopPropagation(); editPreset(b.dataset.e); }; b.addEventListener('touchstart',f,{passive:false}); b.addEventListener('click',f); });
 document.querySelectorAll('.slot').forEach(s=>{ const f=e=>{ e.preventDefault(); e.stopPropagation(); selectSlot(+s.dataset.s); }; s.addEventListener('touchstart',f,{passive:false}); s.addEventListener('click',f); });
 for(const [id,k] of [['mKil','kilishi'],['mThe','the']]){ const el=$(id); const f=e=>{ e.preventDefault(); e.stopPropagation(); useItem(player,k); }; el.addEventListener('touchstart',f,{passive:false}); el.addEventListener('click',f); }
@@ -2990,19 +3027,20 @@ function updateHUD(dt){
   setTxt('stormChip',st); $('stormChip').classList.toggle('danger',!!p.inStorm);
   $('shBar').firstElementChild.style.width=(p.shield/75*100)+'%'; setTxt('shNum',Math.ceil(p.shield));
   $('hpBar').firstElementChild.style.width=Math.max(0,p.hp)+'%'; setTxt('hpNum',Math.max(0,Math.ceil(p.hp))); $('hpBar').classList.toggle('low',p.hp<30);
+  { const off=p.sel===0; if(cache.dropOff!==off){ cache.dropOff=off; $('bDrop').classList.toggle('off',off); } }
   setTxt('nBanco',matchMode==='train'?'∞':p.banco); setTxt('nKil',p.kilishi); setTxt('nThe',p.the);
   $('mKil').classList.toggle('zero',p.kilishi<=0); $('mThe').classList.toggle('zero',p.the<=0);
   SLOT_EL.forEach(s=>{ const i=+s.dataset.s; const t=i===0?'daba':p.slots[i-1]; s.classList.toggle('on',!buildMode&&p.sel===i); s.classList.toggle('off',!t);
     const nm=t?WEAP[t].sn:'', W=t&&WEAP[t], rl=p.reloadT>0&&p.cur===t, low=W&&W.mag&&p.mag[t]<=Math.max(1,W.mag*0.25),
-      sub=!t?'':t==='daba'?'RÉCOLTE':(rl?'RECHARGE':p.mag[t]+'<em> / '+p.ammo+'</em>'), key=nm+'|'+sub+'|'+low+'|'+(WICON[t]?1:0);
+      rr=i>0&&t?p.srar[i-1]:0, sub=!t?'':t==='daba'?'RÉCOLTE':(rl?'RECHARGE':p.mag[t]+'<em> / '+ammoLeft(p,t)+'</em>'), key=nm+'|'+sub+'|'+low+'|'+(WICON[t]?1:0)+'|'+rr;
     if(s._k!==key){ s._k=key; const im=s.querySelector('img'), b=s.querySelector('b'), sp=s.querySelector('span'); b.textContent=nm; sp.innerHTML=sub; sp.classList.toggle('low',!!low&&!rl);
       const src=t&&WICON[t]||''; if(im.getAttribute('src')!==src) im.setAttribute('src',src); s.classList.toggle('ico',!!src);
-      s.style.borderBottomColor=t&&t!=='daba'?RAR_CSS[WEAP[t].rar]:'rgba(255,255,255,.22)'; } });
-  { const t=buildMode?'':p.cur, W=t&&WEAP[t]; setTxt('wname',W?'<span style="color:'+(t==='daba'?'#fff7ea':RAR_CSS[W.rar])+'">'+W.name.toUpperCase()+'</span>':''); }
+      s.style.borderBottomColor=t&&t!=='daba'?RAR_CSS[rr]:'rgba(255,255,255,.22)'; s.style.setProperty('--rar',t&&t!=='daba'?RAR_CSS[rr]:'transparent'); } });
+  { const t=buildMode?'':p.cur, W=t&&WEAP[t], r=curRar(p); setTxt('wname',W?'<span style="color:'+(t==='daba'?'#fff7ea':RAR_CSS[r])+'">'+W.name.toUpperCase()+(t!=='daba'?' <small>'+RARITY[r].name+' · '+AMMO[W.ammo].short.toLowerCase()+'</small>':'')+'</span>':''); }
   updateCompass();
   const sc=isScoped(); $('scope').classList.toggle('hidden',!sc); $('cross').style.visibility=sc?'hidden':'';
   updatePV(dt);
-  if(nearItem&&nearItem.alive&&p.alive){ const nm=WEAP[nearItem.kind.slice(2)].name; setTxt('take', IS_TOUCH?`${ico('pickup')}PRENDRE <b>${nm.toUpperCase()}</b>`:`<span class="key">E</span>Prendre <b>${nm}</b><small>(échange)</small>`); $('take').classList.remove('hidden'); } else { const d=p.alive&&p.phase==='ground'?doorNear(p):null; // v1.3 : invite pour la porte
+  if(nearItem&&nearItem.alive&&p.alive){ const nm=WEAP[nearItem.kind.slice(2)].name, rn=`<i style="color:${RAR_CSS[nearItem.rar]}">${RARITY[nearItem.rar].name}</i>`; setTxt('take', IS_TOUCH?`${ico('pickup')}PRENDRE <b>${nm.toUpperCase()}</b> ${rn}`:`<span class="key">E</span>Prendre <b>${nm}</b> ${rn}<small>(échange)</small>`); $('take').classList.remove('hidden'); } else { const d=p.alive&&p.phase==='ground'?doorNear(p):null; // v1.3 : invite pour la porte
     if(d){ const t=d.open?'Fermer la porte':'Ouvrir la porte'; setTxt('take', IS_TOUCH?`${ico('door')}${t.toUpperCase()}`:`<span class="key">E</span>${t}`); $('take').classList.remove('hidden'); } else $('take').classList.add('hidden'); }
   updateClimbHint(dt);
   // canalisation
@@ -3064,7 +3102,8 @@ function updatePlayer(dt){
     if(firing&&!p.fireWas) p.fireT0=matchTime; p.fireWas=firing;
     const tapOn=pieceTap&&!pieceTap.done&&matchTime-pieceTap.t0<=0.36;
     if(firing||pieceHeld||tapOn){ const t0=firing&&!pieceHeld&&!tapOn?p.fireT0:pieceTap?pieceTap.t0:matchTime; if(tryBuild(p,buildType,buildDir(),{wait:matchTime-t0<0.3})&&pieceTap) pieceTap.done=true; } }
-  else if(firing) playerFire();
+  else if(firing){ const W=WEAP[p.cur]; if(!(W.mode==='semi'&&!W.melee&&!IS_TOUCH&&p.trigLatch)) playerFire(); } // v2.0 : armes semi-automatiques
+  if(!firing) p.trigLatch=false;
   if(p.crouch!==cache.crouch){ cache.crouch=p.crouch; $('bCrouch').classList.toggle('on',p.crouch); }
   tryPickups(p);
 }
@@ -3275,7 +3314,9 @@ function startMatch(mode){
   if(matchMode==='train'){ setupTraining(); resize(); return; }
   // butin
   resetDoors();
-  for(const s of lootSpots){ if(Math.random()<0.8){ const r=Math.random(); const k=r<0.25?'ammo':r<0.42?'kilishi':r<0.56?'the':r<0.7?'banco':'w:'+randGun(0); spawnItem(k,s[0],s[1],s[2]); } }
+  for(const s of lootSpots){ if(Math.random()<0.8){ const r=Math.random(); const k=r<0.25?'ammo':r<0.42?'kilishi':r<0.56?'the':r<0.7?'banco':'w:'+randGun(0);
+    if(k.startsWith('w:')){ const g=k.slice(2); spawnItem(k,s[0],s[1],s[2],1,false,{rar:rollRarity(g)}); if(Math.random()<0.6) spawnItem('ammo',s[0]+0.7,s[1],s[2]+0.4,0,false,{atype:ammoOf(g)}); } // arme au sol : souvent avec ses munitions
+    else spawnItem(k,s[0],s[1],s[2],0,false,k==='ammo'?{atype:pick(AMMO_TYPES)}:null); } }
   for(const s of chestSpots){ if(s[3]==='roof'&&Math.random()<0.2) continue; spawnChest(s[0],s[1],s[2]); }
   resetStorm(); stormMesh.visible=stormInner.visible=true; setupBus(); for(const b of bots) initBot(b);
   camYaw=Math.atan2(-bus.dir.x,-bus.dir.z)+0.9; camPitch=-0.25; curZone=null;
@@ -3290,7 +3331,7 @@ function setupTraining(){
   storm.state='done'; storm.phase=PHASES.length; storm.r=9999; storm.cx=0; storm.cz=0; stormMesh.visible=stormInner.visible=false;
   const [sx,sz]=TRAIN_SPOT, p=player;
   p.phase='ground'; p.grounded=true; p.pos.set(sx,terrainH(sx,sz)+0.5,sz); p.vel.set(0,0,0); p.model.g.visible=true;
-  p.slots=['fusil','pompe','sniper','mitraillette','mitrailleuse']; p.mag={}; for(const w of p.slots) p.mag[w]=WEAP[w].mag; setSel(p,1); p.ammo=300; p.banco=500; p.kilishi=5; p.the=4;
+  p.slots=['fusil','pompe','sniper','mitraillette','mitrailleuse']; p.srar=p.slots.map(w=>WEAP[w].rar); p.mag={}; for(const w of p.slots) p.mag[w]=WEAP[w].mag; setSel(p,1); fillAmmo(p); p.banco=500; p.kilishi=5; p.the=4;
   for(const b of bots){ b.alive=false; b.phase='bus'; b.model.g.visible=false; }
   for(let i=0;i<DUMMIES;i++){ const b=bots[i], a=-0.85+i/(DUMMIES-1)*1.7, d=[12,16,20,26,32,40,50,62][i]; b.home=V(sx+Math.sin(a)*d,0,sz-Math.cos(a)*d); spawnDummy(b); }
   aliveCount=1+DUMMIES; camYaw=0; camPitch=-0.12; curZone=null; state='play';
@@ -3298,7 +3339,7 @@ function setupTraining(){
 }
 function spawnDummy(b){ b.reset(); b.alive=true; b.dummy=true; b.phase='ground'; b.grounded=true; b.pos.set(b.home.x,terrainH(b.home.x,b.home.z)+0.3,b.home.z); b.model.g.visible=true; b.hp=100; b.shield=0; b.banco=0; b.slots=[null,null,null,null,null]; setSel(b,0); }
 function updateTraining(dt){
-  if(!player) return; player.banco=500; player.ammo=300;
+  if(!player) return; player.banco=500; if(!window.__keepAmmo) fillAmmo(player); // munitions illimitées (window.__keepAmmo : tests de consommation)
   for(const b of bots){ if(b.dummy&&!b.alive&&b.respawnT>0){ b.respawnT-=dt; if(b.respawnT<=0) spawnDummy(b); } }
 }
 function showEnd(win){
@@ -3359,7 +3400,7 @@ function initLobby(){
   lobby=createLobby({ THREE, renderer, IS_TOUCH, envMap:scene.environment, TEX, glowTex, profile:PROFILE, SKINS,
     OUTFITS:OUTFITS.map(o=>({name:o.name,css:'rgb('+o.c.map(v=>Math.round(Math.min(1,v)*235+20)).join(',')+')'})),
     WAX:TEX.wax.map((t,i)=>({name:WAX_NAMES[i],url:t.userData.url||(t.image.toDataURL?t.image.toDataURL('image/png'):'')})),
-    WEAPONS:GUNS.map(g=>({id:g,name:WEAP[g].name,rarCss:RAR_CSS[WEAP[g].rar],rarName:RAR_NAMES[WEAP[g].rar]})),
+    WEAPONS:GUNS.map(g=>({id:g,name:WEAP[g].name,rarCss:RAR_CSS[WEAP[g].rar],rarName:RARITY[WEAP[g].rar].name})),
     skinAvailable:k=>!!SKINS[k]&&(!SKINS[k].real||!!ASSETS.c[SKINS[k].real]),
     buildDisplay, weaponModel:t=>makeGunObj(t), quality:()=>quality, objects:OBJ3D,
     startMatch, openSettings, beforeLaunch, precompile:warmGPU, creditsHTML:CREDITS_HTML, sfx:uiSfx,
@@ -3371,7 +3412,7 @@ requestAnimationFrame(loop);
 loadAssets().then(()=>{ try{ makeWeaponIcons(); }catch(e){} initLobby(); goMenu(); try{ lobby.precompile(); lobby.warm(); lobby.render(); }catch(e){} requestAnimationFrame(()=>$('loading').remove()); setTimeout(()=>{ try{ loadSols(); loadAmbient(); loadPackTrees(); loadPackRocks(); }catch(e){ console.warn('décor',e); } },800); }); // une image rendue derrière l'écran : ombres comprises ; v1.6 : sols, animaux, arbres et rochers du pack chargés 0,8 s après l'affichage du lobby
 
 // accès de débogage
-window.FR={get lobby(){return lobby;}, PROFILE, Profile, get matchMode(){return matchMode;}, get camPitch(){return camPitch;}, get sprintOn(){return sprintOn;}, setSprint:v=>{sprintOn=v;}, placementProblem, computePlacement, dirFromYaw, get camYaw(){return camYaw;}, SET, openSettings, closeSettings, openHudEditor, renderTab, get paused(){return paused;}, THREE, ASSETS, selectSlot, swapTake, giveWeapon, beginSwitch, get nearItem(){return nearItem;}, setAds:v=>{ads=v;}, startEdit, confirmEdit, resetEdit, rayCast, crouchPress, get editing(){return editing;}, get state(){return state;}, get player(){return player;}, bots, chars, items, chests, pieces, housesInfo, doors:DOORS, setDoor, interact, hasLOS, findCover, storm, bus, startMatch, update, jumpFromBus:()=>jumpFromBus(player), tryBuild, setBuildType, toggleBuild, warmGPU, AMB, get TERRAIN(){return TERRAIN;}, get TERRAIN_MAT0(){return TERRAIN_MAT0;}, setQuality, qBox, boxGrounded, boxTouch, checkIntegrity, destroyPiece, pieceDown, pieceUp, damagePiece, editPreset, quickSwap, get buildRot(){return buildRot;}, spaceFreeAt:(x,z,y0,y1,r)=>spaceFree(x,z,y0,y1,r), get buildMode(){return buildMode;}, get pieceHeld(){return pieceHeld;}, pieceList, PINST, setFiring:v=>{firing=v;}, setCam:(y,p)=>{camYaw=y;camPitch=p;}, keys, renderer, scene, camera, get aliveCount(){return aliveCount;}, solids, terrainH};
+window.FR={get lobby(){return lobby;}, PROFILE, Profile, get matchMode(){return matchMode;}, get camPitch(){return camPitch;}, get sprintOn(){return sprintOn;}, setSprint:v=>{sprintOn=v;}, placementProblem, computePlacement, dirFromYaw, get camYaw(){return camYaw;}, SET, openSettings, closeSettings, openHudEditor, renderTab, get paused(){return paused;}, THREE, ASSETS, selectSlot, swapTake, giveWeapon, beginSwitch, get nearItem(){return nearItem;}, setAds:v=>{ads=v;}, startEdit, confirmEdit, resetEdit, rayCast, crouchPress, get editing(){return editing;}, get state(){return state;}, get player(){return player;}, bots, chars, items, chests, pieces, housesInfo, doors:DOORS, setDoor, interact, hasLOS, findCover, storm, bus, startMatch, update, jumpFromBus:()=>jumpFromBus(player), tryBuild, setBuildType, toggleBuild, warmGPU, AMB, get TERRAIN(){return TERRAIN;}, get TERRAIN_MAT0(){return TERRAIN_MAT0;}, setQuality, qBox, boxGrounded, boxTouch, checkIntegrity, destroyPiece, pieceDown, pieceUp, damagePiece, editPreset, quickSwap, dropWeapon, spawnItem, items, WEAP, ammoOf, get buildRot(){return buildRot;}, spaceFreeAt:(x,z,y0,y1,r)=>spaceFree(x,z,y0,y1,r), get buildMode(){return buildMode;}, get pieceHeld(){return pieceHeld;}, pieceList, PINST, setFiring:v=>{firing=v;}, setCam:(y,p)=>{camYaw=y;camPitch=p;}, keys, renderer, scene, camera, get aliveCount(){return aliveCount;}, solids, terrainH};
 </script>
 </body>
 </html>

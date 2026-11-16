@@ -16,6 +16,8 @@ export const GRIP={
   pompe:       {sw:'long',cls:'long',hands:2},
   mitrailleuse:{sw:'lmg',cls:'long',hands:2},
   sniper:      {sw:'sniper',cls:'long',hands:2},
+  tactique:    {sw:'long',cls:'long',hands:2},   // v2.0 : fusil tactique
+  pompet:      {sw:'long',cls:'long',hands:2},   // v2.0 : pompe tactique
 };
 /* v1.7 : poses de prise par catégorie, à partir de l'articulation de l'épaule droite (repère du perso : droite +x, haut +y, avant −z).
    o : décalage du pivot par rapport à l'épaule ; r : [lever, tourner vers la gauche] ajoutés à la visée ; k : part de l'inclinaison de la
