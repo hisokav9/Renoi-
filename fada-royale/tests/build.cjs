@@ -80,8 +80,8 @@ const [,, base, out = '/tmp/fr-build'] = process.argv; fs.mkdirSync(out, { recur
     return await page.evaluate(([ed, wasBuild]) => { const FR = window.FR, w = FR.pieceList.filter(q => q.type === 'wall' && q.edited); return { editionOuverte: ed, valideeAuRelache: !FR.editing, caseRetiree: w.length > 0 && w.some(q => q.tiles.includes(false)), retourConstruction: wasBuild && FR.buildMode }; }, [ed, wasBuild]); })();
 
   // 7. « poser au toucher » désactivé : l'appui choisit la pièce sans la poser
-  res.sansPoseAuToucher = await (async () => { await page.evaluate(() => { window.FR.SET.tapBuild = false; window.FR.selectSlot(1); window.__n0 = window.FR.pieceList.length; }); await step(1); await tap(P('ramp')); await step(2);
-    return await page.evaluate(() => { const FR = window.FR, r = { construction: FR.buildMode, piecesPosees: FR.pieceList.length - window.__n0 }; FR.SET.tapBuild = true; return r; }); })();
+  res.sansPoseAuToucher = await (async () => { await page.evaluate(() => { window.FR.SET.tapBuild = false; window.FR.SET.buildStyle = 'avance'; /* v2.0 : réglage du mode avancé */ window.FR.selectSlot(1); window.__n0 = window.FR.pieceList.length; }); await step(1); await tap(P('ramp')); await step(2);
+    return await page.evaluate(() => { const FR = window.FR, r = { construction: FR.buildMode, piecesPosees: FR.pieceList.length - window.__n0 }; FR.SET.tapBuild = true; FR.SET.buildStyle = 'simple'; return r; }); })();
 
   // 8. clavier : V = rampe, Q = mur
   res.clavier = await (async () => { await page.evaluate(() => window.FR.selectSlot(1)); await page.keyboard.press('KeyV'); await step(1); const a = await page.evaluate(() => [window.FR.buildMode, document.querySelector('#pick button.on') && document.querySelector('#pick button.on').dataset.p]);

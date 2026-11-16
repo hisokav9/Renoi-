@@ -152,7 +152,8 @@ body.touch kbd{display:none}
 #bEdit{right:100px;bottom:162px;width:52px;height:52px;font-size:20px!important}
 #bEdit.on{background:rgba(31,163,74,.8)!important}
 #bEditReset{right:164px;bottom:172px;width:44px;height:44px;font-size:18px!important}
-#bRot{right:252px;bottom:236px;width:50px;height:50px}#bRot .ic{transform:scaleX(-1)}
+#bRot{right:252px;bottom:236px;width:50px;height:50px}
+body.bsimple #pick{gap:7px}body.bsimple #pick button{width:56px;height:56px} /* v2.0 : mode simple, pièces plus grandes */#bRot .ic{transform:scaleX(-1)}
 #editPre{position:absolute;left:calc(50% - 190px);top:calc(50% - 70px);display:flex;flex-direction:column;gap:6px;pointer-events:auto}
 #editPre button{font:900 11px Rubik;color:#fff;background:rgba(20,60,110,.75);border:1.5px solid rgba(160,210,255,.6);border-radius:8px;padding:7px 10px;touch-action:none}
 #editBar{position:absolute;left:50%;top:calc(50% + 34px);transform:translateX(-50%);font:900 11px Rubik;background:rgba(20,60,110,.7);padding:5px 10px;border-radius:7px;white-space:nowrap;text-shadow:0 1px 2px #000}
@@ -395,6 +396,7 @@ import {WEAPONS as WMODELS, fitWeapon, fitPiece} from './src/core/weapons.js';
 import {PROC_WEAPONS, buildProcWeapon} from './src/core/weapon-models.js'; // v2.0 : armes modélisées dans le code
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {WEAP, GUNS, RARITY, RAR_COL, RAR_CSS, AMMO, AMMO_TYPES, randGun, rollRarity, rarMul, ammoOf} from './src/core/arsenal.js'; // v2.0 : catalogue des armes
+import {BUILD, DMG_TAKEN, BUILD_START_HP} from './src/core/building.js'; // v2.0 : PV et temps de pose des constructions
 import {GRIP, HOLD, STOW, SWITCH_T, SW_ARM, swTimes, stowOf, DABA_K, DABA_HIT, dabaKey} from './src/core/weapon-handling.js'; // v1.7 : prise et changement d'arme
 
 /* =====================================================================
@@ -420,7 +422,7 @@ const IS_TOUCH = (()=>{ try{ const f=/[?&]touch=([01])/.exec(location.search); i
 const ico=(n,c)=>'<svg class="ic'+(c?' '+c:'')+'"><use href="#i-'+n+'"/></svg>';
 const V=(x=0,y=0,z=0)=>new THREE.Vector3(x,y,z);
 const SET_DEF={sens:1,adsSens:0.6,scopeSens:0.3,invertY:false,aimAssist:true,vibra:true,joyFixed:false,autoSprint:true,fov:70,res:100,viewDist:340,showFps:false,showStats:false,vol:80,sfx:100,amb:70,btnOp:100,btnScale:100,minimap:true,killfeed:true,dmgNums:true,layout:{},
-  tapBuild:true,editRelease:true,buildSens:1,editSens:1,fpsCap:0,faceCam:true}; // v1.5 : faceCam = le perso regarde toujours où vise la caméra (jambes vers la marche) // v1.4 : construction rapide, limite d'images (0 = aucune)
+  tapBuild:true,editRelease:true,buildSens:1,editSens:1,fpsCap:0,faceCam:true,buildStyle:IS_TOUCH?'simple':'avance'}; // v2.0 : buildStyle = mode de construction simple / avancé // v1.5 : faceCam = le perso regarde toujours où vise la caméra (jambes vers la marche) // v1.4 : construction rapide, limite d'images (0 = aucune)
 const SET=Object.assign({},SET_DEF,(()=>{ try{ return JSON.parse(localStorage.getItem('fr_set')||'{}')||{}; }catch(e){ return {}; } })());
 if(!SET.layout||typeof SET.layout!=='object') SET.layout={};
 try{ if(/[?&]stats=1/.test(location.search)) SET.showStats=true; }catch(e){}
@@ -638,7 +640,7 @@ const MAT={
   cloth:TEX.wax.map(t=>new THREE.MeshLambertMaterial({map:t,vertexColors:true,side:THREE.DoubleSide})),
   piece:new THREE.MeshLambertMaterial({map:TEX.brick}),
   pieceRamp:new THREE.MeshLambertMaterial({map:TEX.steps}),
-  ghost:new THREE.MeshBasicMaterial({color:0x8fd3ff,transparent:true,opacity:0.38,depthWrite:false}),
+  ghost:new THREE.MeshBasicMaterial({color:0x5fe07a,transparent:true,opacity:0.38,depthWrite:false}), // v2.0 : vert = pose possible, rouge = impossible
   ghostBad:new THREE.MeshBasicMaterial({color:0xff5544,transparent:true,opacity:0.32,depthWrite:false}),
 };
 swapTexImage(TEX.wax[0],'assets/textures/wax.jpg');
@@ -1550,7 +1552,7 @@ function spawnChest(x,y,z){
    CONSTRUCTION EN BANCO
    ===================================================================== */
 const pieces=new Map(), pieceList=[], ramps=[];
-const PIECE_HP={wall:150,ramp:140,floor:140,cone:140}, BUILD_T={wall:1.6,ramp:1.6,floor:1.3,cone:1.3};
+// v2.0 : PV, temps de pose, coût et résistance : src/core/building.js (BUILD)
 TEX.wood=canvasTex(128,128,(g,w,h)=>{ g.fillStyle='#6b3a1e'; g.fillRect(0,0,w,h); for(let i=0;i<46;i++){ g.strokeStyle=`rgba(${Math.random()<0.5?'38,18,6':'160,100,55'},${0.2+Math.random()*0.35})`; g.lineWidth=1+Math.random()*2; const y=Math.random()*h; g.beginPath(); g.moveTo(0,y); g.bezierCurveTo(w*0.3,y+rnd(-5,5),w*0.7,y+rnd(-5,5),w,y); g.stroke(); } });
 MAT.frame=new THREE.MeshLambertMaterial({map:TEX.wood});
 function coneGeo(){ const P=[],N=[],U=[]; const apex=V(0,2,0); const C=[V(-2,0,-2),V(2,0,-2),V(2,0,2),V(-2,0,2)];
@@ -1592,7 +1594,7 @@ function computePlacement(c,type,dir,opts){
   let lvl; const r=rampUnder(c,cx,cz), up=!!r&&r.dir===dir;
   if(r) lvl = up ? r.lvl+4 : r.lvl;
   else lvl = Math.floor(c.pos.y/4+0.25)*4;
-  const pit=c===player?camPitch:0;
+  const pit=opts&&opts.pit!==undefined?opts.pit:c===player?camPitch:0;
   if(type==='wall'){ const L=lvl+(pit>0.85?4:0);
     // v1.4 : en montée (sur sa rampe, face à la pente) ou juste devant une rampe qui monte dans le même sens, le mur va au BOUT de la
     // rampe de devant : il la protège sans barrer le passage (mur + rampe, mur + rampe… pour monter vite)
@@ -1630,7 +1632,7 @@ const MAT_BUILDLINE=new THREE.LineBasicMaterial({color:0xa8ecff,transparent:true
 function createPiece(pl,owner){
   const mat=(pl.type==='ramp'?MAT.pieceRamp:MAT.piece).clone(); mat.transparent=true; mat.opacity=0.3; if(pl.type==='cone'){ mat.side=THREE.DoubleSide; mat.forceSinglePass=true; } // une seule passe : pas de shader à préparer en pleine partie
   const po=makePieceObj(pl.type,mat,MAT.frame); const mesh=po.obj; placeMesh(mesh,pl);
-  const piece={type:pl.type,key:pl.key,hp:PIECE_HP[pl.type]*0.1,maxHp:PIECE_HP[pl.type],mat,solids:[],ramp:null,anim:0,flash:0,owner,alive:true,lvl:pl.lvl,build:0,buildTime:BUILD_T[pl.type],panel:po.panel,inst:null};
+  const piece={type:pl.type,key:pl.key,hp:BUILD[pl.type].hp*BUILD_START_HP,maxHp:BUILD[pl.type].hp,mat,solids:[],ramp:null,anim:0,flash:0,owner,alive:true,lvl:pl.lvl,build:0,buildTime:BUILD[pl.type].time,panel:po.panel,inst:null};
   if(pl.type==='ramp'){ const [dx,dz]=DIRS[pl.dir];
     piece.ramp={piece,kind:'ramp',cx:pl.cx,cz:pl.cz,x0:pl.cx*4,z0:pl.cz*4,dx,dz,ex:pl.cx*4+(dx<0?4:0),ez:pl.cz*4+(dz<0?4:0),lvl:pl.lvl,dir:pl.dir}; ramps.push(piece.ramp);
     piece.center=V(pl.cx*4+2,pl.lvl+2,pl.cz*4+2); }
@@ -1670,7 +1672,7 @@ function pinstRemove(p){ const P=PINST[p.type], i=p.inst, last=P.items.length-1;
   P.panel.instanceMatrix.needsUpdate=P.frame.instanceMatrix.needsUpdate=true; P.panel.instanceColor.needsUpdate=true; }
 function pinstClear(){ for(const t in PINST){ const P=PINST[t]; for(const q of P.items) q.inst=null; P.items.length=0; P.panel.count=P.frame.count=0; P.panel.visible=P.frame.visible=false; } }
 function setPieceScale(p,s){ if(p.type==='wall') p.mesh.scale.set(1,s,1); else if(p.type==='floor') p.mesh.scale.set(s,1,s); else if(p.type==='cone') p.mesh.scale.setScalar(s); else p.mesh.children[0].scale.setScalar(s); }
-function damagePiece(p,amt){ if(!p.alive) return; p.hp-=amt; p.flash=1; p.hitT=0.14; if(p.hp<=0) destroyPiece(p); }
+function damagePiece(p,amt,kind='bullet'){ if(!p.alive) return; p.hp-=amt*(DMG_TAKEN[kind]??1)/(BUILD[p.type].resist||1); p.flash=1; p.hitT=0.14; if(p.hp<=0) destroyPiece(p); }
 // v1.7 : tremblement d'une pièce touchée (≈ 3 % pendant 0,14 s), puis matrice d'origine remise exactement
 const _wob=new THREE.Matrix4(); function wobblePiece(p,dt){ const P=PINST[p.type]; p.hitT-=dt; if(p.hitT<=0){ p.hitT=0; _wob.copy(p.baseM); } else { const k=1+0.035*Math.sin((0.14-p.hitT)/0.14*Math.PI); _wob.makeScale(k,k,k).premultiply(p.baseM); }
   P.panel.setMatrixAt(p.inst,_wob); P.frame.setMatrixAt(p.inst,_wob); P.panel.instanceMatrix.needsUpdate=P.frame.instanceMatrix.needsUpdate=true; }
@@ -1718,13 +1720,18 @@ function placementProblem(pl){
   if(!plAttached(pl)) return 'vide'; // v1.5 : plus de pièce dans le vide (rien pour la tenir)
   return ''; }
 let buildMsgT=0, camLand=0, camLandK=0;
+// v2.0 : mode simple, à l'appui sur une pièce (pas en la gardant) : si la place visée est prise ou bloquée, on essaie les places voisines (autre inclinaison du regard : devant,
+// au-dessus, sous les pieds) et on garde la première valable
+const SIMPLE_ALT={wall:[],floor:[-0.9,0,0.5],ramp:[],cone:[-0.3,0.3]}; // pas d'autre place pour les murs et les rampes : elle gênerait la montée mur + rampe
 function tryBuild(c,type,dir,opts){
-  if(c.banco<10 || c.buildCD>0) return false;
-  const pl=computePlacement(c,type,dir??dirFromYaw(c===player?camYaw:c.yaw),opts);
+  if(c.banco<BUILD[type].cost || c.buildCD>0) return false;
+  const d0=dir??dirFromYaw(c===player?camYaw:c.yaw);
+  let pl=computePlacement(c,type,d0,opts);
+  if(c===player&&simpleBuild()&&opts&&opts.smart&&pl&&(pieces.has(pl.key)||placementProblem(pl))){ for(const pit of SIMPLE_ALT[type]){ const q=computePlacement(c,type,d0,Object.assign({},opts,{pit})); if(q&&!pieces.has(q.key)&&!placementProblem(q)){ pl=q; break; } } }
   if(!pl||pieces.has(pl.key)) return false;
   const why=placementProblem(pl);
   if(why){ if(c===player&&performance.now()-buildMsgT>900){ buildMsgT=performance.now(); showMsg(why==='joueur'?'QUELQU\'UN EST DANS LE PASSAGE':why==='vide'?'RIEN POUR LA TENIR':'IMPOSSIBLE ICI', why==='joueur'?'recule un peu pour poser':why==='vide'?'pose-la contre le sol ou une autre pièce':'la pièce serait sous le sable',0.9); } return false; }
-  createPiece(pl,c); if(!(c===player&&matchMode==='train')) c.banco-=10; c.buildCD=c===player?0.05:1.2; c.built++;
+  createPiece(pl,c); if(!(c===player&&matchMode==='train')) c.banco-=BUILD[type].cost; c.buildCD=c===player?0.05:1.2; c.built++;
   sfxBuild(c.pos.distanceTo(camera.position)); return true;
 }
 const ghosts={}; for(const k of ['wall','floor','ramp','cone']){ ghosts[k]=makePieceObj(k,MAT.ghost,MAT.ghost).obj; }
@@ -2153,7 +2160,7 @@ function meleeHit(p){ const w=WEAP.daba; if(!p.alive||p.cur!=='daba') return; up
   { const h=rayCast(_o,camFwd,3.0,p);
     if(h.type){ const pt=h.p.clone();
       if(h.type==='char'){ damageChar(h.obj,20,p,false,'daba',pt); }
-      else if(h.type==='piece'){ damagePiece(h.obj,60); }
+      else if(h.type==='piece'){ damagePiece(h.obj,60,'melee'); }
       else if(h.type==='solid'&&h.obj.harvest){ const g=rint(7,10); p.banco=Math.min(500,p.banco+g); p.harvested+=g; damageNumber(pt,'+'+g+' banco','mat'); for(let k=0;k<6;k++) spawnParticle(pt.x,pt.y,pt.z,rnd(-2,2),rnd(1,4),rnd(-2,2),0xc98b55,0.6,1); tone(320,0.05,0.12,'triangle'); }
       else if(h.type==='terrain'){ for(let k=0;k<5;k++) spawnParticle(pt.x,pt.y,pt.z,rnd(-2,2),rnd(1,3),rnd(-2,2),0xe2c28c,0.5,1); } } } }
 function fireGun(p,w){
@@ -2357,7 +2364,7 @@ function botShoot(b,target){
   _d.subVectors(_m,_o).normalize(); const h=rayCast(_o,_d,B.shotgun?40:B.sniper?320:150,b);
   const pt=h.p.clone();
   if(h.type==='char'){ let dmg = (B.shotgun ? (d<6?48:d<12?30:14)*(w==='pompet'?0.62:1) : B.dmg)*rarMul(w,curRar(b)).dmg; if(h.head) dmg*=B.sniper?2:1.5; if(!h.obj.isPlayer) dmg*=0.55; damageChar(h.obj,dmg,b,h.head,w,pt); }
-  else if(h.type==='piece') damagePiece(h.obj,B.shotgun?45:B.sniper?60:20);
+  else if(h.type==='piece') damagePiece(h.obj,B.shotgun?45:B.sniper?60:20,'bot');
   const dc=b.pos.distanceTo(camera.position);
   if(dc<110){ tracer(muzzle(b,_t),pt,0xffd9a0); if(h.type&&dc<60) for(let k=0;k<2;k++) spawnParticle(pt.x,pt.y,pt.z,rnd(-1.5,1.5),rnd(0.5,2.5),rnd(-1.5,1.5),h.type==='char'?0xffe28a:0xd9b07a,0.4,0.8); }
   sfxShot(w,dc);
@@ -2407,7 +2414,7 @@ function updateBot(b,dt){
   const l=Math.hypot(wx,wz); if(l>1){wx/=l;wz/=l;} b.moving=l>0.1;
   b.sprint=!b.crouch&&b.moving&&(b.flee||(b.cover&&!b.inCover)||(!t&&b.moveTarget&&Math.hypot(b.moveTarget.x-b.pos.x,b.moveTarget.z-b.pos.z)>30));
   moveChar(b,wx,wz,5.3*(b.sprint?1.4:1),dt,b.wantJump); b.wantJump=false;
-  if(t&&t.alive&&b.reactT<=0&&b.useT<=0&&b.reloadT<=0){ if(b.canSee) botShoot(b,t); else if(b.blocker&&b.blocker.alive&&b.fireCD<=0){ _o.set(b.pos.x,b.pos.y+1.45,b.pos.z); damagePiece(b.blocker,b.cur==='pompe'?40:b.cur==='sniper'?55:16); if(b.pos.distanceTo(camera.position)<110) tracer(muzzle(b,_t),b.blocker.center,0xffd9a0); sfxShot(b.cur,b.pos.distanceTo(camera.position)); b.fireCD=b.cur==='pompe'?1:0.2; } }
+  if(t&&t.alive&&b.reactT<=0&&b.useT<=0&&b.reloadT<=0){ if(b.canSee) botShoot(b,t); else if(b.blocker&&b.blocker.alive&&b.fireCD<=0){ _o.set(b.pos.x,b.pos.y+1.45,b.pos.z); damagePiece(b.blocker,SHELL_GUNS.has(b.cur)?40:b.cur==='sniper'?55:16,'bot'); if(b.pos.distanceTo(camera.position)<110) tracer(muzzle(b,_t),b.blocker.center,0xffd9a0); sfxShot(b.cur,b.pos.distanceTo(camera.position)); b.fireCD=SHELL_GUNS.has(b.cur)?1:0.2; } }
   tryPickups(b);
 }
 function updateAir(c,dt,wx,wz){
@@ -2901,17 +2908,18 @@ function setBuildType(t){ buildType=t; refreshBuildUI(); }
 // v1.4 : appui sur une pièce (bouton tactile ou touche) : passe en construction avec cette pièce ; si « poser au toucher »,
 // la pièce est posée tout de suite et tant que le doigt reste appuyé, une nouvelle pièce est posée dès que la case visée change
 let buildRot=0; // v1.7 : rotation de la rampe et du mur (quart de tour), touche R en construction / bouton TOURNER
-function buildDir(){ return (dirFromYaw(camYaw)+(buildType==='ramp'||buildType==='wall'?buildRot:0))%4; }
-function rotateBuild(){ buildRot=(buildRot+1)%4; refreshBuildUI(); tone(560+buildRot*80,0.04,0.08,'triangle'); }
+const simpleBuild=()=>SET.buildStyle==='simple';
+function buildDir(){ return (dirFromYaw(camYaw)+(!simpleBuild()&&(buildType==='ramp'||buildType==='wall')?buildRot:0))%4; } // mode simple : orientation automatique
+function rotateBuild(){ if(simpleBuild()){ showMsg('ORIENTATION AUTOMATIQUE','mode de construction simple · Paramètres › Construction',1); return; } buildRot=(buildRot+1)%4; refreshBuildUI(); tone(560+buildRot*80,0.04,0.08,'triangle'); }
 let pieceHeld=null, pieceTap=null; // v1.5 : appui mémorisé 0,35 s (case prise, ou mur qui attend sa rampe) — idée reprise de l'autre version
 function pieceDown(t,place){ const p=player; if(!p||!p.alive||p.phase!=='ground'||state!=='play') return; if(editing) confirmEdit(); setBuildType(t); if(!buildMode) toggleBuild(true);
-  if(place){ pieceHeld=t; pieceTap={t,t0:matchTime}; p.buildCD=Math.min(p.buildCD,0); if(tryBuild(p,t,buildDir(),{wait:true})) pieceTap.done=true; } }
+  if(place){ pieceHeld=t; pieceTap={t,t0:matchTime}; p.buildCD=Math.min(p.buildCD,0); if(tryBuild(p,t,buildDir(),{wait:true,smart:true})) pieceTap.done=true; } } // appui : place voisine si besoin (mode simple)
 function pieceUp(t){ if(pieceHeld===t) pieceHeld=null; }
 function toggleBuild(force){ const on = force===undefined ? !buildMode : force; if(on&&editing) confirmEdit(); buildMode=on; if(!on){ pieceHeld=null; pieceTap=null; } refreshBuildUI(); }
 function refreshBuildUI(){ const ed=!!editing;
   $('buildBar').classList.toggle('hidden',!buildMode||IS_TOUCH); $('bBuild').classList.toggle('on',buildMode);
   $('bFire').classList.toggle('bmode',buildMode||ed); const fl=ed?'CASE':buildMode?'POSER':'TIRER'; if($('bFire').dataset.l!==fl){ $('bFire').dataset.l=fl; $('bFire').innerHTML=ico(ed?'cell':buildMode?'place':'fire')+'<small>'+fl+'</small>'; }
-  $('bRot').classList.toggle('hidden',!buildMode||!IS_TOUCH); $('bRot').querySelector('small').textContent=buildRot?'TOURNER ·'+(buildRot*90)+'°':'TOURNER';
+  $('bRot').classList.toggle('hidden',!buildMode||!IS_TOUCH||simpleBuild()); document.body.classList.toggle('bsimple',simpleBuild()); $('bRot').querySelector('small').textContent=buildRot?'TOURNER ·'+(buildRot*90)+'°':'TOURNER';
   $('editPre').classList.toggle('hidden',!(ed&&editing.p.type==='wall'));
   if(ed){ const t=editing.p.type==='ramp'?ico('pencil')+' RAMPE · choisis les cases du côté qui monte, puis valide':EDIT_TXT; if($('editBar').dataset.t!==t){ $('editBar').dataset.t=t; $('editBar').innerHTML=t; } }
   $('bEdit').classList.toggle('on',ed); $('bEdit').innerHTML=ed?ico('check')+'<small>VALIDER</small>':ico('pencil')+'<small>ÉDITER</small>'; $('bEditReset').classList.toggle('hidden',!ed); $('editBar').classList.toggle('hidden',!ed); $('bAim').classList.toggle('hidden',ed||buildMode);
@@ -2933,7 +2941,7 @@ tbtn('bRot',()=>rotateBuild());
 tbtn('bAim',()=>{ ads=!ads; $('bAim').classList.toggle('on',ads); });
 { const tk=$('take'); const f=e=>{ e.preventDefault(); e.stopPropagation(); interact(); }; tk.addEventListener('touchstart',f,{passive:false}); tk.addEventListener('click',f); }
 document.querySelectorAll('#pick button').forEach(b=>{ const t=b.dataset.p;
-  b.addEventListener('touchstart',e=>{ e.preventDefault(); e.stopPropagation(); for(const tc of e.changedTouches) roles.set(tc.identifier,{role:'pick',p:t,el:b,x:tc.clientX,y:tc.clientY}); b.classList.add('act'); pieceDown(t,SET.tapBuild); },{passive:false});
+  b.addEventListener('touchstart',e=>{ e.preventDefault(); e.stopPropagation(); for(const tc of e.changedTouches) roles.set(tc.identifier,{role:'pick',p:t,el:b,x:tc.clientX,y:tc.clientY}); b.classList.add('act'); pieceDown(t,SET.tapBuild||simpleBuild()); },{passive:false});
   b.addEventListener('click',()=>{ if(!IS_TOUCH) pieceDown(t,false); }); });
 { const sb=$('bSwap'); const f=e=>{ e.preventDefault(); e.stopPropagation(); quickSwap(); }; sb.addEventListener('touchstart',f,{passive:false}); sb.addEventListener('click',f); }
 { const db=$('bDrop'); const f=e=>{ e.preventDefault(); e.stopPropagation(); dropWeapon(); }; db.addEventListener('touchstart',f,{passive:false}); db.addEventListener('click',f); }
@@ -3096,7 +3104,7 @@ function updatePlayer(dt){
   if(p.slideT>0&&Math.random()<0.7) spawnParticle(p.pos.x+rnd(-0.3,0.3),p.pos.y+0.08,p.pos.z+rnd(-0.3,0.3),-p.vel.x*0.15+rnd(-1,1),rnd(0.5,1.6),-p.vel.z*0.15+rnd(-1,1),0xe2c28c,0.45,1.1,3);
   if(editing){ updateEdit(); }
   else if(buildMode){ const pl=computePlacement(p,buildType,buildDir()); for(const k in ghosts) ghosts[k].visible=false; const gh=ghosts[buildType]; placeMesh(gh,pl); gh.visible=true;
-    const why=pieces.has(pl.key)?'pris':p.banco<10?'banco':placementProblem(pl,p); const bad=!!why;
+    const why=pieces.has(pl.key)?'pris':p.banco<BUILD[buildType].cost?'banco':placementProblem(pl,p); const bad=!!why;
     if(gh._bad!==bad){ gh._bad=bad; gh.traverse(o=>{ if(o.isMesh) o.material=bad?MAT.ghostBad:MAT.ghost; }); }
     // pose : TIRER/clic gardé, pièce gardée, ou appui mémorisé ; pendant 0,3 s on attend un emplacement qui tient (voir computePlacement)
     if(firing&&!p.fireWas) p.fireT0=matchTime; p.fireWas=firing;
@@ -3204,7 +3212,9 @@ const TABS={
   ctrl:[['html',HELP_HTML],['range','sens','Sensibilité caméra',0.3,2.5,0.05,f2],['range','adsSens','Sensibilité en visée',0.2,1.2,0.05,f2],['range','scopeSens','Sensibilité lunette (sniper)',0.1,0.8,0.05,f2],
     ['toggle','invertY',"Inverser l'axe vertical"],['toggle','aimAssist','Aide à la visée'],['toggle','vibra','Vibrations quand tu es touché'],['toggle','joyFixed','Joystick fixe (sinon il apparaît où tu poses le doigt)'],['toggle','autoSprint','Sprint auto quand le joystick est poussé à fond'],
     ['toggle','faceCam','Le perso regarde toujours où vise la caméra (jambes vers la marche, marche arrière). Sinon : il se tourne vers où il court']],
-  build:[['toggle','tapBuild','Toucher une pièce la pose tout de suite (doigt gardé : pose en continu). Sinon : toucher une pièce la choisit, POSER la pose'],
+  build:[['seg','buildStyle','MODE DE CONSTRUCTION',[['simple','SIMPLE'],['avance','AVANCÉ']]],
+    ['hint','SIMPLE (conseillé au téléphone) : toucher une pièce la pose tout de suite, doigt gardé = pose en continu, orientation automatique ; si la case visée est prise, la pièce se met à la place libre la plus proche (devant, au-dessus, sous les pieds). Boutons de pièces plus grands. AVANCÉ : rotation des pièces (R / TOURNER), réglages ci-dessous.'],
+    ['toggle','tapBuild','Toucher une pièce la pose tout de suite (doigt gardé : pose en continu). Sinon : toucher une pièce la choisit, POSER la pose'],
     ['toggle','editRelease',"Valider l'édition en relâchant le doigt (ou le clic)"],
     ['range','buildSens','Sensibilité de la caméra en construction',0.5,2,0.05,f2],['range','editSens','Sensibilité de la caméra en édition',0.5,2,0.05,f2],
     ['hint','Pour monter vite : avance et pose mur puis rampe, mur puis rampe. Le mur se place tout seul au bout de la rampe de devant. À l’Entraînement, le banco est illimité et le menu pause permet d’effacer tes constructions.']],
@@ -3222,11 +3232,13 @@ function renderTab(t){ curTab=t; document.querySelectorAll('.stabs button').forE
       const inp=d.querySelector('input'), sv=d.querySelector('.sval'); inp.value=SET[key]; sv.textContent=fmt(SET[key]);
       inp.addEventListener('input',()=>{ SET[key]=parseFloat(inp.value); sv.textContent=fmt(SET[key]); applySettings(key); saveSet(); }); }
     else if(type==='toggle'){ d.className='srow'; d.innerHTML=`<span>${label}</span><label class="sw"><input type="checkbox"><i></i></label>`; const inp=d.querySelector('input'); inp.checked=!!SET[key];
+      if(key==='tapBuild'&&SET.buildStyle==='simple'){ inp.checked=true; inp.disabled=true; d.style.opacity=0.5; } // v2.0 : toujours actif en mode simple
       inp.addEventListener('change',()=>{ SET[key]=inp.checked; applySettings(key); saveSet(); }); }
     else if(type==='quality'){ d.className='srow col'; d.innerHTML='<div class="lab"><span>Profil graphique</span></div><div class="seg"><button data-q="low">Basse</button><button data-q="medium">Moyenne</button><button data-q="high">Haute</button></div>';
       d.querySelectorAll('button').forEach(b=>{ b.classList.toggle('on',b.dataset.q===quality); b.addEventListener('click',()=>{ setQuality(b.dataset.q); renderTab(curTab); }); }); }
     else if(type==='seg'){ d.className='srow col'; d.innerHTML=`<div class="lab"><span>${label}</span></div><div class="seg">`+row[3].map(([v,t])=>`<button data-v="${v}">${t}</button>`).join('')+'</div>';
-      d.querySelectorAll('button').forEach(b=>{ b.classList.toggle('on',+b.dataset.v===SET[key]); b.addEventListener('click',()=>{ SET[key]=+b.dataset.v; saveSet(); applySettings(key); renderTab(curTab); }); }); }
+      const num=typeof SET_DEF[key]==='number', val=v=>num?+v:v;
+      d.querySelectorAll('button').forEach(b=>{ b.classList.toggle('on',val(b.dataset.v)===SET[key]); b.addEventListener('click',()=>{ SET[key]=val(b.dataset.v); saveSet(); applySettings(key); renderTab(curTab); }); }); }
     else if(type==='button'){ d.innerHTML=`<button class="sbtn ${row[3]||''}">${key}</button>`; d.firstElementChild.addEventListener('click',label); }
     else if(type==='hint'){ d.className='shint'; d.textContent=key; }
     else if(type==='html'){ d.className='shint'; d.innerHTML=key; }
@@ -3412,7 +3424,7 @@ requestAnimationFrame(loop);
 loadAssets().then(()=>{ try{ makeWeaponIcons(); }catch(e){} initLobby(); goMenu(); try{ lobby.precompile(); lobby.warm(); lobby.render(); }catch(e){} requestAnimationFrame(()=>$('loading').remove()); setTimeout(()=>{ try{ loadSols(); loadAmbient(); loadPackTrees(); loadPackRocks(); }catch(e){ console.warn('décor',e); } },800); }); // une image rendue derrière l'écran : ombres comprises ; v1.6 : sols, animaux, arbres et rochers du pack chargés 0,8 s après l'affichage du lobby
 
 // accès de débogage
-window.FR={get lobby(){return lobby;}, PROFILE, Profile, get matchMode(){return matchMode;}, get camPitch(){return camPitch;}, get sprintOn(){return sprintOn;}, setSprint:v=>{sprintOn=v;}, placementProblem, computePlacement, dirFromYaw, get camYaw(){return camYaw;}, SET, openSettings, closeSettings, openHudEditor, renderTab, get paused(){return paused;}, THREE, ASSETS, selectSlot, swapTake, giveWeapon, beginSwitch, get nearItem(){return nearItem;}, setAds:v=>{ads=v;}, startEdit, confirmEdit, resetEdit, rayCast, crouchPress, get editing(){return editing;}, get state(){return state;}, get player(){return player;}, bots, chars, items, chests, pieces, housesInfo, doors:DOORS, setDoor, interact, hasLOS, findCover, storm, bus, startMatch, update, jumpFromBus:()=>jumpFromBus(player), tryBuild, setBuildType, toggleBuild, warmGPU, AMB, get TERRAIN(){return TERRAIN;}, get TERRAIN_MAT0(){return TERRAIN_MAT0;}, setQuality, qBox, boxGrounded, boxTouch, checkIntegrity, destroyPiece, pieceDown, pieceUp, damagePiece, editPreset, quickSwap, dropWeapon, spawnItem, items, WEAP, ammoOf, get buildRot(){return buildRot;}, spaceFreeAt:(x,z,y0,y1,r)=>spaceFree(x,z,y0,y1,r), get buildMode(){return buildMode;}, get pieceHeld(){return pieceHeld;}, pieceList, PINST, setFiring:v=>{firing=v;}, setCam:(y,p)=>{camYaw=y;camPitch=p;}, keys, renderer, scene, camera, get aliveCount(){return aliveCount;}, solids, terrainH};
+window.FR={get lobby(){return lobby;}, PROFILE, Profile, get matchMode(){return matchMode;}, get camPitch(){return camPitch;}, get sprintOn(){return sprintOn;}, setSprint:v=>{sprintOn=v;}, placementProblem, computePlacement, dirFromYaw, get camYaw(){return camYaw;}, SET, openSettings, closeSettings, openHudEditor, renderTab, get paused(){return paused;}, THREE, ASSETS, selectSlot, swapTake, giveWeapon, beginSwitch, get nearItem(){return nearItem;}, setAds:v=>{ads=v;}, startEdit, confirmEdit, resetEdit, rayCast, crouchPress, get editing(){return editing;}, get state(){return state;}, get player(){return player;}, bots, chars, items, chests, pieces, housesInfo, doors:DOORS, setDoor, interact, hasLOS, findCover, storm, bus, startMatch, update, jumpFromBus:()=>jumpFromBus(player), tryBuild, setBuildType, toggleBuild, warmGPU, AMB, get TERRAIN(){return TERRAIN;}, get TERRAIN_MAT0(){return TERRAIN_MAT0;}, setQuality, qBox, boxGrounded, boxTouch, checkIntegrity, destroyPiece, pieceDown, pieceUp, damagePiece, editPreset, quickSwap, BUILD, setSet:(k,v)=>{ SET[k]=v; refreshBuildUI(); }, dropWeapon, spawnItem, items, WEAP, ammoOf, get buildRot(){return buildRot;}, spaceFreeAt:(x,z,y0,y1,r)=>spaceFree(x,z,y0,y1,r), get buildMode(){return buildMode;}, get pieceHeld(){return pieceHeld;}, pieceList, PINST, setFiring:v=>{firing=v;}, setCam:(y,p)=>{camYaw=y;camPitch=p;}, keys, renderer, scene, camera, get aliveCount(){return aliveCount;}, solids, terrainH};
 </script>
 </body>
 </html>
