@@ -12,8 +12,8 @@ const { chromium, devices } = require('playwright'); const [,, base] = process.a
   await page.route(u => !u.toString().startsWith('http://127.0.0.1') && !u.toString().startsWith('http://localhost'), r => r.abort());
   await page.goto(base + '?touch=1'); await page.waitForFunction(() => window.FR && window.FR.state === 'menu', null, { timeout: 120000 });
   await page.evaluate(() => { const FR = window.FR; FR.startMatch('train'); window.__freeze = true; const p = FR.player;
-    const open = (x, z) => !FR.solids.some(s => s.maxX > x - 14 && s.minX < x + 14 && s.maxZ > z - 14 && s.minZ < z + 14);
-    let spot = null; for (let r = 0; r < 220 && !spot; r += 6) for (let a = 0; a < 6.28 && !spot; a += 0.4) { const x = 40 + Math.cos(a) * r, z = -30 + Math.sin(a) * r; if (open(x, z)) spot = [x, z]; }
+    const open = (x, z) => !FR.solids.some(s => s.maxX > x - 14 && s.minX < x + 14 && s.maxZ > z - 14 && s.minZ < z + 14) && Math.abs(FR.terrainH(x, z - 10) - FR.terrainH(x, z + 4)) < 0.6 && Math.abs(FR.terrainH(x - 8, z) - FR.terrainH(x + 8, z)) < 0.6; // dégagé et plat (une pente change la hauteur des pièces)
+    let spot = null; for (let r = 0; r < 220 && !spot; r += 6) for (let a = 0; a < 6.28 && !spot; a += 0.4) { const x = 40 + Math.cos(a) * r, z = -30 + Math.sin(a) * r; if (open(x, z)) spot = [Math.floor(x / 4) * 4 + 2, Math.floor(z / 4) * 4 + 2]; } // au centre d'une case de construction (le résultat ne dépend plus d'où tombe le point)
     window.__spot = spot; p.pos.set(spot[0], FR.terrainH(spot[0], spot[1]) + 0.05, spot[1]); FR.setCam(0, -0.05); for (let i = 0; i < 10; i++) FR.update(1 / 30); });
   const cdp = await ctx.newCDPSession(page); const W = 915, H = 412;
   const fingers = {}; const send = async type => { await cdp.send('Input.dispatchTouchEvent', { type, touchPoints: Object.values(fingers) }); };
@@ -37,7 +37,7 @@ const { chromium, devices } = require('playwright'); const [,, base] = process.a
   // 3. construction en courant
   const wallBtn = await center('#pick button[data-p="wall"]'); const b0 = await st();
   await down('A', W * 0.18, H * 0.68); await move('A', W * 0.18, H * 0.68 - 50); await down('B', W * 0.62, H * 0.35); await down('D', wallBtn[0], wallBtn[1]);
-  for (let i = 0; i < 20; i++) { await move('A', W * 0.18, H * 0.68 - 50); await move('B', W * 0.62 + i * 3, H * 0.35); await step(2); }
+  for (let i = 0; i < 30; i++) { await move('A', W * 0.18, H * 0.68 - 50); await move('B', W * 0.62 + i * 2, H * 0.35); await step(2); } // 2 s : assez pour changer de case quel que soit le point de départ sur la grille
   const b1 = await st(); await up('D'); await up('B'); await up('A'); await step(5);
   res.constructionEnCourant = { piecesPosees: b1.pieces - b0.pieces, avance: +Math.hypot(b1.x - b0.x, b1.z - b0.z).toFixed(1), cameraTournee: +(b0.yaw - b1.yaw).toFixed(2), modeConstruction: b1.build };
   // 4. changement d'arme en courant, puis ÉCHANGE

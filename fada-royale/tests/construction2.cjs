@@ -47,7 +47,7 @@ const { chromium, devices } = require('playwright'); const [,, base] = process.a
     out.pv = { mur: FR.BUILD.wall.hp, rampe: FR.BUILD.ramp.hp, sol: FR.BUILD.floor.hp, toit: FR.BUILD.cone.hp, tirsPourDetruireUnMur: {} };
     for (const [w, slot] of [['fusil', 1], ['pompe', 2], ['sniper', 3], ['daba', 0]]) { clear(); go(24, 0); FR.setCam(0, -0.05); FR.pieceDown('wall', true); FR.pieceUp('wall'); FR.toggleBuild(false); step(60);
       const wall = FR.pieceList.find(q => q.type === 'wall' && q.alive); const hp0 = Math.round(wall.hp); FR.selectSlot(slot); step(25); FR.setCam(0, -0.12); let shots = 0, f = 0;
-      while (wall.alive && f < 900) { const m0 = w === 'daba' ? 0 : p.mag[p.cur], sw0 = p.swingT; FR.setFiring(true); FR.update(1 / 30); FR.setFiring(false); f++; if (w !== 'daba' && p.mag[p.cur] < m0) shots++; if (w === 'daba' && p.swingT > sw0 + 0.1) shots++; if (w !== 'daba' && p.mag[p.cur] === 0) p.mag[p.cur] = 30; }
+      while (wall.alive && f < 900) { const m0 = w === 'daba' ? 0 : p.mag[p.cur], sw0 = p.swingT; FR.setCam(0, -0.12); /* on revise le mur (compense le recul, comme un joueur) */ FR.setFiring(true); FR.update(1 / 30); FR.setFiring(false); f++; if (w !== 'daba' && p.mag[p.cur] < m0) shots++; if (w === 'daba' && p.swingT > sw0 + 0.1) shots++; if (w !== 'daba' && p.mag[p.cur] === 0) p.mag[p.cur] = 30; }
       out.pv.tirsPourDetruireUnMur[w] = { pvDepart: hp0, tirs: shots, detruit: !wall.alive }; }
     return out; });
   for (const k in res) console.log(k.padEnd(15), JSON.stringify(res[k]));
