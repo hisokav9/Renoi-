@@ -1,5 +1,67 @@
 # Fada Royale — Rapport de tests
 
+# v2.0.1
+
+Mêmes conditions que les versions précédentes : Chromium sans écran, rendu logiciel (SwiftShader), réseau externe coupé, boucle du jeu figée et avancée image par image par les tests. **Aucun test sur un vrai téléphone** : les FPS sur Android ne sont pas garantis.
+
+Batterie complète (35 tests) lancée sur le code de la v2.0.1, puis les tests du lobby relancés après l'intégration du panorama : **tous passent, aucune erreur de page** (détails plus bas).
+
+## Nouveaux tests
+
+| Test | Ce qui est vérifié | Résultat |
+|---|---|---|
+| `air_eau.cjs` — chute | Saut à 600 m : pose, vitesse, piqué, ouverture | Corps à 82° (à plat ventre), 40 m/s ; en poussant : 55 m/s, corps à 99°, 14,8 m/s vers l'avant ; ouverture automatique à 43 m du sol ; SAUT à 297 m : le parapente s'ouvre |
+| `air_eau.cjs` — parapente | Sans toucher, virage, atterrissage | 7,5 m/s vers l'avant sans clavier, descente 4,7 m/s ; virage 1,57 rad/s (plafond 1,6) ; voile inclinée de 0,15 rad, perso de 0,35 ; descente au contact 2,8 m/s ; au sol en courant à 3,5 m/s, voile rangée |
+| `air_eau.cjs` — nage | Joueur posé dans le fleuve | Hanches 0,14 m sous la surface, tête 0,13 m hors de l'eau, corps à 64° ; arme cachée ; 2,9 m/s, 3,9 en sprint ; 0 tir, 0 pièce posée, pas d'emote |
+| `air_eau.cjs` — sortie et bots | Nager jusqu'à la berge ; un bot dans l'eau face au joueur | Sorti en 2 s, arme ressortie, au sol ; le bot a nagé 59 images sans tirer, puis a tiré 4 fois une fois sorti |
+| `lieu_camera.cjs` — lieu | 40 s à longer le bord de Zinder (entre 0,85 et 0,99 fois son rayon), écran 800 × 480 | 1 seule affiche du nom |
+| `lieu_camera.cjs` — caméra | Perso dos au mur d'une maison | Loin des murs : opaque ; caméra à 0,37 m : opacité 0,23 ; bot avec le même perso : opaque ; après : opaque |
+| `lieu_camera.cjs` — textes | Tailles calculées par le navigateur à 800 × 480 | Munitions des cases 11 px, nom de l'arme 12 px, compteurs 11 px |
+
+## Panorama du lobby
+
+| Vérification | Résultat |
+|---|---|
+| `lobbytest.cjs` (ordinateur, téléphone en paysage, téléphone en portrait) : accueil, persos, boutique (tenues, planeurs, armes), missions, événements, profil, modes, partie, fin, entraînement | Passent sur ordinateur, téléphone en paysage et en portrait, aucune erreur de page |
+| Captures (accueil, boutique avec le planeur : la caméra recule et lève les yeux, panneaux ouverts : le perso se décale) | Aucun bord ni trou du panorama visible ; le minaret reste dans le cadre au téléphone en paysage |
+| Sans le fichier image | L'ancienne cour fermée (mur, minaret 3D) est construite ; seule erreur : le fichier introuvable (404) |
+| Appels de dessin du lobby (une image) | 224 → 43 ; objets 400 → 68 ; triangles 28 206 → 27 050 |
+
+## Durée des parties (`partie.cjs`, bots seuls, joueur spectateur)
+
+| Bots | Parties | Durées (s) | Moyenne |
+|---|---|---|---|
+| 19 (normaux) | 2 | 1 094 · 1 003 | 1 048 s (17,5 min) |
+| 39 (mélangés) | 3 | 1 050 · 884 · 1 152 | 1 029 s (17,1 min) |
+| 49 (mélangés) | 4 | 1 025 · 1 096 · 874 · 1 027 | 1 006 s (16,8 min) |
+| 59 (mélangés) | 2 | 1 114 · 1 023 | 1 068 s (17,8 min) |
+
+**9 parties sur 11 entre 15 et 20 min ; 2 un peu en dessous** (874 s et 884 s, soit 14,6 et 14,7 min). Aucun bot mort sans arme.
+
+`combat.cjs` (joueur piloté par le test, 39 bots) : parties de 18 min et 17,7 min ; le joueur élimine 8 puis 11 bots, est tué par un bot à 1 min 31 dans la 1re, meurt dans la tempête à 14 min 22 (rang 5) dans la 2e. Les 21 lieux visités à pied, une maison ouverte avec E et visitée dans chaque nouveau lieu qui en a.
+
+## Performances (`perf_mobile.cjs`, processeur ralenti ×4, pas un vrai téléphone)
+
+Calcul du jeu (logique + animation des persos, sans le rendu), en ms par image (entre parenthèses : 95 % des images en dessous) :
+
+| Situation | v2.0 | v2.0.1 |
+|---|---|---|
+| Ville, 1 min après l'atterrissage, 29 bots | 5,5 (8,2) | 5,1 (9,7) |
+| Même chose, 39 bots | 4,2 (7,5) | 6,8 (9,7) |
+| Même chose, 59 bots | 10,9 (16,1) | 9,6 (14,7) |
+| Pire cas, tous les bots autour du joueur (29 / 39 / 59 réglés) | 11,3 · 14,3 · 19,8 | 11,8 · 14,4 · 20,3 |
+| En tirant, selon l'arme (Entraînement) | 3,1 à 4,7 | 2,8 à 6,1 |
+| Lancement de la 1re partie (19 / 29 / 39 / 59 bots) | 0,43 · 0,5 · 0,8 · 0,79 s | 0,56 · 0,45 · 0,8 · 0,93 s |
+
+Les écarts vont dans les deux sens (39 bots plus lent, 59 bots plus rapide) : ils dépendent de l'endroit où les bots ont atterri, tiré au sort à chaque partie. La chute, le parapente et la nage ne coûtent que pour les persos concernés (la nage remplace le déplacement au sol, elle ne s'y ajoute pas).
+
+## Non-régression
+
+Passent sans changement : `arsenal`, `construction2`, `graphismes`, `bots`, `emotes`, `partie` (×4 réglages), `combat`, `perf_mobile`, `prise` (110 situations), `changement`, `construction`, `tactile`, `build`, `support`, `houses`, `cover`, `fixes2`, `ddatest` (0 différence), `decals`, `sim`, `flows` (ordinateur et téléphone), `lobbytest` (ordinateur et téléphone), `hud`, `animtest` (Boss et Guerrière), `decor`, `profiles`.
+
+- `flows.cjs` sur ordinateur s'est arrêté une fois sur un délai de capture d'écran dépassé (30 s), ses vérifications étant déjà passées : d'autres captures tournaient en même temps sur la machine. Relancé seul : il passe.
+- `cover.cjs` : 10 bots sur 12 se mettent à couvert et y restent, comme en v2.0.
+
 # v2.0
 
 Mêmes conditions que les versions précédentes : Chromium sans écran, rendu logiciel (SwiftShader), réseau externe coupé, boucle du jeu figée et avancée image par image par les tests. **Aucun test sur un vrai téléphone** (pas d'appareil ni d'émulateur Android ici) : les tests « téléphone » émulent un Pixel 7 (écran, toucher) et, pour les mesures de calcul, ralentissent le processeur ×4 (`perf_mobile.cjs`, la même approximation que Lighthouse). **Les FPS sur Android ne sont pas garantis** ; le rendu (GPU) n'est pas mesurable ici.

@@ -70,6 +70,8 @@ Mêmes règles que plus haut : vue de profil, fond gris clair uni, sans logo ni 
 
 ## 1 quater. Panorama du lobby (v2.0.1)
 
+**Reçu et intégré** (v2.0.1) : 2 images 1774 × 887, pas raccordables à 360° ; la 2e est utilisée, posée sur un arc de 120° derrière l'estrade (`assets/images/lobby-panorama.jpg`, réglages `PANORAMA` dans `src/lobby/lobby.js`). Une version plus large (4096 px ou plus, même cadrage) serait plus nette sur ordinateur : il suffit de remplacer le fichier.
+
 Le ciel du lobby est aujourd'hui un dégradé (orange à l'horizon, indigo en haut) derrière l'estrade et les murs en 3D. Une image panoramique à 360° peut le remplacer : elle est posée sur la sphère du ciel, le décor 3D (murs d'Agadez, estrade, étal) reste devant.
 
 Format : **panorama équirectangulaire 360° × 180°, rapport 2:1** (4096 × 2048 au minimum, 8192 × 4096 idéal), bords gauche et droit qui se raccordent, horizon exactement au milieu de la hauteur, caméra à hauteur d'homme, sans inclinaison. La moitié basse (le sol) sera en grande partie cachée par le sol 3D du lobby.

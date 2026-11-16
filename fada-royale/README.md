@@ -1,4 +1,4 @@
-# Fada Royale — v2.0
+# Fada Royale — v2.0.1
 
 Battle royale du Sahel en 3D (three.js), jouable dans le navigateur sur PC et téléphone.
 20 à 60 joueurs (toi + 19 à 59 bots, réglable), taxi-brousse volant, harmattan qui se resserre en 19 min, construction en banco, carte du Niger de 680 m de côté et 21 lieux.
@@ -23,6 +23,7 @@ Options dans l'adresse :
 
 ## Ce qu'il y a dedans
 
+- **Nouveau en v2.0.1** : chute libre à plat ventre (piqué, ouverture anticipée avec SAUT), parapente qui avance tout seul et s'incline dans les virages, nage dans le fleuve et le lac (sans tir ni construction), lobby ouvert sur un panorama d'Agadez au coucher du soleil, corrections vues dans une vidéo de jeu (nom du lieu qui clignotait, textes des petits écrans, perso transparent quand la caméra est collée à lui).
 - **Nouveau en v2.0** : arsenal (8 armes, 5 raretés par arme, 4 types de munitions, lâcher / reprendre / remplacer, fusil tactique et pompe tactique modélisés dans le code), construction en continu avec mode SIMPLE ou AVANCÉ et constructions deux fois plus solides, 5 profils graphiques et limite d'images selon l'écran, HUD personnalisable (taille, opacité, masquer, dispositions Classique / Compacte / Construction / Personnalisée), carte agrandie avec 8 nouveaux lieux, parties de 15 à 20 min, 19 à 59 bots en 3 niveaux, emotes (salut, bravo, victoire, danse).
 - **v1.7 (armes en main, construction)** : armes épaulées à droite et visibles derrière le perso (arme basse, combat, visée, sprint, abaissée contre un mur), daba tenue par le manche avec un vrai coup par-dessus l'épaule, changement d'arme en étapes (étui dans le dos ou à la hanche) et bouton ÉCHANGE, sortie de sprint avant le tir, rotation des pièces (R / TOURNER), matérialisation et tremblement des pièces, raccourcis PORTE / FENÊTRE / DEMI-MUR et édition des rampes, caméra plus proche en combat. Audit : `documentation/FADA_ROYALE_V17_AUDIT.md`.
 - **v1.6 (décor réaliste)** : sols photo mélangés selon les zones (sable, dunes ridées, latérite, herbe sèche, gravier de l'Aïr, terre craquelée), vrai ciel du Sahel et ciel d'harmattan pendant la tempête, image de la ville à l'arrivée dans 9 zones (v1.6.1 : seulement celles qui ressemblent au jeu), 51 animaux (girafes, dromadaires, zébus, chèvres, moutons, ânes, pintades, éléphants, hippos, vautours), palmiers doum et dattiers, neems et karités, rochers de granite. Tiré d'un pack généré à partir de `documentation/PROMPTS_DECOR.md`.
@@ -62,7 +63,7 @@ Options dans l'adresse :
 ## Documentation
 
 - `documentation/FADA_ROYALE_V2_AUDIT.md` : audit de la v2.0 et résultats.
-- `documentation/FADA_ROYALE_V1_CHANGELOG.md` commence par la v2.0 (arsenal, construction, graphismes, HUD, carte, bots, emotes), puis la v1.7 (armes en main, construction), puis la v1.6 (décor réaliste), la v1.5 (mur dans le vide, idées de l'autre version), la v1.4 (construction rapide), puis la v1.3 (caméra, se hisser, portes, couvert des bots, fluidité), la v1.2, la v1.1 et la v1.0.
+- `documentation/FADA_ROYALE_V1_CHANGELOG.md` commence par la v2.0.1 (chute, parapente, nage, panorama du lobby), puis la v2.0 (arsenal, construction, graphismes, HUD, carte, bots, emotes), puis la v1.7 (armes en main, construction), puis la v1.6 (décor réaliste), la v1.5 (mur dans le vide, idées de l'autre version), la v1.4 (construction rapide), puis la v1.3 (caméra, se hisser, portes, couvert des bots, fluidité), la v1.2, la v1.1 et la v1.0.
 - `documentation/PROMPTS_ASSETS.md` : prompts pour générer les modèles 3D et images qui manquent (armes sans problème de licence, accessoires, persos, textures).
 - `documentation/PROMPTS_DECOR.md` : prompts pour un décor réaliste (kits de maisons, arbres, animaux, rochers, sols, ciel, carte illustrée, bannières des villes) ; `documentation/guides/` : vue du ciel de la vraie carte, avec et sans noms.
 

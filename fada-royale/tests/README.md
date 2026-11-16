@@ -48,6 +48,8 @@ Les scripts v1.1 figent la boucle du jeu (`window.__freeze = true`) et avancent 
 | `partie.cjs` | **v2.0** : parties entières entre bots (le joueur regarde) : durée, morts dans la tempête, précision, soins, constructions, abris, calcul par image | `node tests/partie.cjs URL 3 49 mixte` |
 | `combat.cjs` | **v2.0** : le joueur marche dans les 21 lieux et entre dans une maison de chaque nouveau lieu ; parties complètes joueur (piloté par le test, ni invincible ni aidé) contre bots | `node tests/combat.cjs URL 2 39` |
 | `emotes.cjs` | **v2.0** : les 4 emotes sur le Boss et la Guerrière (vrai bouton, arme rangée, mains mesurées sur le squelette, annulation en marchant), bot qui célèbre une vraie élimination | `node tests/emotes.cjs URL /tmp/out` |
+| `air_eau.cjs` | **v2.0.1** : chute libre (pose, piqué, ouverture avec SAUT, ouverture automatique), parapente (avance seul, virage incliné, arrondi, atterrissage), nage (flotte, crawl, ni tir ni construction ni emote), sortie de l'eau, bot qui nage sans tirer | `node tests/air_eau.cjs URL /tmp/out` |
+| `lieu_camera.cjs` | **v2.0.1** : écran 800 × 480 : nom du lieu qui ne clignote plus au bord d'une ville, perso transparent quand la caméra est collée à lui (pas les bots au même perso), taille des textes du HUD | `node tests/lieu_camera.cjs URL` |
 
 ## Limites
 

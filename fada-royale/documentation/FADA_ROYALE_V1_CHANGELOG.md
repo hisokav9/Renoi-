@@ -1,5 +1,55 @@
 # Fada Royale — Journal des modifications
 
+# v2.0.1 — Chute libre, parapente, nage, panorama du lobby, corrections vues dans une vidéo de jeu
+
+Base : v2.0 (commit `19f4c30`). Demandes : les problèmes vus dans deux vidéos de jeu enregistrées sur ton téléphone (écran 800 × 480, 50 joueurs), améliorer la descente en parachute, le vol en parapente, ajouter la nage, puis le prompt d'un panorama pour le lobby ; ensuite, l'intégration de l'image générée avec ce prompt.
+
+**Limites, dites tout de suite :**
+- **Aucun test sur un vrai téléphone** (ni appareil ni émulateur ici) : les FPS sur Android ne sont **pas garantis**.
+- Le panorama reçu fait **1774 × 887 pixels** : net au téléphone, un peu doux sur un grand écran d'ordinateur. Une version de 4096 pixels de large ou plus le rendrait plus net (même fichier à remplacer, aucun code à toucher).
+- Sur 11 parties entières entre bots (19 à 59 bots), **2 ont duré un peu moins de 15 min** (874 s et 884 s) ; les 9 autres entre 15,9 et 19,2 min.
+
+## 1. Corrections vues dans la vidéo
+
+| Problème vu | Correction |
+|---|---|
+| Le nom du lieu clignotait en longeant le bord d'une ville (l'affiche se relançait à chaque passage de la limite) | Le lieu en cours « colle » un peu au-delà de sa limite (rayon × 1,05 pour une ville, 9 m de plus pour le fleuve) ; pas d'affiche pour la brousse ni pour un lieu déjà annoncé il y a moins de 25 s ; l'affiche ne bloque plus les doigts et descend sous les compteurs au téléphone |
+| Textes trop petits sur un écran 800 × 480 | Munitions des cases 11 px (gras), compteurs 11 à 13 px, nom de l'arme 12 px sur un fond sombre |
+| Caméra collée au perso quand il est dos à un mur : on ne voyait plus rien | Le perso devient transparent quand la caméra est à moins de 1,4 m (jusqu'à 23 % d'opacité), puis redevient opaque. Ses matériaux sont copiés pour lui seul : les bots qui ont le même perso ne changent pas |
+| Le fusil tactique beige se confondait avec le sable | Beige plus soutenu (`src/core/weapon-models.js`) |
+
+Ce qui était voulu et n'a pas été changé : les boules brunes sont des jarres en terre, les plaques sur les murs sont des poutres (torons) du style d'Agadez.
+
+## 2. Chute libre (`FLY` dans `index.html`)
+
+- Le perso tombe **à plat ventre** (corps à 82°), à 40 m/s ; **pousser vers l'avant = piqué** : 55 m/s, corps tête la première, plus de vitesse vers l'avant ; déplacement horizontal jusqu'à 15 m/s ; bras écartés ; filets d'air autour de lui.
+- **SAUT ouvre le parapente plus tôt** (à plus de 12 m du sol) ; sinon ouverture automatique à 44 m. Les bots ouvrent chacun à une hauteur différente (36 à 52 m).
+
+## 3. Parapente
+
+- Il **avance toujours** (7,5 m/s sans toucher à rien, jusqu'à 11,5 en poussant), descend de 4,6 m/s (6,2 en poussant).
+- **Virages progressifs** (1,6 rad/s au plus) : la voile et le perso s'inclinent dans le virage, la main du côté du virage tire le frein.
+- **Arrondi avant de se poser** (sous 4,5 m) : la descente ralentit à moins de 3 m/s et le perso se pose en courant (il garde 70 % de sa vitesse au moment du contact).
+
+## 4. Nage
+
+- Dans plus de 1,25 m d'eau (fleuve, lac), le perso **flotte** (hanches juste sous la surface, tête hors de l'eau) et **nage le crawl** (bras qui tournent, battements de jambes, éclaboussures) : 3 m/s, 3,9 m/s en sprint.
+- **Pas de tir, de construction, d'objet ni d'emote dans l'eau** (message « PAS EN NAGEANT ») ; l'arme est rangée et ressort sur la berge.
+- Les bots nagent aussi, sans tirer ; la caméra reste au-dessus de l'eau.
+
+## 5. Panorama du lobby (`src/lobby/lobby.js`, `assets/images/lobby-panorama.jpg`)
+
+- Prompt fourni (`PROMPTS_ASSETS.md` § 1 quater). Sur les 2 images reçues, la **2e** est utilisée (caravane sur la dune, minaret d'Agadez hérissé de torons). Un **pylône de télécommunication** visible à droite (élément moderne, à éviter d'après le prompt) a été effacé ; rien d'autre n'est retouché.
+- L'image n'est pas un vrai 360° (ses bords gauche et droit ne se raccordent pas) et la caméra du lobby regarde toujours devant elle : elle est posée sur un **arc de cylindre de 120° derrière l'estrade**, horizon de l'image à hauteur des yeux. Les bords et le haut se fondent dans l'ancien ciel dégradé, qui reste derrière.
+- Avec l'image, le lobby s'ouvre sur le paysage : le **mur de la cour, le minaret 3D, les palmiers 3D et les dunes ne sont plus construits** (le panorama les montre déjà). L'estrade, le service à thé, l'étal en wax, la poussière et les rayons de lumière restent. Le sol 3D se fond dans le sable de l'image ; le halo du soleil est posé sur le soleil de l'image.
+- Effet de bord mesuré : **224 → 43 appels de dessin** dans le lobby (400 → 68 objets).
+- L'image est chargée avec les autres ressources (derrière l'écran de chargement). **Sans le fichier, l'ancienne cour fermée revient** (vérifié).
+- Réglages regroupés dans `PANORAMA` (`src/lobby/lobby.js`) : largeur de l'arc, point placé devant la caméra, ligne d'horizon, soleil, fondu du sol. Pour changer d'image : remplacer le fichier (rapport 2:1, horizon au milieu) et, si besoin, ces réglages.
+
+## 6. Version
+
+Lobby et titre « v2.0.1 » ; Android `versionCode` 20, `versionName` 2.0.1 ; APK signé avec la même clé que les versions précédentes.
+
 # v2.0 — Arsenal, construction, graphismes, HUD, grande carte, 60 joueurs
 
 Base : v1.7 (commit `720c7a2`, sauvegarde avant modification). Demandes : « Weapon System 2.0 » (arsenal) et « 2.0 Gameplay Overhaul ». Audit préalable : `FADA_ROYALE_V2_AUDIT.md`. Travail en 5 étapes vérifiées, une par commit (`3c3c427`, `a1bd202`, `7fe7598`, `16bd9a2`, `351773f`).

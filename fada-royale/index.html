@@ -399,7 +399,7 @@ import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {MeshoptDecoder} from 'three/addons/libs/meshopt_decoder.module.js';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
-import {createLobby} from './src/lobby/lobby.js';
+import {createLobby,LOBBY_PANORAMA} from './src/lobby/lobby.js';
 import * as Profile from './src/core/profile.js';
 import {WEAPONS as WMODELS, fitWeapon, fitPiece} from './src/core/weapons.js';
 import {PROC_WEAPONS, buildProcWeapon} from './src/core/weapon-models.js'; // v2.0 : armes modélisées dans le code
@@ -1453,17 +1453,19 @@ function unifySkeleton(sc){ sc.updateMatrixWorld(true); let main=null; sc.traver
   sc.traverse(o=>{ if(!o.isSkinnedMesh||o===main) return; let changed=false; const inv=[]; const nb=o.skeleton.bones.map((b,i)=>{ const c=canon[boneBase(b.name)]; const Io=o.skeleton.boneInverses[i];
       if(!c||c===b){ inv.push(Io.clone()); return b; } changed=true; inv.push(new THREE.Matrix4().copy(c.matrixWorld).invert().multiply(b.matrixWorld).multiply(Io)); return c; });
     if(changed) o.bind(new THREE.Skeleton(nb,inv),o.bindMatrix); }); }
+let LOBBY_PANO=null;
 async function loadAssets(){
   const ld=new GLTFLoader(); ld.setMeshoptDecoder(MeshoptDecoder);
   // v1.2 : armes créées pour le jeu (assets/armes/*.glb, calées par src/core/weapons.js) ; le revolver garde l'ancien modèle
   for(const n of PROC_WEAPONS){ const f=buildProcWeapon(THREE,mergeGeometries,n); f.object.traverse(o=>{ if(o.isMesh){ o.castShadow=true; o.receiveShadow=false; } });
     ASSETS.w[n]={scene:f.object,muzzle:f.muzzle,muzzleY:f.muzzleY,...buttOf(f.object)}; ANCH[n]=Object.assign(ANCH[n]||{},f.anchors); }
-  const jobs=[...Object.keys(WMODELS).map(n=>['wn',n]),['w','revolver'],['o','kilishi'],['o','verre-the'],['o','theiere'],['c','boss'],['c','guerriere'],['anim','boss'],['anim','guerriere']]; let done=0;
+  const jobs=[...Object.keys(WMODELS).map(n=>['wn',n]),['w','revolver'],['o','kilishi'],['o','verre-the'],['o','theiere'],['c','boss'],['c','guerriere'],['anim','boss'],['anim','guerriere'],['pano','lobby']]; let done=0;
   const b64=s2=>{ const bin=atob(s2); const u=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) u[i]=bin.charCodeAt(i); return u.buffer; };
   await Promise.all(jobs.map(async([t,n])=>{ try{
       if(t==='wn'){ const cfg=WMODELS[n], g=await ld.loadAsync(`./assets/armes/${cfg.file}.glb`); prepWeapon(n,fitWeapon(THREE,g.scene,n));
         if(cfg.mag){ const gp=await ld.loadAsync(`./assets/armes/${cfg.mag.file}.glb`); PROP3D[cfg.mag.kind||('mag:'+n)]=castNone(fitPiece(THREE,gp.scene,cfg.mag.len)); } }
       else if(t==='o'){ const g=await ld.loadAsync(`./assets/objets/${n}.glb`); OBJ3D[n]=castNone(g.scene); }
+      else if(t==='pano') LOBBY_PANO=await new THREE.TextureLoader().loadAsync(LOBBY_PANORAMA); // v2.0.1 : panorama du lobby (absent : l'ancienne cour fermée)
       else { const mod=await import(`./assets/${t}_${n}.js`);
       if(t==='anim') ASSETS.anim[n]=decodeAnims(mod.default); else { const g=await ld.parseAsync(b64(mod.default),''); prepAsset(t,n,g.scene); } } }
     catch(e){ console.warn('fichier non chargé',t,n,e); } done++; $('loadBar').style.width=(done/jobs.length*100)+'%'; }));
@@ -3409,6 +3411,7 @@ Revolver Colt Python : modèle importé (auteur à créditer)<br>
 Persos : avatar Ready Player Me, personnage Adobe Fuse / Mixamo<br>
 Animations : « Universal Animation Library » 1 et 2 par Quaternius — licence CC0 (domaine public)<br>
 <b>Décor (v1.6)</b><br>Sols, ciels, panoramas des villes, animaux, palmiers, arbres et rochers : pack d'images et de modèles générés par l'équipe de Fada Royale à partir de ses fiches de prompts<br>
+<b>Lobby (v2.0.1)</b><br>Panorama d'Agadez au coucher du soleil : image générée par l'équipe de Fada Royale à partir de sa fiche de prompt<br>
 Moteur 3D : three.js · Jeu : Fada Royale`;
 const HELP_HTML = IS_TOUCH
   ? 'Joystick à gauche pour bouger · glisse à droite pour viser · TIRER (glisse dessus pour viser) · VISER : viser / lunette · ACCR. : s\'accroupir, en courant = glissade · SPRINT (ou joystick à fond) · SAUT face à un rebord : s\'y hisser (on peut sauter juste après le bord d\'une rampe) · MUR, RAMPE, SOL, TOIT (en haut à droite) : touche une pièce pour la poser, garde le doigt pour en poser à la chaîne en avançant (mur puis rampe, mur puis rampe… pour monter) ; regarde en haut pour poser au-dessus · touche ton arme pour quitter la construction · ÉDITER : modifier ton mur (relâche pour valider) · touche le kilishi ou le thé pour te soigner · près d\'une porte, touche OUVRIR LA PORTE.'
@@ -3668,7 +3671,7 @@ function initLobby(){
     WAX:TEX.wax.map((t,i)=>({name:WAX_NAMES[i],url:t.userData.url||(t.image.toDataURL?t.image.toDataURL('image/png'):'')})),
     WEAPONS:GUNS.map(g=>({id:g,name:WEAP[g].name,rarCss:RAR_CSS[WEAP[g].rar],rarName:RARITY[WEAP[g].rar].name})),
     skinAvailable:k=>!!SKINS[k]&&(!SKINS[k].real||!!ASSETS.c[SKINS[k].real]),
-    buildDisplay, weaponModel:t=>makeGunObj(t), quality:()=>Q.shadow?quality:'low', objects:OBJ3D, /* v2.0 : le lobby n'a d'ombres que si le profil en a */
+    buildDisplay, panorama:LOBBY_PANO, weaponModel:t=>makeGunObj(t), quality:()=>Q.shadow?quality:'low', objects:OBJ3D, /* v2.0 : le lobby n'a d'ombres que si le profil en a */
     startMatch, openSettings, beforeLaunch, precompile:warmGPU, creditsHTML:CREDITS_HTML, sfx:uiSfx,
     resetProfile:()=>{ try{ localStorage.removeItem('fr_profile'); }catch(e){} location.reload(); } });
 }

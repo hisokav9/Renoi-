@@ -41,6 +41,13 @@ export const MODES = [
   { id: 'online', name: 'En ligne', sub: 'Multijoueur', desc: 'Parties contre de vrais joueurs : demande des serveurs de jeu.', ok: false },
 ];
 
+/* v2.0.1 : panorama du lobby. arc = largeur de l'image en angle (rad) ; cx = point de l'image placé droit devant la caméra (0 à 1,
+   de gauche à droite) ; hy = ligne d'horizon de l'image (0 en haut, 1 en bas) ; sun = position du soleil dans l'image ;
+   ground = sol 3D opaque jusqu'à ground[0] m puis fondu jusqu'à ground[1] m, sa couleur passe de sand[0] à sand[1] (le sable de l'image
+   une fois éclairé par les lumières du lobby). */
+export const LOBBY_PANORAMA = 'assets/images/lobby-panorama.jpg';
+export const PANORAMA = { arc: 2.1, cx: 0.6, hy: 0.513, sun: [0.405, 0.496], sunGlow: 30, fadeX: 0.05, fadeTop: 0.15, ground: [4, 20], sand: [0xc68650, 0x8c3f16] };
+
 export function createLobby(ctx) {
   const { THREE, renderer } = ctx;
   const P = ctx.profile;
@@ -60,7 +67,14 @@ export function createLobby(ctx) {
   // boîte dont les UV suivent la taille réelle (texture répétée tous les 4 m, comme les maisons du jeu)
   const boxUV = (w, h, d) => { const g = new THREE.BoxGeometry(w, h, d); const uv = g.attributes.uv; const dims = [[d, h], [d, h], [w, d], [w, d], [w, h], [w, h]];
     for (let f = 0; f < 6; f++) for (let i = 0; i < 4; i++) { const k = f * 4 + i; uv.setXY(k, uv.getX(k) * dims[f][0] / 4, uv.getY(k) * dims[f][1] / 4); } return g; };
-  // ciel du soir : sable doré à l'horizon, bleu nuit en haut
+  /* v2.0.1 : panorama du lobby (image de l'équipe : Agadez au coucher du soleil, caravane sur la dune), préchargé par index.html.
+     Posé sur un arc de cylindre derrière l'estrade : la caméra du lobby regarde toujours devant elle, l'image n'a donc pas à faire
+     le tour complet (ses bords gauche et droit ne se raccordent pas) et garde plus de pixels à l'écran. Avec l'image, la cour fermée
+     (mur, minaret 3D, dunes) n'est pas construite et le sol 3D se fond dans le sable de l'image ; sans elle, l'ancien décor reste. */
+  const EYE_Y = 1.42; // hauteur de la caméra du lobby (update)
+  const PANO = ctx.panorama && ctx.panorama.image ? (() => { const P = { ...PANORAMA, R: 150 };
+    P.H = P.R * P.arc * ctx.panorama.image.height / ctx.panorama.image.width; return P; })() : null;
+  // ciel du soir : sable doré à l'horizon, bleu nuit en haut (derrière le panorama : visible au-delà de ses bords)
   {
     const g = new THREE.SphereGeometry(200, 32, 16); const p = g.attributes.position; const cols = [];
     const hor = new THREE.Color(0xf3a55c), mid = new THREE.Color(0xb35a3c), top = new THREE.Color(0x221a35), c = new THREE.Color();
@@ -70,6 +84,20 @@ export function createLobby(ctx) {
     sky.renderOrder = -2; stage.add(sky);
     const sun = new THREE.Sprite(new THREE.SpriteMaterial({ map: ctx.glowTex, color: 0xffd9a0, fog: false, depthWrite: false, transparent: true, blending: THREE.AdditiveBlending }));
     sun.scale.set(70, 70, 1); sun.position.set(-38, 22, -150); stage.add(sun);
+    if (PANO) { // le halo se pose sur le soleil de l'image
+      const a = (PANO.sun[0] - PANO.cx) * PANO.arc, r = PANO.R * 0.93;
+      sun.position.set(Math.sin(a) * r, EYE_Y + (PANO.hy - PANO.sun[1]) * PANO.H * 0.93, -Math.cos(a) * r); sun.scale.setScalar(PANO.sunGlow);
+    }
+  }
+  if (PANO) {
+    const { arc, cx, hy, R, H } = PANO, tex = ctx.panorama; tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
+    const g = new THREE.CylinderGeometry(R, R, H, 64, 16, true, Math.PI - (1 - cx) * arc, arc); const uv = g.attributes.uv, cols = [];
+    // vue de l'intérieur, l'image serait inversée : u retourné ; bords gauche / droit et haut fondus dans le ciel dégradé
+    for (let i = 0; i < uv.count; i++) { const u = uv.getX(i), v = uv.getY(i); uv.setX(i, 1 - u);
+      const k = Math.max(0, Math.min(1, u / PANO.fadeX, (1 - u) / PANO.fadeX, (1 - v) / PANO.fadeTop)); cols.push(1, 1, 1, k * k * (3 - 2 * k)); }
+    g.setAttribute('color', new THREE.Float32BufferAttribute(cols, 4));
+    const m = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ map: tex, vertexColors: true, transparent: true, side: THREE.BackSide, fog: false, depthWrite: false }));
+    m.position.y = EYE_Y - (0.5 - hy) * H; m.renderOrder = -1.9; m.name = 'panorama'; stage.add(m);
   }
   // lumières : clé chaude, contre-jour cyan, remplissage terre
   const hemi = new THREE.HemisphereLight(0xffe2b8, 0x5a3420, 0.95); stage.add(hemi);
@@ -80,10 +108,14 @@ export function createLobby(ctx) {
 
   // sol de sable
   {
-    const g = new THREE.CircleGeometry(90, 72); g.rotateX(-Math.PI / 2); const p = g.attributes.position; const cols = []; const c = new THREE.Color(); const a = new THREE.Color(0xd9a86c), b = new THREE.Color(0x8a5733);
-    for (let i = 0; i < p.count; i++) { const d = Math.hypot(p.getX(i), p.getZ(i)); c.copy(a).lerp(b, Math.min(1, d / 40)); cols.push(c.r, c.g, c.b); }
-    g.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
-    const m = new THREE.Mesh(g, new THREE.MeshLambertMaterial({ vertexColors: true })); m.receiveShadow = true; stage.add(m);
+    // avec le panorama : anneaux de 2 m (le fondu a besoin de sommets entre le centre et le bord)
+    const G = PANO ? PANO.ground : null;
+    const g = G ? new THREE.RingGeometry(0.01, G[1] + 2, 72, Math.ceil((G[1] + 2) / 2)) : new THREE.CircleGeometry(90, 72); g.rotateX(-Math.PI / 2);
+    const p = g.attributes.position; const cols = []; const c = new THREE.Color(); const a = new THREE.Color(G ? PANO.sand[0] : 0xd9a86c), b = new THREE.Color(G ? PANO.sand[1] : 0x8a5733), far = G ? G[1] * 0.6 : 40;
+    for (let i = 0; i < p.count; i++) { const d = Math.hypot(p.getX(i), p.getZ(i)); c.copy(a).lerp(b, Math.min(1, d / far)); cols.push(c.r, c.g, c.b);
+      if (G) { const k = Math.max(0, Math.min(1, (d - G[0]) / (G[1] - G[0]))); cols.push(1 - k * k * (3 - 2 * k)); } }
+    g.setAttribute('color', new THREE.Float32BufferAttribute(cols, G ? 4 : 3));
+    const m = new THREE.Mesh(g, new THREE.MeshLambertMaterial({ vertexColors: true, transparent: !!G })); m.receiveShadow = true; stage.add(m);
   }
   // estrade : terre cuite, anneau d'or, néon cyan
   const plat = new THREE.Group(); stage.add(plat);
@@ -119,6 +151,7 @@ export function createLobby(ctx) {
     const banco = new THREE.MeshLambertMaterial({ map: T.decor }), plain = new THREE.MeshLambertMaterial({ map: T.banco });
     const neonM = new THREE.MeshBasicMaterial({ color: 0x3fd6e8 });
     const R = 15, n = 15;
+    if (!PANO) { // cour fermée (sans panorama) : mur de banco et minaret
     for (let i = 0; i < n; i++) {
       const a = -1.2 + i / (n - 1) * 2.4; const x = Math.sin(a) * R, z = -Math.cos(a) * R - 1; const h = 3.4 + ((i * 7) % 3) * 0.45;
       const door = i === 5 || i === 9;
@@ -144,6 +177,7 @@ export function createLobby(ctx) {
     const cap = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.6, 1.5), plain); cap.position.y = H + 0.3; mg.add(cap);
     const egg = new THREE.Mesh(new THREE.SphereGeometry(0.28, 12, 8), lam(0xf4efe6)); egg.scale.y = 1.3; egg.position.y = H + 1.0; mg.add(egg);
     const beacon = new THREE.Mesh(new THREE.BoxGeometry(1.52, 0.06, 1.52), neonM); beacon.position.y = H + 0.02; mg.add(beacon);
+    }
     // auvent en wax (marché)
     const aw = new THREE.Group(); aw.position.set(8.2, 0, -9.5); aw.rotation.y = -0.55; stage.add(aw);
     for (const [px, pz] of [[-1.6, -1.1], [1.6, -1.1], [-1.6, 1.1], [1.6, 1.1]]) { const p = new THREE.Mesh(new THREE.BoxGeometry(0.1, 2.6, 0.1), wood); p.position.set(px, 1.3, pz); aw.add(p); }
@@ -164,9 +198,9 @@ export function createLobby(ctx) {
       const top = new THREE.Group(); top.position.set(-Math.sin(lean) * 5.4, 5.4, 0); g.add(top);
       for (let k = 0; k < 9; k++) { const f = new THREE.Mesh(new THREE.ConeGeometry(0.5, 2.4, 4), lam(0x5c7a32, { flatShading: true })); f.scale.z = 0.12; f.position.y = 0.2; f.rotation.set(1.15, k / 9 * Math.PI * 2, 0); const h2 = new THREE.Group(); h2.rotation.y = k / 9 * Math.PI * 2; f.rotation.set(1.2, 0, 0); f.position.set(0, 0.2, 1.0); h2.add(f); top.add(h2); }
       return g; };
-    palm(-7.5, -10, 1.05, 0.08); palm(-15, -13, 1.35, 0.05); palm(14, -7, 1.1, -0.1);
+    if (!PANO) { palm(-7.5, -10, 1.05, 0.08); palm(-15, -13, 1.35, 0.05); palm(14, -7, 1.1, -0.1); } // le panorama a ses palmiers
     // dunes lointaines
-    for (const [x, z, sx, sy] of [[-30, -45, 22, 5], [10, -60, 30, 7], [40, -40, 18, 4], [-55, -20, 20, 5]]) { const d = new THREE.Mesh(new THREE.SphereGeometry(1, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2), lam(0xc98f58)); d.scale.set(sx, sy, sx * 0.6); d.position.set(x, -0.2, z); stage.add(d); }
+    if (!PANO) for (const [x, z, sx, sy] of [[-30, -45, 22, 5], [10, -60, 30, 7], [40, -40, 18, 4], [-55, -20, 20, 5]]) { const d = new THREE.Mesh(new THREE.SphereGeometry(1, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2), lam(0xc98f58)); d.scale.set(sx, sy, sx * 0.6); d.position.set(x, -0.2, z); stage.add(d); }
   }
   // poussière qui flotte dans la lumière
   const DUST = 170; const dustGeo = new THREE.BufferGeometry(); const dp = new Float32Array(DUST * 3), dv = [];
@@ -367,6 +401,7 @@ export function createLobby(ctx) {
       <li><b>Chute libre</b> à plat ventre : pousse vers l’avant pour piquer, <b>SAUT</b> pour ouvrir le parapente plus tôt.</li>
       <li><b>Parapente</b> : il avance tout seul, tourne en s’inclinant et freine avant de se poser.</li>
       <li><b>Nage</b> : dans le fleuve et le lac, ton perso flotte et nage (pas de tir ni de construction dans l’eau).</li>
+      <li><b>Lobby</b> ouvert sur un panorama d’Agadez au coucher du soleil.</li>
       <li>Le nom du lieu ne clignote plus au bord des villes ; textes plus lisibles sur les petits écrans ; ton perso devient transparent quand la caméra est collée à lui.</li></ul>
       <h3>Nouveautés de la v2.0 : arsenal, grande carte, 60 joueurs</h3><ul class="lb-list">
       <li><b>Arsenal</b> : 5 raretés par arme (gris, vert, bleu, violet, orange), 4 types de munitions, 2 nouvelles armes (fusil tactique beige, pompe tactique), lâcher une arme (G / LÂCHER) et la reprendre.</li>
@@ -515,7 +550,7 @@ export function createLobby(ctx) {
     viewX += (viewXT - viewX) * (1 - Math.exp(-8 * dt)); viewY += (viewYT - viewY) * (1 - Math.exp(-8 * dt));
     // aperçu d'un planeur : la caméra recule et lève les yeux vers la voile
     const gl = preview && preview.glider !== undefined; lift += ((gl ? 1 : 0) - lift) * (1 - Math.exp(-5 * dt));
-    cam.position.set(Math.sin(t * 0.15) * 0.25, 1.42 + Math.sin(t * 0.3) * 0.05 + (portrait ? 0.15 : 0) + lift * 0.9, dist + (portrait ? 2.2 : 0) + lift * 3.2); cam.lookAt(0, 1.24 + lift * 1.5, 0);
+    cam.position.set(Math.sin(t * 0.15) * 0.25, EYE_Y + Math.sin(t * 0.3) * 0.05 + (portrait ? 0.15 : 0) + lift * 0.9, dist + (portrait ? 2.2 : 0) + lift * 3.2); cam.lookAt(0, 1.24 + lift * 1.5, 0);
     cam.setViewOffset(innerWidth, innerHeight, viewX, viewY, innerWidth, innerHeight);
     const sh = ctx.quality() !== 'low';
     if (sh !== lastShadow) { lastShadow = sh; key.castShadow = sh; stage.traverse(o => { if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => m.needsUpdate = true); }); }
