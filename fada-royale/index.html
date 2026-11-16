@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>Fada Royale v1.6</title>
+<title>Fada Royale v1.6.1</title>
 <!-- three.js r160 est hébergé avec le jeu (dossier lib/) : plus besoin d'un CDN pour démarrer -->
 <script type="importmap">{"imports":{"three":"./lib/three/three.module.min.js","three/addons/":"./lib/three/addons/"}}</script>
 <script>
@@ -2827,7 +2827,9 @@ addEventListener('touchend',touchEnd); addEventListener('touchcancel',touchEnd);
    ===================================================================== */
 let msgT=0, zoneT=0, curZone=null, zoneCheck=0;
 function showMsg(t,s='',dur=1.6){ $('msg').innerHTML=t+(s?`<small>${s}</small>`:''); $('msg').style.opacity=1; msgT=dur; }
-const ZONE_PIC={niamey:'niamey-fleuve',agadez:'agadez-mosquee',tenere:'dunes-acacia',zinder:'zinder',maradi:'marche',koure:'savane-girafes',dosso:'village-arbre',arlit:'arlit-mine',ayorou:'port-pirogues',tahoua:'falaises-village',diffa:'mare-pirogues',parcw:'baobabs-elephants',tillaberi:'fleuve-rizieres',lac:'mare-pirogues'};
+// v1.6.1 : seulement les images qui montrent ce qu'on voit dans le jeu. Retirées (texte seul) : Niamey (pont suspendu, celui du jeu est plat),
+// Tahoua (falaises, la ville du jeu est plate), Tillabéri (rizières), Diffa et lac Tchad (marais de roseaux, le lac du jeu est bordé de palmiers)
+const ZONE_PIC={agadez:'agadez-mosquee',tenere:'dunes-acacia',zinder:'zinder',maradi:'marche',koure:'savane-girafes',dosso:'village-arbre',arlit:'arlit-mine',ayorou:'port-pirogues',parcw:'baobabs-elephants'};
 let zonePicsLoaded=false; function preloadZonePics(){ if(zonePicsLoaded) return; zonePicsLoaded=true; for(const k in ZONE_PIC){ const im=new Image(); im.src='assets/images/lieux/'+ZONE_PIC[k]+'.jpg'; } }
 function showZone(z,force){ if(!force&&curZone&&curZone.id===z.id) return; curZone=z; const pic=ZONE_PIC[z.id];
   const tx=`${ico('pin')}${z.name}<small>${z.sub}</small>`; $('zone').innerHTML=pic?`<div class="zimg" style="background-image:url(assets/images/lieux/${pic}.jpg)"><div class="ztx">${tx}</div></div>`:tx; $('zone').classList.toggle('pic',!!pic); $('zone').style.opacity=1; zoneT=pic?3.2:2.6; }

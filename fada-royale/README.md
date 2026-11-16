@@ -1,4 +1,4 @@
-# Fada Royale — v1.6
+# Fada Royale — v1.6.1
 
 Battle royale du Sahel en 3D (three.js), jouable dans le navigateur sur PC et téléphone.
 20 joueurs (toi + 19 bots), taxi-brousse volant, harmattan qui se resserre, construction en banco, carte du Niger de 480 m de côté.
@@ -23,7 +23,7 @@ Options dans l'adresse :
 
 ## Ce qu'il y a dedans
 
-- **Nouveau en v1.6 (décor réaliste)** : sols photo mélangés selon les zones (sable, dunes ridées, latérite, herbe sèche, gravier de l'Aïr, terre craquelée), vrai ciel du Sahel et ciel d'harmattan pendant la tempête, image de la ville à l'arrivée dans une zone, 51 animaux (girafes, dromadaires, zébus, chèvres, moutons, ânes, pintades, éléphants, hippos, vautours), palmiers doum et dattiers, neems et karités, rochers de granite. Tiré d'un pack généré à partir de `documentation/PROMPTS_DECOR.md`.
+- **Nouveau en v1.6 (décor réaliste)** : sols photo mélangés selon les zones (sable, dunes ridées, latérite, herbe sèche, gravier de l'Aïr, terre craquelée), vrai ciel du Sahel et ciel d'harmattan pendant la tempête, image de la ville à l'arrivée dans 9 zones (v1.6.1 : seulement celles qui ressemblent au jeu), 51 animaux (girafes, dromadaires, zébus, chèvres, moutons, ânes, pintades, éléphants, hippos, vautours), palmiers doum et dattiers, neems et karités, rochers de granite. Tiré d'un pack généré à partir de `documentation/PROMPTS_DECOR.md`.
 - **v1.5** : plus de mur dans le vide en haut des rampes (une pièce doit tenir sur quelque chose), effondrement de ce qui n'est plus relié au sol, appui de construction mémorisé (mur et rampe dans n'importe quel ordre), perso toujours face à la caméra avec les jambes vers la marche (réglable), saut tolérant au bord et juste avant d'atterrir. Idées reprises d'une autre version du jeu.
 - **v1.4 (construction rapide)** : les 4 pièces toujours à l'écran (appui = pose, doigt gardé = pose en continu), le mur se place au bout de la rampe pour monter vite, édition validée en relâchant, banco illimité et effacement des constructions à l'Entraînement, onglet de réglages Construction, limite d'images, pièces dessinées en instances (fluide avec des centaines de pièces).
 - **v1.3** : le perso se tourne avec la caméra même à l'arrêt ; plus de grimpe le long des murs, on se hisse seulement sur un rebord à portée de main (muret, mur, toit) ; portes de maisons qui s'ouvrent et se ferment (E ou bouton OUVRIR LA PORTE), ouvertes aussi par les bots ; bots qui se mettent à couvert pour recharger ou se soigner ; plus d'à-coup à la première sortie d'une arme, moins d'appels de dessin en Basse.

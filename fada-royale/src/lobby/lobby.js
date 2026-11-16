@@ -255,7 +255,7 @@ export function createLobby(ctx) {
     <button data-p="profile">${ico('profile')}<span>Profil</span></button>
   </nav>
   <div class="lb-home" id="lbHome">
-    <div class="lb-logo"><div class="lb-flag"><i></i><i></i><i></i></div><h1>FADA<br>ROYALE</h1><p><b>v1.6</b>Le battle royale du Sahel</p></div>
+    <div class="lb-logo"><div class="lb-flag"><i></i><i></i><i></i></div><h1>FADA<br>ROYALE</h1><p><b>v1.6.1</b>Le battle royale du Sahel</p></div>
     <div class="lb-who"><small>Ton personnage</small><b id="lbCharName">—</b><span class="lb-hint">${ctx.IS_TOUCH ? 'Glisse pour le tourner · pince pour zoomer' : 'Glisse pour le tourner · molette pour zoomer'}</span></div>
     <div class="lb-playbox"><button class="lb-mode" id="lbModeBtn"><small>Mode</small><b id="lbModeName">Battle Royale · Solo</b>${ico('chev')}</button>
       <button class="lb-play" id="play">JOUER</button></div>
@@ -368,7 +368,7 @@ export function createLobby(ctx) {
       <li><b>Vrai ciel</b> du Sahel, qui se voile de poussière dans l’harmattan.</li>
       <li><b>Animaux :</b> girafes de Kouré, dromadaires d’Agadez, zébus, chèvres, moutons, ânes, pintades, éléphants du Parc W, hippos du fleuve à Ayorou, vautours dans le ciel.</li>
       <li><b>Palmiers doum et dattiers, neems dans les villes, karités au sud, rochers de granite</b> dans le Ténéré et l’Aïr.</li>
-      <li><b>Image de la ville</b> quand tu arrives dans une zone (Niamey, Agadez, Zinder…).</li></ul>
+      <li><b>Image de la ville</b> quand tu arrives dans une zone (Agadez, Zinder, Maradi, Kouré…).</li></ul>
       <h3>Nouveautés de la v1.5</h3><ul class="lb-list">
       <li><b>Plus de mur dans le vide :</b> en haut de tes rampes, le mur se pose au bout de ta rampe. Une pièce qui ne tient sur rien est refusée.</li>
       <li><b>Effondrement :</b> casse le bas d’une construction et tout ce qui ne tient plus tombe.</li>

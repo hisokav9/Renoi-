@@ -1,5 +1,19 @@
 # Fada Royale — Journal des modifications
 
+# v1.6.1 — Seulement le décor cohérent avec le jeu
+
+Demande du propriétaire : « ceux qui ne sont pas cohérents au jeu, comme la carte, ne les utilise pas ».
+
+| | |
+|---|---|
+| **Vérification** | Pour chacune des 13 images de ville, une vue du jeu au même endroit a été mise à côté de l'image du bandeau. Animaux, arbres, rochers, sols et ciel avaient déjà été placés selon les zones du jeu ; la carte du pack n'a jamais été utilisée (ni dans le jeu, ni dans l'APK, ni dans le dépôt). |
+| **Gardées (9)** | Agadez (mosquée, dromadaires), Ténéré (dunes, acacia seul), Kouré (girafes), Arlit (chevalement de la mine), Zinder (vieux Birni), Maradi (marché), Ayorou (marché au bord du fleuve), Dosso (arbre à palabres), Parc du W (baobabs, éléphants). |
+| **Retirées (4 images, 5 zones)** | Niamey : pont suspendu à grandes tours, celui du jeu est plat. Tahoua : grandes falaises, la ville du jeu est plate. Tillabéri : rizières vertes, absentes du jeu. Diffa et lac Tchad : marais de roseaux, le lac du jeu est bordé de palmiers. Ces zones ont de nouveau le bandeau en texte seul (comme en v1.5) ; les 4 images sont supprimées du jeu et de l'APK. |
+| **Fichiers** | `index.html` : `ZONE_PIC` ; `assets/images/lieux/` |
+| **Divers** | Version 1.6.1 (versionCode 17) : s'installe par-dessus la 1.6. |
+
+---
+
 # v1.6 — Décor réaliste (pack du propriétaire)
 
 Base : v1.5 (APK 1.5). Matière : `fada-royale-modele-glb-29mo.zip`, un pack d'images et de modèles 3D généré par le propriétaire du jeu à partir des fiches de `documentation/PROMPTS_DECOR.md` (sols, ciels, panoramas de villes, carte, 11 animaux, 6 arbres, 23 rochers et reliefs). Les fichiers ont été ouverts et mesurés (taille, triangles, textures), pas exécutés. On a pris ce qui rend bien dans le jeu et dans le budget d'un téléphone ; le reste est expliqué au §7.

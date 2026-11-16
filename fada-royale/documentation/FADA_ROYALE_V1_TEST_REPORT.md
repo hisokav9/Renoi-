@@ -1,5 +1,17 @@
 # Fada Royale — Rapport de tests
 
+# v1.6.1
+
+| Vérification | Résultat |
+|---|---|
+| Bandeau en arrivant à Niamey, Tahoua, Tillabéri, Diffa, lac Tchad | Texte seul (nom et sous-titre), comme en v1.5 |
+| Bandeau à Agadez, Kouré, Parc du W | Image de la ville, nom dans l'image |
+| Fichiers introuvables pendant la partie | Aucun |
+| Partie complète (`sim.cjs`) | 0 erreur, 0 NaN |
+| APK 1.6.1 | Signature v2 vérifiée, même certificat (`3DB2BF18…`), version 1.6.1 (code 17), 11,8 Mo ; 9 images de ville dedans, ni la carte du pack ni les 4 images retirées ; jeu extrait de l'APK, hors ligne : 0 fichier introuvable, 0 erreur JavaScript, partie lancée |
+
+---
+
 # v1.6
 
 Mêmes conditions que la v1.5 (Chromium sans écran, rendu logiciel SwiftShader, réseau externe coupé, boucle figée). Pas de test sur un vrai téléphone. Les temps de rendu en millisecondes viennent du rendu logiciel (processeur) : ils servent à comparer, pas à prédire les images par seconde d'un téléphone.
