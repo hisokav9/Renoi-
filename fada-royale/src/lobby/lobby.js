@@ -255,7 +255,7 @@ export function createLobby(ctx) {
     <button data-p="profile">${ico('profile')}<span>Profil</span></button>
   </nav>
   <div class="lb-home" id="lbHome">
-    <div class="lb-logo"><div class="lb-flag"><i></i><i></i><i></i></div><h1>FADA<br>ROYALE</h1><p><b>v1.7</b>Le battle royale du Sahel</p></div>
+    <div class="lb-logo"><div class="lb-flag"><i></i><i></i><i></i></div><h1>FADA<br>ROYALE</h1><p><b>v2.0</b>Le battle royale du Sahel</p></div>
     <div class="lb-who"><small>Ton personnage</small><b id="lbCharName">—</b><span class="lb-hint">${ctx.IS_TOUCH ? 'Glisse pour le tourner · pince pour zoomer' : 'Glisse pour le tourner · molette pour zoomer'}</span></div>
     <div class="lb-playbox"><button class="lb-mode" id="lbModeBtn"><small>Mode</small><b id="lbModeName">Battle Royale · Solo</b>${ico('chev')}</button>
       <button class="lb-play" id="play">JOUER</button></div>
@@ -363,6 +363,13 @@ export function createLobby(ctx) {
   // --- événements
   function htmlEvents() {
     return `<div class="lb-ev"><b>Aucun événement en cours</b><p>Les événements (défis à durée limitée, récompenses spéciales) arriveront dans une prochaine version. Rien n’est simulé ici.</p></div>
+      <h3>Nouveautés de la v2.0 : arsenal, grande carte, 60 joueurs</h3><ul class="lb-list">
+      <li><b>Arsenal</b> : 5 raretés par arme (gris, vert, bleu, violet, orange), 4 types de munitions, 2 nouvelles armes (fusil tactique beige, pompe tactique), lâcher une arme (G / LÂCHER) et la reprendre.</li>
+      <li><b>Carte de 680 m</b> : 8 nouveaux lieux (camp militaire, oasis de Bilma, cimenterie de Malbaza, forteresse de Djado, massif de Termit, Filingué, Gouré, marché de Gaya). Parties de 15 à 20 min.</li>
+      <li><b>19 à 59 bots</b> et 3 niveaux (débutants, normaux, avancés, ou mélangés) dans Paramètres › Partie.</li>
+      <li><b>Construction</b> : mode SIMPLE ou AVANCÉ, pose en continu, fantôme vert ou rouge, constructions deux fois plus solides.</li>
+      <li><b>Graphismes</b> : 5 profils (Très faible à Élevé, Personnalisé), limite d’images selon ton écran. <b>HUD</b> : dispositions Classique, Compacte, Construction ou la tienne (taille, opacité, masquer).</li>
+      <li><b>Emotes</b> : salut, bravo, victoire, danse (bouton à côté des paramètres).</li></ul>
       <h3>Nouveautés de la v1.7 : armes en main et construction</h3><ul class="lb-list">
       <li><b>Armes épaulées</b> à droite, visibles derrière ton perso ; arme basse en exploration, remontée pour viser, en travers au sprint, abaissée contre un mur.</li>
       <li><b>Daba bien en main</b> : le coup part au-dessus de l’épaule et frappe devant toi, les dégâts tombent quand la lame touche.</li>

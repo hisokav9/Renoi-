@@ -59,6 +59,15 @@ Mêmes règles que plus haut : vue de profil, fond gris clair uni, sans logo ni 
 | Pompe « Kouré » (pompe semi-automatique, `long`) | `Low-poly game-ready semi-automatic tactical shotgun, ORIGINAL design, black steel receiver, olive green fore-end with deep grooves, tube magazine under a short wide barrel, folding skeleton stock, brass shell holder strip on the side, 0.95 m long, side view, plain light grey background, no logos, no text` |
 | Pompe « Zinder » (pompe à bois, `long`) | `Low-poly game-ready pump-action shotgun, ORIGINAL design, hand-carved dark wood stock with geometric Hausa patterns, blued steel barrel with a bead sight, pump fore-end as a separate part, 1.0 m long, side view, plain light grey background, no logos, no text` |
 
+## 1 ter. Ce qui manque après la v2.0 (et l'outil qu'il faut)
+
+| Ressource | État en v2.0 | Comment l'obtenir |
+|---|---|---|
+| Fusil tactique et pompe tactique en vrais modèles détaillés | Modélisés dans le code (pièces en volume, 300 à 700 triangles) | Images avec les prompts « Aïr » et « Kouré » ci-dessus, puis un outil image → 3D (Higgsfield est branché ici mais **consomme des crédits payants : seulement avec ton accord**), ou un modeleur 3D (Blender) |
+| Les 7 armes de la v1.2 en volume complet | Modèles « 2.5D » (silhouette extrudée, ≈ 4 cm d'épaisseur) | Même chemin, à partir des images de la v1.2 |
+| Emotes naturelles (danse, salut, applaudissements, victoire) | 4 gestes construits à la main sur le squelette ; la vidéo de référence annoncée n'a pas été reçue | **Mixamo** (site gratuit d'Adobe, compte Adobe nécessaire) : « Waving », « Clapping », « Victory », « Hip Hop Dancing »… Nos persos ont un squelette Mixamo : les clips téléchargés en FBX (sans peau) se convertissent au format des animations du jeu (`assets/anim_*.js`). Je n'ai pas accès à ton compte : il faut me fournir les FBX. |
+| Images d'arrivée des 8 nouveaux lieux | Pas d'image (seul le nom s'affiche) | Prompts dans le style de `PROMPTS_DECOR.md` : « panoramic photo of a Sahel military outpost / Bilma oasis with salt pans / cement plant / ruined ksar of Djado / Termit rocky massif / hilltop village of Filingué / dune village of Gouré / Gaya market », lumière d'harmattan, sans texte |
+
 ## 2. Accessoires des animations (kilishi, thé)
 
 Aujourd'hui ce sont des formes simples dessinées par le code. Format : GLB, moins de 600 triangles, texture 512×512.

@@ -57,3 +57,22 @@ Les 5 catégories et ce qui existe dans le jeu :
 5. Carte agrandie, tempête pour 15-20 min, plus de bots et profils.
 6. Emotes simples.
 7. Tests (les deux listes demandées), documentation, APK.
+
+## 5. Résultats (fin de la v2.0)
+
+| Point de l'audit | Fait | Mesure / test |
+|---|---|---|
+| Catalogue de statistiques | `src/core/arsenal.js`, seule source des valeurs | `arsenal.cjs` |
+| Raretés par arme | 5 raretés, plage par arme, effet sur dégâts / rechargement / dispersion, couleurs au sol, dans l'inventaire | `arsenal.cjs` : 22 / 23,5 / 25 / 26,5 / 28 de dégâts par balle (fusil d'assaut, commun → légendaire) |
+| Munitions | 4 types, plafonds, caisses typées | `arsenal.cjs` |
+| Inventaire | Lâcher (G / LÂCHER), reprendre, remplacer ; rareté et chargeur gardés | `arsenal.cjs` |
+| 5 catégories demandées | 3 gardées (fusil d'assaut, sniper, pompe), 2 nouvelles modélisées dans le code (fusil tactique, pompe tactique) | `arsenal.cjs`, `prise.cjs` (9 armes) |
+| Emotes | 4 gestes construits à la main (pas de clip, vidéo non reçue) | `emotes.cjs` |
+| Construction continue, fantôme vert / rouge, simple / avancé, PV | Faits, réglages dans `src/core/building.js` | `construction2.cjs`, `construction.cjs`, `build.cjs`, `support.cjs` |
+| Graphismes | 5 profils, réglages séparés, anticrénelage au redémarrage, limite d'images selon l'écran | `graphismes.cjs` |
+| HUD | Opacité, masquage, dispositions Classique / Compacte / Construction / Personnalisée | `graphismes.cjs` |
+| Carte | 680 m de côté, 8 nouveaux lieux (21 au total) | `bots.cjs`, `combat.cjs` |
+| Durée de partie | Tempête de 18 min (7 phases), réglages dans `src/core/match.js` | `partie.cjs` : voir le rapport de tests |
+| Bots | 19 à 59 réglables, 3 niveaux + mélangés, IA (zone, pillage, fin de partie, profils) | `bots.cjs`, `partie.cjs`, `combat.cjs` |
+
+Détail des chiffres et des tests : `FADA_ROYALE_V1_TEST_REPORT.md` (section v2.0).

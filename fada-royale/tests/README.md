@@ -41,6 +41,13 @@ Les scripts v1.1 figent la boucle du jeu (`window.__freeze = true`) et avancent 
 | `housestats.cjs` | **v1.1** : toutes les maisons ouvertes : nombre, étages, hauteur sous plafond, dénivelé devant la porte, hauteur des marches | `node tests/housestats.cjs URL` |
 | `reloads.cjs` | **v1.1** : planches d'images des rechargements de chaque arme, culasse du sniper, kilishi, thé, changement d'arme ; cartouches du pompe une par une et tir qui interrompt | `node tests/reloads.cjs URL /tmp/out boss` puis `python3 tests/planche.py /tmp/out boss` |
 | `hud.cjs` | **v1.1** : captures du HUD en partie sur ordinateur et téléphone (Pixel 7 paysage) | `node tests/hud.cjs URL /tmp/out` |
+| `arsenal.cjs` | **v2.0** : les 8 armes (équiper, modèle visible, tir auto / semi-auto, rechargement, bon type de munitions), caisses typées et plafonds, ramasser / lâcher / reprendre / remplacer (rareté et chargeur gardés), couleurs et dégâts des 5 raretés | `node tests/arsenal.cjs URL` |
+| `construction2.cjs` | **v2.0** : 10 murs sans lever le doigt, changer de pièce pendant la pose, modes SIMPLE / AVANCÉ, construire en combat, PV réels (tirs pour détruire un mur selon l'arme) | `node tests/construction2.cjs URL` |
+| `graphismes.cjs` | **v2.0** : les 5 profils (appels de dessin, ombres, sol), Personnalisé, limite d'images (fréquence de l'écran, limites proposées, porte de limite), HUD au téléphone : déplacer, taille, opacité, masquer, enregistrer, recharger la page, dispositions toutes faites | `node tests/graphismes.cjs URL` |
+| `bots.cjs` | **v2.0** : 21 lieux et maisons des nouvelles zones, tempête, nombre de bots (19 / 39 / 59), répartition des niveaux, effet réel du niveau (précision, délai du 1er tir), calcul avec tous les bots autour du joueur | `node tests/bots.cjs URL` |
+| `partie.cjs` | **v2.0** : parties entières entre bots (le joueur regarde) : durée, morts dans la tempête, précision, soins, constructions, abris, calcul par image | `node tests/partie.cjs URL 3 49 mixte` |
+| `combat.cjs` | **v2.0** : le joueur marche dans les 21 lieux et entre dans une maison de chaque nouveau lieu ; parties complètes joueur (piloté par le test, ni invincible ni aidé) contre bots | `node tests/combat.cjs URL 2 39` |
+| `emotes.cjs` | **v2.0** : les 4 emotes sur le Boss et la Guerrière (vrai bouton, arme rangée, mains mesurées sur le squelette, annulation en marchant), bot qui célèbre une vraie élimination | `node tests/emotes.cjs URL /tmp/out` |
 
 ## Limites
 

@@ -1,5 +1,146 @@
 # Fada Royale — Journal des modifications
 
+# v2.0 — Arsenal, construction, graphismes, HUD, grande carte, 60 joueurs
+
+Base : v1.7 (commit `720c7a2`, sauvegarde avant modification). Demandes : « Weapon System 2.0 » (arsenal) et « 2.0 Gameplay Overhaul ». Audit préalable : `FADA_ROYALE_V2_AUDIT.md`. Travail en 5 étapes vérifiées, une par commit (`3c3c427`, `a1bd202`, `7fe7598`, `16bd9a2`, `351773f`).
+
+**Ce qui n'a pas été fait ou pas pu l'être**, dit tout de suite :
+- Les 5 images d'armes reçues sont des rendus officiels de Fortnite : elles ont servi à choisir des **catégories** d'armes, rien n'en est copié (ni image, ni forme).
+- « La vidéo fournie » pour les emotes **n'a pas été reçue** avec la demande : les emotes ne s'en inspirent pas.
+- Aucun clip de danse ou d'emote n'existe dans le projet : les 4 emotes sont construites à la main sur le squelette.
+- Les 2 nouvelles armes sont **modélisées dans le code** (vraies pièces en volume) ; un modèle plus détaillé demanderait un outil « image → 3D » payant (Higgsfield, crédits) : **pas utilisé sans ton accord**.
+- **Aucun test sur un vrai téléphone** (pas d'appareil ni d'émulateur ici) : les mesures de calcul sont faites dans un navigateur sans écran ; les FPS sur Android ne sont **pas garantis**.
+
+## 1. Arsenal (`src/core/arsenal.js`, nouveau)
+
+| | |
+|---|---|
+| **Catalogue unique** | Toutes les valeurs des armes (dégâts, tête, cadence, chargeur, recharge, dispersion, portée, dégâts aux constructions, recul, mode de tir, munitions, raretés possibles, réglages des bots) sont dans un seul fichier ; `index.html` les lit, rien n'est recopié ailleurs. |
+| **5 raretés par arme** | Commun (gris), Peu commun (vert), Rare (bleu), Épique (violet), Légendaire (orange). Chaque arme a une rareté de base (valeurs du tableau) et une plage de raretés possibles. Un cran au-dessus : +6 % de dégâts (aussi aux constructions), −6 % de temps de rechargement, −5 % de dispersion. Rareté visible : faisceau et anneau au sol, cadre de la case, nom de l'arme. |
+| **4 types de munitions** | Légères, moyennes, lourdes, cartouches (avant : une réserve commune de 300). Plafonds, caisses typées au sol (bande de couleur), caisses ramassées jusqu'au plafond, le reste reste au sol. |
+| **Inventaire** | Ramasser (rareté et chargeur gardés), **lâcher** (touche G, bouton LÂCHER), reprendre, **remplacer** l'arme en main quand les 5 cases sont pleines (E / bouton) ; même arme de meilleure rareté = l'ancienne est remplacée et posée au sol. Cases : couleur de rareté, chargeur / réserve. |
+| **Modes de tir** | Automatique (garder le doigt) ou semi-automatique (un coup par clic à la souris ; au doigt, garder appuyé retire à la cadence de l'arme). |
+| **2 nouvelles armes** | **Fusil tactique** beige (semi-automatique, précis, munitions moyennes) et **pompe tactique** noire à canon long (semi-automatique, munitions de pompe). Modèles construits dans le code (`src/core/weapon-models.js`) : boîtiers, canons, chargeur, crosse, poignée, garde-main, en volume, matières PBR partagées, 3 à 4 appels de dessin par arme. Prise en main, étuis, rechargements et sons branchés sur les systèmes v1.7. |
+| **Butin** | Armes au sol avec rareté tirée au sort (les coffres font mieux), souvent avec leurs munitions ; éliminations : caisses du type des armes du perso. |
+| **Bots** | Compatibles : dégâts selon la rareté de leur arme, choix d'arme selon la rareté et la distance. |
+
+Catalogue (valeurs de `src/core/arsenal.js`) :
+
+| Arme | Mode | Munitions | Dégâts | Tête | Cadence (tirs/s) | Chargeur | Recharge (s) | Portée (m) | Dégâts aux constructions | Raretés possibles |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Revolver | semi-auto | légères | 40 | ×2 | 2.4 | 6 | 2 | 140 | 35 | Commun → Rare |
+| Mitraillette | automatique | légères | 14 | ×1.6 | 13.3 | 30 | 1.8 | 85 | 16 | Commun → Épique |
+| Fusil d'assaut | automatique | moyennes | 25 | ×1.6 | 7.7 | 30 | 1.9 | 170 | 30 | Commun → Légendaire |
+| Fusil tactique | semi-auto | moyennes | 36 | ×2 | 4.2 | 20 | 2 | 220 | 34 | Peu commun → Légendaire |
+| Pompe | semi-auto | Cartouches | 11 × 9 plombs | ×1.5 | 1.2 | 5 | 2.2 | 55 | 12 | Commun → Épique |
+| Pompe tactique | semi-auto | Cartouches | 8.5 × 8 plombs | ×1.5 | 2.9 | 8 | 2.4 | 50 | 10 | Peu commun → Légendaire |
+| Mitrailleuse | automatique | moyennes | 22 | ×1.5 | 10.0 | 80 | 4 | 150 | 34 | Rare → Légendaire |
+| Sniper | semi-auto | lourdes | 95 | ×2.5 | 0.7 | 5 | 2.8 | 450 | 70 | Rare → Légendaire |
+
+Dégâts par balle (ou par plomb) selon la rareté (les valeurs du tableau sont celles de la rareté de base, en gras) :
+
+| Arme | Commun | Peu commun | Rare | Épique | Légendaire |
+|---|---|---|---|---|---|
+| Revolver | 37.6 / 2.12 s | **40.0 / 2.00 s** | 42.4 / 1.88 s | — | — |
+| Mitraillette | 13.2 / 1.91 s | **14.0 / 1.80 s** | 14.8 / 1.69 s | 15.7 / 1.58 s | — |
+| Fusil d'assaut | 22.0 / 2.13 s | 23.5 / 2.01 s | **25.0 / 1.90 s** | 26.5 / 1.79 s | 28.0 / 1.67 s |
+| Fusil tactique | — | 31.7 / 2.24 s | 33.8 / 2.12 s | **36.0 / 2.00 s** | 38.2 / 1.88 s |
+| Pompe | 9.7 / 2.46 s | 10.3 / 2.33 s | **11.0 / 2.20 s** | 11.7 / 2.07 s | — |
+| Pompe tactique | — | 8.0 / 2.54 s | **8.5 / 2.40 s** | 9.0 / 2.26 s | 9.5 / 2.11 s |
+| Mitrailleuse | — | — | 20.7 / 4.24 s | **22.0 / 4.00 s** | 23.3 / 3.76 s |
+| Sniper | — | — | 83.6 / 3.14 s | 89.3 / 2.97 s | **95.0 / 2.80 s** |
+
+Munitions :
+
+| Type | Plafond transporté | Caisse au sol | Armes |
+|---|---|---|---|
+| Munitions légères | 360 | 30 | Revolver, Mitraillette |
+| Munitions moyennes | 300 | 30 | Fusil d'assaut, Fusil tactique, Mitrailleuse |
+| Munitions lourdes | 60 | 6 | Sniper |
+| Cartouches | 60 | 10 | Pompe, Pompe tactique |
+
+Modèles 3D des armes : revolver, mitraillette, fusil d'assaut, pompe, sniper, mitrailleuse et daba = modèles « 2.5D » de la v1.2 (silhouette découpée, extrudée et arrondie, ≈ 4 cm d'épaisseur : vraie géométrie, pas une image plane) ; fusil tactique et pompe tactique = modélisés en volume dans le code (v2.0). Aucun modèle n'est copié d'un autre jeu.
+
+## 2. Construction (`src/core/building.js`, nouveau)
+
+| | |
+|---|---|
+| **Réglages centralisés** | PV, temps de pose, coût, résistance par pièce, et part des dégâts par type d'attaque (balles du joueur, des bots, coups de daba). |
+| **PV doublés** | Mur 150 → 300, rampe / sol / toit 140 → 280 (mesuré : 10 balles de fusil d'assaut, 3 coups de pompe, 5 de sniper, 5 coups de daba pour un mur fini). |
+| **Pose en continu** | Doigt (ou clic) gardé sur une pièce = pose en continu ; on peut changer de pièce sans lever le doigt (mesuré : 10 murs en 1,1 s). |
+| **Fantôme** | Vert quand la pièce peut être posée, rouge sinon (avant : bleu). |
+| **Mode SIMPLE / AVANCÉ** | Paramètres › Construction. SIMPLE (par défaut au téléphone) : toucher une pièce la pose, orientation automatique, boutons de pièces plus grands, si la case visée est prise la pièce va à la place libre la plus proche (devant, au-dessus, sous les pieds). AVANCÉ : rotation (R / TOURNER) et tous les réglages fins. Même système de construction dans les deux modes (pas de système parallèle). |
+
+## 3. Graphismes
+
+| | |
+|---|---|
+| **5 profils** | Très faible (nouveau : sans ombres ni effets, résolution 0,75, 180 m de vue), Faible, Moyen, Élevé, **Personnalisé** (part du profil choisi avant, puis ombres aucune / basses / moyennes / hautes, sol simple / détaillé, effets réduits / moyens / complets, végétation réduite / complète). Mesuré au même endroit : 93, 100, 193 et 199 appels de dessin de Très faible à Élevé. |
+| **Premier lancement** | Téléphone modeste (≤ 2 Go de mémoire ou ≤ 4 cœurs) : Très faible ; autre téléphone : Faible ; ordinateur : Élevé. |
+| **Anticrénelage** | Réglable, appliqué au prochain lancement (WebGL ne permet pas de le changer en cours de route). |
+| **Limite d'images** | 30 / 45 / 60 / 90 / 120 : la fréquence de l'écran est mesurée, seules les limites qu'il peut afficher sont proposées (écran 60 Hz : 30, 45, 60). Limite par accumulateur : 45 sur un écran 60 Hz donne bien 45 (avant : 30). Compteur de FPS déjà présent. |
+| **Pas de post-traitement** | Le jeu n'a pas d'effets de post-traitement (flou, bloom) : rien à régler de ce côté. |
+
+## 4. HUD
+
+| | |
+|---|---|
+| **Éditeur** | En plus de déplacer et redimensionner (v1.1) : **opacité** et **masquage** de chaque élément (le joystick et les paramètres ne se masquent pas), bouton TOURNER et bouton des emotes ajoutés. |
+| **Dispositions** | Classique, Compacte (boutons plus petits et plus discrets), Construction (pièces, ÉDITER et BÂTIR plus grands), **Personnalisée** (la tienne, gardée sur le téléphone, retrouvée au redémarrage). Une disposition faite avant la v2.0 devient « Personnalisée ». |
+| **Joueurs** | « 37 en vie / 50 » ; Paramètres › Partie donne la répartition des bots de la partie en cours (débutants, normaux, avancés, encore en jeu, éliminés). |
+
+## 5. Carte (680 m de côté au lieu de 480 m, ≈ 2 × la surface)
+
+8 nouveaux lieux autour de l'ancienne carte (qui ne change pas), avec maisons ouvertes (portes, étages, butin dedans), butin et coffres :
+
+| Lieu | Où | Contenu |
+|---|---|---|
+| Camp militaire | Est | 6 casernes, hangar, 2 miradors, château d'eau, sacs de sable |
+| Bilma | Nord-est | Oasis : palmiers dattiers, puits, salines, cases, maisons de banco, au milieu des dunes |
+| Malbaza | Sud-est | Cimenterie : 3 silos, 2 hangars, convoyeur, château d'eau, pylônes, logements |
+| Djado | Nord | Forteresse en ruine (ksar), maisons de banco, murets, rochers |
+| Termit | Nord-ouest | Massif rocheux (collines, 70 gros rochers à récolter), 2 maisons, mirador |
+| Filingué | Ouest (autre rive) | Village sur une colline : cases, maisons, baobab |
+| Gouré | Est | Village des dunes : cases, maisons, palmiers |
+| Gaya | Sud | Grand marché : 15 étals, maisons |
+
+Brousse (arbres, rochers, buttes, buissons, butin) à la même densité qu'avant sur toute la carte ; fleuve et palmiers sur toute la longueur ; terrain plus fin en Moyen / Élevé (mailles de 3 m) ; taxi-brousse à la même vitesse (traversée de 40 s).
+
+## 6. Tempête et durée des parties (`src/core/match.js`, nouveau)
+
+7 phases au lieu de 5 : zone de départ de 500 m de rayon (toute la carte), puis 250, 160, 95, 52, 24, 9 et 0 m ; dégâts 1 à 12 par seconde ; tempête finie en **18 min** (avant : ≈ 5 min). Mesuré sur des parties entières entre bots : **15,8 min en moyenne avec 39 ou 49 bots**, 14 min avec 59 (voir le rapport de tests).
+
+## 7. Bots
+
+| | Avant (v1.7) | v2.0 |
+|---|---|---|
+| Nombre | 19 (20 joueurs), fixe | **19 à 59**, réglable (Paramètres › Partie) ; par défaut 49 sur ordinateur, 39 au téléphone, 29 sur un téléphone modeste |
+| Niveaux | un seul | **Débutants, Normaux, Avancés, Mélangés** (35 / 45 / 20 %) : précision, délai de réaction, perception, construction quand ils sont touchés, seuil de soin, pas de côté, sauts, marge pour rejoindre la zone, rayon de recherche du butin |
+| Zone | partaient 22 s avant que la tempête avance, quelle que soit la distance | partent à temps selon la distance à courir et leur niveau |
+| Début de partie | combat dès l'atterrissage | pillent d'abord (perception réduite tant qu'on ne les touche pas, 35 à 70 s) |
+| Fin de partie | erraient au hasard dans la zone | tiennent leur position, ou rentrent dans la zone de leur côté |
+| Armes | — | distances de combat des 2 nouvelles armes |
+| Célébrations | — | emote après une élimination, parfois |
+
+## 8. Emotes
+
+Salut, Bravo, Victoire, Danse : bouton à côté des paramètres (touche J puis 1 à 4 sur ordinateur). Gestes construits à la main (cibles des mains pour l'IK des bras, rotations du buste et des hanches). Arme rangée pendant l'emote ; annulée en bougeant, en tirant, en construisant ou quand on est touché ; Victoire jouée quand on gagne ; les bots célèbrent parfois une élimination.
+
+## 9. Performances
+
+| | |
+|---|---|
+| **Ramassage des bots** | Chaque bot testait tous les objets de la carte à chaque image (8 % du calcul avec 49 bots) : une image sur 3 par bot. |
+| **Coffres** | Ouverture testée une image sur 3 par coffre (au lieu de tous les coffres × tous les persos à chaque image). |
+| **Objets au sol** | Le flottement n'est calculé que pour les objets affichés. |
+| **Animation** | Les bots au-delà de 2 × la distance d'animation complète ne sont animés qu'une image sur 6 (le temps d'animation reste juste). |
+| **Mesures** | Voir le rapport de tests : logique + animation par image selon le nombre de bots. |
+
+## 10. Fichiers
+
+- Nouveaux : `src/core/arsenal.js`, `src/core/weapon-models.js`, `src/core/building.js`, `src/core/match.js` ; tests `arsenal.cjs`, `construction2.cjs`, `graphismes.cjs`, `bots.cjs`, `partie.cjs`, `emotes.cjs`, `combat.cjs` ; `documentation/FADA_ROYALE_V2_AUDIT.md`.
+- Modifiés : `index.html` (arsenal, inventaire, butin, HUD, construction, graphismes, éditeur de HUD, carte, tempête, bots, emotes, performances), `src/core/weapon-handling.js` (prise des 2 nouvelles armes), `src/lobby/lobby.js` (v2.0, nouveautés, description du mode), `tests/prise.cjs` (9 armes), `tests/build.cjs` (mode avancé pour un essai), `android/AndroidManifest.xml` (versionCode 19, versionName 2.0), `android/README.md`.
+
 # v1.7 — Armes en main, changement d'arme, construction
 
 Base : v1.6.1 (commit `a418d73`, sauvegarde avant modification). Demande : « mission 1.7 » (prise des armes et du sabre, changement d'arme, construction à la Fortnite, animations, caméra, contrôles tactiles, Android). Audit préalable : `FADA_ROYALE_V17_AUDIT.md`. Mesures : `FADA_ROYALE_V1_TEST_REPORT.md`.
