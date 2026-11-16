@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>Fada Royale v2.0</title>
+<title>Fada Royale v2.0.1</title>
 <!-- three.js r160 est hébergé avec le jeu (dossier lib/) : plus besoin d'un CDN pour démarrer -->
 <script type="importmap">{"imports":{"three":"./lib/three/three.module.min.js","three/addons/":"./lib/three/addons/"}}</script>
 <script>
@@ -57,7 +57,7 @@ button{font-family:inherit;cursor:pointer;border:0;color:inherit}
 #zone .zimg{display:none}#zone.pic{top:7%}
 #zone.pic .zimg{display:flex;flex-direction:column;justify-content:flex-end;margin:0 auto;width:min(460px,46vw);aspect-ratio:3/1;background-size:cover;background-position:center;border-radius:14px;border:2px solid rgba(255,236,210,.75);box-shadow:0 8px 24px rgba(0,0,0,.45);overflow:hidden}
 #zone.pic .ztx{padding:22px 8px 6px;background:linear-gradient(transparent,rgba(20,10,4,.82));font-size:24px}#zone.pic .ztx small{font-size:12px}#zone.pic .ztx .ic{width:22px;height:22px}
-body.touch #zone.pic{top:3%}body.touch #zone.pic .zimg{width:min(400px,42vw)}body.touch #zone.pic .ztx{font-size:20px;padding-top:16px}
+#zone{pointer-events:none}body.touch #zone.pic{top:19%}body.touch #zone.pic .zimg{width:min(280px,32vw);opacity:.92}body.touch #zone.pic .ztx{font-size:16px;padding-top:12px}body.touch #zone.pic .ztx small{font-size:10px} /* v2.0.1 : plus petite, sous les commandes du haut */
 #msg{position:absolute;top:27%;left:0;right:0;text-align:center;font-family:Bungee;font-size:26px;color:#ffd166;text-shadow:0 3px 0 #7a2e0b,0 0 18px rgba(0,0,0,.6);opacity:0;transition:opacity .3s}
 #msg small{display:block;font:700 14px Rubik;color:#fff}
 #cross{position:absolute;left:50%;top:50%;width:0;height:0;--g:7px}
@@ -102,7 +102,7 @@ body.touch #zone.pic{top:3%}body.touch #zone.pic .zimg{width:min(400px,42vw)}bod
 .slot.on{transform:translateY(-5px);border-color:rgba(255,210,122,.85);background:linear-gradient(180deg,rgba(244,164,60,.62),rgba(120,60,20,.75));box-shadow:0 0 0 1px rgba(255,210,122,.35),0 6px 14px rgba(0,0,0,.35)}
 .slot.on kbd{color:#fff7ea}
 .slot.off{opacity:.32}
-#wname{font:400 13px/16px Bungee;letter-spacing:.6px;height:16px;text-shadow:0 2px 0 rgba(0,0,0,.55)}
+#wname{font:400 13px/16px Bungee;letter-spacing:.6px;height:16px;text-shadow:0 2px 0 rgba(0,0,0,.55);padding:0 6px;border-radius:6px;background:rgba(14,9,4,.42)} /* v2.0.1 : fond sombre, ne se confond plus avec les barres */
 .itm{position:relative;min-width:56px;height:52px;border-radius:9px;background:var(--panel);border:1px solid var(--line);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:#fff7ea;padding:0 6px}
 .itm .ic{width:20px;height:20px;color:var(--acc2)}
 .itm b{font:400 13px/1 Bungee}
@@ -239,13 +239,13 @@ body.editing-hud.he-adv #bRot.hidden{display:flex!important}
 
 @media (max-height:480px),(max-width:700px){
   #mini{width:96px;height:96px}
-  .chip{gap:4px}.chip .ic{width:13px;height:13px}.chip b{font-size:12px}
-  .chip{font-size:11px;padding:3px 7px}
+  .chip{gap:4px}.chip .ic{width:13px;height:13px}.chip b{font-size:13px}
+  .chip{font-size:11px;padding:3px 7px}.chip small{font-size:11px}
   #bars{width:240px}
-  .slot{width:54px;height:44px}.slot img{top:5px;height:18px;left:5px;width:calc(100% - 10px)}.slot span{font-size:9px}.slot b{font-size:9px}
+  .slot{width:58px;height:46px}.slot img{top:4px;height:17px;left:5px;width:calc(100% - 10px)}.slot span{font-size:11px;font-weight:800}.slot b{font-size:10px} /* v2.0.1 : 9 px illisible sur un petit écran */
   .itm{min-width:44px;height:42px}.itm .ic{width:16px;height:16px}.itm b{font-size:11px}
   #compass{width:200px;margin-left:-100px;height:26px}
-  #wname{font-size:11px;height:13px;line-height:13px}
+  #wname{font:800 12px/15px Rubik;height:15px;letter-spacing:.3px} /* v2.0.1 : Rubik gras, plus lisible que Bungee en petit */
   .brow>span{font-size:12px;min-width:26px}
   #zone{font-size:26px}#zone small{font-size:12px}
   #msg{font-size:20px}
@@ -260,6 +260,7 @@ body.editing-hud.he-adv #bRot.hidden{display:flex!important}
 <body>
 <!-- icônes du jeu (dessinées pour Fada Royale, trait 2 px, couleur héritée) -->
 <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<symbol id="i-wave" viewBox="0 0 24 24"><path d="M2 9c3 0 3-2 5-2s2 2 5 2 3-2 5-2 2 2 5 2M2 16c3 0 3-2 5-2s2 2 5 2 3-2 5-2 2 2 5 2"/></symbol>
 <symbol id="i-emote" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 14.5c1 1.6 2.3 2.4 4 2.4s3-.8 4-2.4"/><path d="M9 9.5h.01M15 9.5h.01" stroke-width="3"/></symbol>
 <symbol id="i-gear" viewBox="0 0 24 24"><path stroke-width="1.8" d="M19.47 10.58 L22.12 10.72 L22.12 13.28 L19.47 13.42 L18.29 16.27 L20.06 18.25 L18.25 20.06 L16.27 18.29 L13.42 19.47 L13.28 22.12 L10.72 22.12 L10.58 19.47 L7.73 18.29 L5.75 20.06 L3.94 18.25 L5.71 16.27 L4.53 13.42 L1.88 13.28 L1.88 10.72 L4.53 10.58 L5.71 7.73 L3.94 5.75 L5.75 3.94 L7.73 5.71 L10.58 4.53 L10.72 1.88 L13.28 1.88 L13.42 4.53 L16.27 5.71 L18.25 3.94 L20.06 5.75 L18.29 7.73 Z"/><circle cx="12" cy="12" r="3.3"/></symbol>
 <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.3"/><path d="M2.8 20c0-3.6 2.8-6.2 6.2-6.2s6.2 2.6 6.2 6.2"/><path d="M15.6 4.9a3.2 3.2 0 0 1 0 6.3M17.8 14.3c2 .8 3.4 2.9 3.4 5.7"/></symbol>
@@ -1382,7 +1383,7 @@ function makeGlider(){
 function updateGlider(c,dt){ const gl=c.model.glider; if(!gl||!gl.visible) return; c.gliderT=(c.gliderT||0)+dt;
   const u=Math.min(1,c.gliderT/0.55), e=1+2.2*Math.pow(u-1,3)+1.2*Math.pow(u-1,2); // easeOutBack
   gl.scale.set(Math.max(0.05,e),Math.max(0.05,Math.min(1,u*1.6)),Math.max(0.2,e));
-  const s=Math.sin(c.yaw), co=Math.cos(c.yaw), side=c.vel.x*co-c.vel.z*s; gl.rotation.z=lerp(gl.rotation.z,clamp(-side*0.05,-0.35,0.35),1-Math.exp(-4*dt));
+  gl.rotation.z=lerp(gl.rotation.z,-(c.gBank||0)*0.35,1-Math.exp(-4*dt)); // v2.0.1 : la voile s'incline dans les virages (le perso aussi : animRealAnim)
   gl.userData.wing.rotation.x=Math.sin(c.gliderT*1.7)*0.03; }
 function buildChar(skinKey){
   const S=SKINS[skinKey]; const g=new THREE.Group(); const body=new THREE.Group(); g.add(body);
@@ -1825,7 +1826,7 @@ let buildMsgT=0, camLand=0, camLandK=0;
 // v2.0 : mode simple, à l'appui sur une pièce (pas en la gardant) : si la place visée est prise ou bloquée, on essaie les places voisines (autre inclinaison du regard : devant,
 // au-dessus, sous les pieds) et on garde la première valable
 const SIMPLE_ALT={wall:[],floor:[-0.9,0,0.5],ramp:[],cone:[-0.3,0.3]}; // pas d'autre place pour les murs et les rampes : elle gênerait la montée mur + rampe
-function tryBuild(c,type,dir,opts){
+function tryBuild(c,type,dir,opts){ if(c.swim) return false; // v2.0.1 : pas de construction en nageant
   if(c.banco<BUILD[type].cost || c.buildCD>0) return false;
   const d0=dir??dirFromYaw(c===player?camYaw:c.yaw);
   let pl=computePlacement(c,type,d0,opts);
@@ -1933,8 +1934,21 @@ function collideXZ(c){
 }
 function canStand(c){ const list=gridQuery(c.pos.x-0.6,c.pos.z-0.6,c.pos.x+0.6,c.pos.z+0.6);
   for(const s of list){ if(c.pos.x>s.minX-0.38&&c.pos.x<s.maxX+0.38&&c.pos.z>s.minZ-0.38&&c.pos.z<s.maxZ+0.38&&s.minY>c.pos.y+0.9&&s.minY<c.pos.y+1.8) return false; } return true; }
+/* v2.0.1 : nage. Avant, le perso marchait au fond du fleuve, la tête au ras de l'eau. Là où l'eau a plus de 1,25 m de fond, il flotte
+   (hanches ≈ 0,1 m sous la surface, tête dehors) et nage en crawl : 3 m/s, 3,9 m/s au sprint ; arme rangée, ni tir, ni construction,
+   ni soin ; il ressort en marchant là où l'eau redevient basse. Bots compris. */
+const SWIM_DEPTH=1.25, SWIM_Y=WATER_Y-1.08;
+function swimMove(c,wx,wz,dt){
+  if(!c.swim){ c.swim=true; c.crouch=false; c.slideT=0; c.height=1.75; c.swimT=0; if(c.pos.distanceTo(camera.position)<45) for(let i=0;i<10;i++) spawnParticle(c.pos.x+rnd(-0.5,0.5),WATER_Y+0.05,c.pos.z+rnd(-0.5,0.5),rnd(-1.5,1.5),rnd(2,4),rnd(-1.5,1.5),0xe4f6ff,0.6,0.9,12); }
+  c.swimT+=dt; const sp=c.sprint?3.9:3.0, k=1-Math.exp(-3*dt); c.vel.x=lerp(c.vel.x,wx*sp,k); c.vel.z=lerp(c.vel.z,wz*sp,k); c.vel.y=0;
+  c.blocked=false; c.pos.x+=c.vel.x*dt; c.pos.z+=c.vel.z*dt; collideXZ(c);
+  c.pos.y=lerp(c.pos.y,SWIM_Y+0.04*Math.sin(c.swimT*3.2),1-Math.exp(-5*dt)); // flotte, avec une petite houle
+  const g=groundAt(c.pos.x,c.pos.z,c.pos.y+0.5); if(g>c.pos.y){ c.pos.y=g; } // berge qui remonte
+  c.grounded=true; c.onRamp=null; c.coyote=0;
+  const mv=Math.hypot(c.vel.x,c.vel.z); if(mv>0.8&&c.pos.distanceTo(camera.position)<40&&Math.random()<dt*7){ const f=0.7/mv; spawnParticle(c.pos.x+c.vel.x*f+rnd(-0.3,0.3),WATER_Y+0.05,c.pos.z+c.vel.z*f+rnd(-0.3,0.3),rnd(-0.6,0.6),rnd(1.2,2.4),rnd(-0.6,0.6),0xe4f6ff,0.45,0.7,12); } }
 function moveChar(c,wx,wz,speed,dt,jump){
   const th=terrainH(c.pos.x,c.pos.z); const inWater = th<WATER_Y-0.5 && c.pos.y<WATER_Y;
+  if(WATER_Y-th>SWIM_DEPTH&&c.pos.y<SWIM_Y+0.5){ swimMove(c,wx,wz,dt); return; } else if(c.swim){ c.swim=false; }
   let sp=speed*(inWater?0.55:1)*(c.useT>0?0.45:1)*(c.crouch&&c.slideT<=0?0.42:1); const acc=c.grounded?14:4; let k=1-Math.exp(-acc*dt);
   if(c.slideT>0){ c.slideT-=dt; const f=clamp(c.slideT/1.0,0,1); sp=lerp(3,12,f*f); wx=c.slideDir.x; wz=c.slideDir.z; k=1-Math.exp(-20*dt);
     if(c.slideT<=0){ c.slideT=0; if(canStand(c)) c.crouch=false; } }
@@ -2176,7 +2190,7 @@ class Char{
     this.boltT=0; this.pumpT=0; this.switchDur=0; this.switchFrom=null; this.swPh=0; this.swU=0; this.swFrom=null; this.raiseT=0; this.meleeAt=0; this.reloadDur=0; this.reloadShells=0; this.reloadDone=0; this.combatT=0;
     this.dmgDealt=0; this.built=0; this.chestsOpened=0; this.harvested=0; this.recorded=false; this.dummy=false; this.respawnT=0; this.deathT=0; this.hurtT=0; this.moving=false; this.model.g.visible=false; this.model.g.rotation.set(0,0,0); this.model.g.scale.setScalar(1); this.model.glider.visible=false;
     this.target=null; this.moveTarget=null; this.thinkT=Math.random()*0.3; this.reactT=0; this.burst=0; this.strafe=Math.random()<0.5?1:-1; this.strafeT=0; this.stuck=0; this.lastPos=V(); this.seeT=0; this.blocker=null; this.canSee=false; this.wantJump=false; this.jumpAt=0; this.landTarget=null; this.rank=0; this.calmT=0; this.killer=null; this.inStorm=false; this.stormAcc=0; this.detourT=0;
-    this.crouch=false; this.slideT=0; this.slideDir=V(); this.ck=0; this.landT=0; this.sprint=false; this.sprintCD=0; if(this.model.an) this.model.an=newAnState(); this.recoil=0; this.switchT=0; this.aimPitch=0; this.height=1.75; this.model.st={}; }
+    this.crouch=false; this.swim=false; this.slideT=0; this.slideDir=V(); this.ck=0; this.landT=0; this.sprint=false; this.sprintCD=0; if(this.model.an) this.model.an=newAnState(); this.recoil=0; this.switchT=0; this.aimPitch=0; this.height=1.75; this.model.st={}; }
 }
 /* v2.0 : munitions par type. c.ammo reste lisible (réserve du type de l'arme en main) ; l'écrire remplit tous les types
    (compatibilité : entraînement, tests). Le jeu lui-même passe par ammoT / ammoLeft / useAmmo. */
@@ -2188,16 +2202,16 @@ function startReload(c){ const w=WEAP[c.cur]; if(!c.alive||w.melee||c.reloadT>0|
   else c.reloadT=c.reloadDur=w.reload*rm;
   c.useT=0; c.boltT=0; c.pumpT=0; }
 function finishReload(c){ const w=WEAP[c.cur]; const need=w.mag-c.mag[c.cur]; const take=c.isPlayer?Math.min(need,ammoLeft(c,c.cur)):need; c.mag[c.cur]+=take; useAmmo(c,c.cur,take); }
-function useItem(c,kind){ if(!c||!c.alive||c.phase==='bus'||c.useT>0||c.reloadT>0) return; if(kind==='kilishi'&&(c.kilishi<=0||c.hp>=100)) return; if(kind==='the'&&(c.the<=0||c.shield>=75)) return; c.useKind=kind; c.useT=c.useMax=kind==='kilishi'?2.0:1.6; }
+function useItem(c,kind){ if(!c||!c.alive||c.phase==='bus'||c.swim||c.useT>0||c.reloadT>0) return; if(kind==='kilishi'&&(c.kilishi<=0||c.hp>=100)) return; if(kind==='the'&&(c.the<=0||c.shield>=75)) return; c.useKind=kind; c.useT=c.useMax=kind==='kilishi'?2.0:1.6; }
 function finishUse(c){ if(!c.isPlayer) BSTAT.heals++; if(c.useKind==='kilishi'){ c.kilishi--; c.hp=Math.min(100,c.hp+25); } else { c.the--; c.shield=Math.min(75,c.shield+25); } if(c.isPlayer) sfxPick(); c.useKind=null; }
 /* ---------- v2.0 : emotes ----------
    Le projet n'a aucun clip de danse ou d'emote (seulement marche, course, saut, glissade, soin, coup, abattage) : les 4 gestes sont
    construits à la main sur le squelette, comme le coup de daba (cibles des mains pour l'IK des bras, rotations du buste). */
 const EMOTES={salut:{name:'SALUT',dur:2.6},bravo:{name:'BRAVO',dur:2.8},victoire:{name:'VICTOIRE',dur:2.6},danse:{name:'DANSE',dur:8}};
-function startEmote(c,k){ if(!c||!c.alive||c.phase!=='ground'||!c.grounded||c.useT>0||c.reloadT>0||c.swPh||c.mantle||(c===player&&(buildMode||editing))||!EMOTES[k]) return false;
+function startEmote(c,k){ if(!c||!c.alive||c.phase!=='ground'||c.swim||!c.grounded||c.useT>0||c.reloadT>0||c.swPh||c.mantle||(c===player&&(buildMode||editing))||!EMOTES[k]) return false;
   if(Math.hypot(c.vel.x,c.vel.z)>0.8) return false; c.emote={k,t:0}; return true; }
 function updateEmote(c,dt){ const e=c.emote; if(!e) return; e.t+=dt;
-  if(e.t>EMOTES[e.k].dur||!c.alive||c.phase!=='ground'||Math.hypot(c.vel.x,c.vel.z)>0.8||!c.grounded||c.useT>0||c.reloadT>0||c.swPh||c.mantle||(c.hurtT||0)>0.25||(c===player&&(buildMode||firing||editing))) c.emote=null; }
+  if(e.t>EMOTES[e.k].dur||!c.alive||c.phase!=='ground'||c.swim||Math.hypot(c.vel.x,c.vel.z)>0.8||!c.grounded||c.useT>0||c.reloadT>0||c.swPh||c.mantle||(c.hurtT||0)>0.25||(c===player&&(buildMode||firing||editing))) c.emote=null; }
 // fondu d'entrée et de sortie (0,25 s)
 const emoteK=e=>Math.min(1,e.t/0.25,Math.max(0,(EMOTES[e.k].dur-e.t)/0.25));
 // cibles des mains (repère du perso : x à droite, y en haut, −z devant) ; renvoie [poids main droite, poids main gauche]
@@ -2211,7 +2225,7 @@ function emoteBody(c,e,B,g){ const t=e.t, k=emoteK(e); _efw.set(0,0,1).applyQuat
   if(e.k==='danse'){ const s=Math.sin(t*Math.PI*2*1.4); addRot(B.Hips,_UP,s*0.22*k); addRot(B.Spine1,_efw,s*0.1*k); addRot(B.Spine2,_UP,-s*0.18*k); addRot(B.Head,_efw,-s*0.12*k); g.position.y+=0.05*k*Math.abs(Math.sin(t*Math.PI*2*1.4)); }
   else if(e.k==='bravo'){ addRot(B.Head,_ax,0.08*k); }
   else if(e.k==='victoire'){ addRot(B.Head,_ax,-0.18*k); addRot(B.Spine2,_ax,-0.08*k); } }
-const _efw=new THREE.Vector3();
+const _efw=new THREE.Vector3(), _skv=new THREE.Vector3();
 let emoteOpen=false;
 function toggleEmoteBar(v){ emoteOpen=v===undefined?!emoteOpen:v; $('emoteBar').classList.toggle('hidden',!emoteOpen); }
 function playerEmote(k){ toggleEmoteBar(false); if(state!=='play') return; if(!startEmote(player,k)) showMsg('PAS MAINTENANT','arrête-toi, au sol, sans recharger ni construire',1.1); }
@@ -2276,7 +2290,7 @@ const camFwd=V(), camRight=V(), _o=V(), _d=V(), _t=V(), _m=V();
 function updateCamVectors(){ const cp=Math.cos(camPitch); camFwd.set(-Math.sin(camYaw)*cp,Math.sin(camPitch),-Math.cos(camYaw)*cp); camRight.set(Math.cos(camYaw),0,-Math.sin(camYaw)); }
 function muzzle(c,out){ const wo=c.model.w&&c.model.w[c.cur]; if(wo&&wo.visible&&c.cur!=='daba'){ const A=ASSETS.w[c.cur]; wo.updateWorldMatrix(true,false); return wo.localToWorld(out.set(0,A&&A.muzzleY!==undefined?A.muzzleY:0.02,A?A.muzzle:-0.6)); } const s=Math.sin(c.yaw), co=Math.cos(c.yaw); return out.set(c.pos.x-s*0.75+co*0.18, c.pos.y+1.28, c.pos.z-co*0.75-s*0.18); }
 let bloom=0;
-function playerFire(){
+function playerFire(){ if(player&&player.swim) return; // v2.0.1 : pas de tir en nageant
   const p=player, w=WEAP[p.cur];
   if(p.reloadT>0&&SHELL_GUNS.has(p.cur)&&p.mag[p.cur]>0){ p.reloadT=0; p.reloadShells=0; } // aux pompes, on peut tirer pendant le rechargement cartouche par cartouche
   if(p.fireCD>0||p.reloadT>0||p.raiseT>0||(p.switchT>0&&!(p.swPh===2&&p.swU>0.85))) return; // v1.7 : on peut tirer à la fin de la sortie de l'arme
@@ -2387,7 +2401,7 @@ function updateBus(dt){ if(!bus.active) return; bus.t+=dt; const k=bus.t/bus.dur
   for(const c of chars){ if(c.phase==='bus'&&c.alive){ c.pos.copy(bus.pos); if(!c.isPlayer&&bus.t>=c.jumpAt) jumpFromBus(c); } }
   if(bus.t>=bus.dur){ for(const c of chars) if(c.phase==='bus') jumpFromBus(c); }
   if(bus.t>bus.dur+8){ bus.active=false; bus.g.visible=false; } }
-function jumpFromBus(c){ if(c.phase!=='bus') return; c.phase='fall'; c.pos.set(bus.pos.x,bus.pos.y-3,bus.pos.z); c.vel.set(bus.dir.x*8,0,bus.dir.z*8); c.model.g.visible=true;
+function jumpFromBus(c){ if(c.phase!=='bus') return; c.phase='fall'; c.skyDive=0; c.pos.set(bus.pos.x,bus.pos.y-3,bus.pos.z); c.vel.set(bus.dir.x*8,0,bus.dir.z*8); c.model.g.visible=true;
   if(c===player){ state='play'; $('busUI').classList.add('hidden'); camPitch=-0.55; } }
 
 const PHASES=STORM.phases; // v2.0 : phases dans src/core/match.js (v1.0 : 5 phases, 5 min ; v2.0 : 7 phases, 17 min)
@@ -2417,7 +2431,7 @@ function updateStorm(dt){
    IA DES BOTS
    ===================================================================== */
 const POIS=[...CITIES.map(c=>[c.x,c.z]),[26,-98],[-24,-114],[-66,63],[BRIDGE_X,BRIDGE_Z],[60,-40],[150,120],[40,70],[150,-30],[-150,150],[200,-60],[120,200],[-200,-150],[-30,80]];
-function initBot(b){ const t=pick(POIS); b.landTarget=V(clamp(t[0]+rnd(-30,30),-MAP+10,MAP-10),0,clamp(t[1]+rnd(-30,30),-MAP+10,MAP-10));
+function initBot(b){ b.openAt=rnd(36,52); const t=pick(POIS); b.landTarget=V(clamp(t[0]+rnd(-30,30),-MAP+10,MAP-10),0,clamp(t[1]+rnd(-30,30),-MAP+10,MAP-10));
   // sauter quand le taxi est au plus près de la cible
   let best=0,bd=1e9; for(let k=0;k<=40;k++){ const kk=k/40; const x=lerp(bus.start.x,bus.end.x,kk), z=lerp(bus.start.z,bus.end.z,kk); const d=Math.hypot(x-b.landTarget.x,z-b.landTarget.z); if(d<bd){bd=d;best=kk;} }
   b.jumpAt=clamp(best*bus.dur-rnd(1,4)+rnd(-1,1),1.5,bus.dur-0.5); }
@@ -2495,7 +2509,7 @@ function botOnDamaged(b,att){
   if(b.banco>=10&&b.buildCD<=0&&b.phase==='ground'&&Math.random()<(b.prof?b.prof.build:0.5)){ const dir=dirFromYaw(Math.atan2(-(att.pos.x-b.pos.x),-(att.pos.z-b.pos.z))); tryBuild(b,'wall',dir); if(Math.random()<0.3) setTimeout(()=>{ if(b.alive&&b.banco>=10){ b.buildCD=0; tryBuild(b,'ramp',dir); } },350); }
 }
 function botShoot(b,target){
-  const w=b.cur; if(b.fireCD>0||b.switchT>0||w==='daba') return; const W=WEAP[w], B=W.bot; b.recoil=1; b.noiseT=1.5; if(w==='sniper') b.boltT=0.9; else if(w==='pompe') b.pumpT=0.5;
+  const w=b.cur; if(b.fireCD>0||b.switchT>0||w==='daba'||b.swim) return; const W=WEAP[w], B=W.bot; b.recoil=1; b.noiseT=1.5; if(w==='sniper') b.boltT=0.9; else if(w==='pompe') b.pumpT=0.5;
   _o.set(b.pos.x,b.pos.y+1.45,b.pos.z);
   const d=Math.hypot(target.pos.x-b.pos.x,target.pos.z-b.pos.z);
   let p = B.shotgun ? (d<7?0.85:d<15?0.45:0.12) : B.sniper ? clamp(0.62-d*0.002,0.25,0.6) : clamp(0.5-d*0.009,0.06,0.45)*(B.acc||1);
@@ -2535,7 +2549,7 @@ function updateBot(b,dt){
   updateTimers(b,dt);
   if(b.dummy){ moveChar(b,0,0,0,dt,false); b.moving=false; b.yaw=Math.atan2(-(player.pos.x-b.pos.x),-(player.pos.z-b.pos.z)); return; }
   if(b.phase==='bus') return;
-  if(b.phase==='fall'||b.phase==='glide'){ let wx=0,wz=0; if(b.landTarget){ const dx=b.landTarget.x-b.pos.x, dz=b.landTarget.z-b.pos.z, d=Math.hypot(dx,dz); if(d>2){ wx=dx/d; wz=dz/d; } } updateAir(b,dt,wx,wz); if(wx||wz) b.yaw=Math.atan2(-wx,-wz); return; }
+  if(b.phase==='fall'||b.phase==='glide'){ let wx=0,wz=0; if(b.landTarget){ const dx=b.landTarget.x-b.pos.x, dz=b.landTarget.z-b.pos.z, d=Math.hypot(dx,dz); if(d>2){ wx=dx/d; wz=dz/d; } } updateAir(b,dt,wx,wz); if(b.phase==='fall'&&(wx||wz)) b.yaw=Math.atan2(-wx,-wz); return; } /* v2.0.1 : au parapente, le cap vient de la voile */
   b.calmT-=dt; b.thinkT-=dt; if(b.thinkT<=0){ b.thinkT=0.28+Math.random()*0.08; botThink(b); }
   if(b.celebrateAt&&matchTime>=b.celebrateAt){ b.celebrateAt=0; if(!b.flee&&!(b.target&&b.target.alive&&b.canSee)){ b.vel.x=b.vel.z=0; startEmote(b,pick(['victoire','danse','salut','bravo'])); } }
   if(b.emote){ if(b.flee||(b.target&&b.target.alive&&b.canSee)) b.emote=null; else { moveChar(b,0,0,0,dt,false); b.moving=false; return; } } // v2.0 : immobile pendant l'emote
@@ -2560,16 +2574,32 @@ function updateBot(b,dt){
   if(t&&t.alive&&b.reactT<=0&&b.useT<=0&&b.reloadT<=0){ if(b.canSee) botShoot(b,t); else if(b.blocker&&b.blocker.alive&&b.fireCD<=0){ _o.set(b.pos.x,b.pos.y+1.45,b.pos.z); damagePiece(b.blocker,SHELL_GUNS.has(b.cur)?40:b.cur==='sniper'?55:16,'bot'); if(b.pos.distanceTo(camera.position)<110) tracer(muzzle(b,_t),b.blocker.center,0xffd9a0); sfxShot(b.cur,b.pos.distanceTo(camera.position)); b.fireCD=SHELL_GUNS.has(b.cur)?1:0.2; } }
   if(((pickTick+b.ix)%3)===0) tryPickups(b); /* v2.0 : une image sur 3 par bot (60 bots × tous les objets à chaque image coûtait 8 % du calcul) */
 }
-function updateAir(c,dt,wx,wz){
-  const g=groundAt(c.pos.x,c.pos.z,c.pos.y);
-  if(c.phase==='fall'){ c.vel.y=Math.max(c.vel.y-30*dt,-42); if(c.pos.y-g<44){ c.phase='glide'; c.model.glider.visible=true; c.gliderT=0; } }
-  if(c.phase==='glide') updateGlider(c,dt);
-  let hs=c.phase==='fall'?17:11;
-  if(c.phase==='glide') c.vel.y=lerp(c.vel.y,-6.5,1-Math.exp(-3*dt));
-  const k=1-Math.exp(-2.2*dt); c.vel.x=lerp(c.vel.x,wx*hs,k); c.vel.z=lerp(c.vel.z,wz*hs,k);
+/* v2.0.1 : chute libre et parapente refaits
+   Chute libre : à plat ventre ; joystick = direction (jusqu'à 15 m/s) ; le pousser vers l'avant = piqué (chute jusqu'à 55 m/s au lieu
+   de 40) ; SAUT ouvre le parapente plus tôt (au moins 12 m au-dessus du sol) ; ouverture automatique à 44 m (bots : 36 à 52 m).
+   Parapente : avance toujours (7,5 m/s sans toucher au joystick, jusqu'à 11,5), tourne vers le joystick à 1,6 rad/s en s'inclinant,
+   descend de 4,6 à 6,2 m/s ; sous 4,5 m, arrondi (il freine) puis se pose en courant. Avant : sans joystick, il descendait à la verticale. */
+const FLY={fallMin:-40, fallDive:-55, fallH:15, openAuto:44, openMin:12, gSpeed:7.5, gSpeedMax:11.5, gSink:-4.6, gSinkMax:-6.2, gTurn:1.6, flare:4.5};
+function openGlider(c,early){ if(c.phase!=='fall') return false; const g=groundAt(c.pos.x,c.pos.z,c.pos.y); if(early&&c.pos.y-g<FLY.openMin) return false;
+  c.phase='glide'; c.model.glider.visible=true; c.gliderT=0; const hs=Math.hypot(c.vel.x,c.vel.z);
+  c.gHead=hs>1?Math.atan2(-c.vel.x,-c.vel.z):c.yaw; c.gSpd=clamp(hs,FLY.gSpeed,FLY.gSpeedMax); c.gBank=0; c.vel.y=Math.max(c.vel.y,-14); return true; }
+function updateAir(c,dt,wx,wz,fwd=0){
+  const g=groundAt(c.pos.x,c.pos.z,c.pos.y), inp=Math.min(1,Math.hypot(wx,wz));
+  if(c.phase==='fall'){ const dive=Math.max(0,fwd), term=lerp(FLY.fallMin,FLY.fallDive,dive);
+    c.vel.y=c.vel.y<term?lerp(c.vel.y,term,1-Math.exp(-2*dt)):Math.max(c.vel.y-30*dt,term); // relever le piqué : on ralentit peu à peu
+    const k=1-Math.exp(-2.2*dt); c.vel.x=lerp(c.vel.x,wx*FLY.fallH,k); c.vel.z=lerp(c.vel.z,wz*FLY.fallH,k); c.skyDive=lerp(c.skyDive||0,dive,1-Math.exp(-4*dt));
+    if(c===player&&Q.pmax>100&&Math.random()<0.6){ const a=Math.random()*6.28, r=rnd(1.5,5); spawnParticle(c.pos.x+Math.cos(a)*r,c.pos.y-rnd(4,10),c.pos.z+Math.sin(a)*r,0,0,0,0xfff6e8,0.35,0.6,0); } // air qui défile
+    if(c.pos.y-g<(c.openAt||FLY.openAuto)) openGlider(c,false); }
+  if(c.phase==='glide'){ updateGlider(c,dt);
+    const want=inp>0.2?Math.atan2(-wx,-wz):c.gHead, dh=Math.atan2(Math.sin(want-c.gHead),Math.cos(want-c.gHead)), turn=clamp(dh,-FLY.gTurn*dt,FLY.gTurn*dt); c.gHead+=turn;
+    c.gBank=lerp(c.gBank||0,clamp(turn/Math.max(dt,1e-3)*0.3,-0.45,0.45),1-Math.exp(-5*dt));
+    const flare=clamp(1-(c.pos.y-g)/FLY.flare,0,1), spd=lerp(FLY.gSpeed,FLY.gSpeedMax,inp)*(1-0.45*flare);
+    c.gSpd=lerp(c.gSpd||spd,spd,1-Math.exp(-2*dt)); c.vel.y=lerp(c.vel.y,lerp(lerp(FLY.gSink,FLY.gSinkMax,inp),-1.8,flare),1-Math.exp(-(flare>0?7:3)*dt));
+    c.vel.x=-Math.sin(c.gHead)*c.gSpd; c.vel.z=-Math.cos(c.gHead)*c.gSpd; c.yaw=c.gHead; }
   const prevY=c.pos.y; c.pos.x+=c.vel.x*dt; c.pos.z+=c.vel.z*dt; collideXZ(c); c.pos.y+=c.vel.y*dt;
   const g2=groundAt(c.pos.x,c.pos.z,prevY);
-  if(c.pos.y<=g2){ c.pos.y=g2; c.vel.set(0,0,0); c.phase='ground'; c.grounded=true; c.model.glider.visible=false; c.calmT=c.isPlayer?0:rnd(6,14); if(c===player){ const z=zoneAt(c.pos.x,c.pos.z); showZone(z,true); } }
+  if(c.pos.y<=g2){ const run=c.phase==='glide'; c.pos.y=g2; c.vel.y=0; if(run){ c.vel.x*=0.7; c.vel.z*=0.7; } else c.vel.set(0,0,0); // au parapente : on se pose en courant
+    c.phase='ground'; c.grounded=true; c.model.glider.visible=false; c.calmT=c.isPlayer?0:rnd(6,14); if(c===player){ const z=zoneAt(c.pos.x,c.pos.z); showZone(z,true); } }
 }
 
 /* ---------- animation des persos ---------- */
@@ -2751,12 +2781,17 @@ function animRealAnim(c,dt){
   g.visible=c.isPlayer||dc<Q.vis; if(!g.visible) return;
   if(c===player&&isScoped()) g.visible=false;
   g.position.copy(c.pos); g.rotation.y=c.yaw;
+  // v2.0.1 : chute libre à plat ventre (plus penché en piqué), parapente incliné dans les virages ; rotation autour des hanches (1 m)
+  { const tp=c.phase==='fall'?-1.2-0.3*(c.skyDive||0):c.phase==='glide'?0.06:c.swim?-1.05:0, tr=c.phase==='glide'?-(c.gBank||0)*0.8:0; // nage : à l'horizontale
+    an.skP=lerp(an.skP||0,tp,1-Math.exp(-(c.phase==='fall'?3:c.swim?5:9)*dt)); an.skR=lerp(an.skR||0,tr,1-Math.exp(-6*dt));
+    if(Math.abs(an.skP)>0.003||Math.abs(an.skR)>0.003){ g.rotation.order='YXZ'; g.rotation.x=an.skP; g.rotation.z=an.skR; _skv.set(0,1,0).applyQuaternion(g.quaternion); g.position.x-=_skv.x; g.position.y+=1-_skv.y; g.position.z-=_skv.z; }
+    else if(g.rotation.x||g.rotation.z){ g.rotation.x=0; g.rotation.z=0; an.skP=0; an.skR=0; } }
   m.acc+=dt; m.frame++; if(!c.isPlayer&&dc>Q.animFar&&(m.frame%(dc>Q.animFar*2?6:3))) return; dt=m.acc; m.acc=0; /* v2.0 : au-delà de 2 × animFar, une image sur 6 */
   const air=c.phase!=='ground'||!c.grounded, sliding=c.slideT>0, sky=c.phase==='fall'||c.phase==='glide';
   const sp=Math.hypot(c.vel.x,c.vel.z);
   // v1.3 : immobile, le perso qui se tourne avec la caméra fait quelques pas sur place (pas de pivot « patin à glace »)
   const turnSp=!air&&sp<0.4?clamp(Math.abs(c.turnRate||0)*2.4,0,1.3):0;
-  an.sp=lerp(an.sp,air?an.sp:Math.max(sp,turnSp),1-Math.exp(-12*dt)); const s=an.sp;
+  an.sp=lerp(an.sp,air?an.sp:c.swim?0:Math.max(sp,turnSp),1-Math.exp(-12*dt)); /* nage : jambes de la pose de repos (battements ajoutés plus bas) */ const s=an.sp;
   c.ck=lerp(c.ck,c.crouch&&!sliding?1:0,1-Math.exp(-10*dt));
   // --- saut / chute ---
   if(air){ if(!an.wasAir){ an.wasAir=true; an.airT=0; an.fallV=0; an.jt=c.vel.y>3?0:-1; } an.airT+=dt; an.fallV=Math.min(an.fallV,c.vel.y); if(an.jt>=0) an.jt+=dt*1.3; }
@@ -2813,8 +2848,9 @@ function animRealAnim(c,dt){
   // v1.7 : changement d'arme : swK = 0 en position prête, 1 à l'étui ; étape 1 : l'ancienne arme y va, étape 2 : la nouvelle en sort
   let sw=0, wType=c.cur, swK=0;
   if(c.swPh){ sw=1; wType=c.swPh===1&&c.swFrom?c.swFrom:c.cur; swK=c.swPh===1?smooth(0,1,c.swU):c.swPh===3?1:1-smooth(0,1,c.swU); }
-  const climbing=!!c.mantle, gun=wType!=='daba', Gp=GRIP[wType], showW=!sky&&!using&&!bm&&!climbing&&!c.emote; /* v2.0 : arme rangée pendant une emote */
+  const climbing=!!c.mantle, gun=wType!=='daba', Gp=GRIP[wType], showW=!sky&&!using&&!bm&&!climbing&&!c.emote&&!c.swim; /* v2.0 : arme rangée pendant une emote ; v2.0.1 : et en nageant */
   _ax.set(1,0,0).applyQuaternion(g.quaternion);
+  if(c.swim&&B.LeftUpLeg){ const f=Math.sin((c.swimT||0)*9)*0.22; addRot(B.LeftUpLeg,_ax,f); addRot(B.RightUpLeg,_ax,-f); addRot(B.Neck,_ax,0.45); addRot(B.Head,_ax,0.25); } // v2.0.1 : battements, tête hors de l'eau
   const pk=sliding||air?0.5:1; addRot(B.Spine1,_ax,pS*0.1*pk); addRot(B.Spine2,_ax,pS*0.16*pk); addRot(B.Neck,_ax,pS*0.2); addRot(B.Head,_ax,pS*(gun?0.2:0.3));
   // soins : la tête mord (kilishi) ou bascule en arrière pour boire (thé)
   let headX=0, useU=0;
@@ -2890,9 +2926,12 @@ function animRealAnim(c,dt){
   an.chU=chU;
   // --- mains (IK) ---
   let have=false;
-  if(climbing){ mantleHands(c,g,_lL,_lR); wL=wR=1; have=true; }
-  else if(c.phase==='glide'){ _lR.set(0.34,2.08,0.02); _lL.set(-0.34,2.08,0.02); wL=wR=1; have=true; }
-  else if(c.phase==='fall'){ _lR.set(0.75,1.5,0.2); _lL.set(-0.75,1.5,0.2); wL=wR=1; have=true; }
+  if(c.swim){ const per=c.sprint?0.8:1.05, ph=(c.swimT||0)/per*Math.PI*2; // v2.0.1 : crawl ; un bras tire sous le ventre pendant que l'autre revient par-dessus
+    for(const [v,s0,o] of [[_lR,1,0],[_lL,-1,Math.PI]]){ const a=ph+o, sn=Math.sin(a); v.set(s0*(0.22+0.14*Math.max(0,-sn)),1.42+0.6*Math.cos(a),-0.32*sn); }
+    wL=wR=1; have=true; }
+  else if(climbing){ mantleHands(c,g,_lL,_lR); wL=wR=1; have=true; }
+  else if(c.phase==='glide'){ const bk=c.gBank||0; _lR.set(0.34,2.08-Math.max(0,bk)*0.7,0.02); _lL.set(-0.34,2.08-Math.max(0,-bk)*0.7,0.02); wL=wR=1; have=true; } // v2.0.1 : le frein du côté du virage est tiré
+  else if(c.phase==='fall'){ _lR.set(0.6,1.66,-0.12); _lL.set(-0.6,1.66,-0.12); wL=wR=1; have=true; } // v2.0.1 : position « boîte » des parachutistes
   else if(bm){ m.bp.localToWorld(_tR.set(0.16,-0.02,0.05)); m.bp.localToWorld(_tL.set(-0.16,-0.02,0.05)); g.worldToLocal(_lR.copy(_tR)); g.worldToLocal(_lL.copy(_tL)); wL=wR=1; have=true; }
   else if(c.emote){ const w=emoteHands(c.emote,_lR,_lL); wR=w[0]; wL=w[1]; have=true; } // v2.0 : emote
   else if(isDaba&&!using&&dc<110){ anchorLocal(m,g,wo,'daba','grip',_lR); _lL.set(-0.2,1,0); wR=1; wL=0; have=true; }
@@ -3059,7 +3098,7 @@ const simpleBuild=()=>SET.buildStyle==='simple';
 function buildDir(){ return (dirFromYaw(camYaw)+(!simpleBuild()&&(buildType==='ramp'||buildType==='wall')?buildRot:0))%4; } // mode simple : orientation automatique
 function rotateBuild(){ if(simpleBuild()){ showMsg('ORIENTATION AUTOMATIQUE','mode de construction simple · Paramètres › Construction',1); return; } buildRot=(buildRot+1)%4; refreshBuildUI(); tone(560+buildRot*80,0.04,0.08,'triangle'); }
 let pieceHeld=null, pieceTap=null; // v1.5 : appui mémorisé 0,35 s (case prise, ou mur qui attend sa rampe) — idée reprise de l'autre version
-function pieceDown(t,place){ const p=player; if(!p||!p.alive||p.phase!=='ground'||state!=='play') return; if(editing) confirmEdit(); setBuildType(t); if(!buildMode) toggleBuild(true);
+function pieceDown(t,place){ const p=player; if(!p||!p.alive||p.phase!=='ground'||state!=='play') return; if(p.swim){ showMsg('PAS EN NAGEANT','sors de l’eau pour construire',1); return; } if(editing) confirmEdit(); setBuildType(t); if(!buildMode) toggleBuild(true);
   if(place){ pieceHeld=t; pieceTap={t,t0:matchTime}; p.buildCD=Math.min(p.buildCD,0); if(tryBuild(p,t,buildDir(),{wait:true,smart:true})) pieceTap.done=true; } } // appui : place voisine si besoin (mode simple)
 function pieceUp(t){ if(pieceHeld===t) pieceHeld=null; }
 function toggleBuild(force){ const on = force===undefined ? !buildMode : force; if(on&&editing) confirmEdit(); buildMode=on; if(!on){ pieceHeld=null; pieceTap=null; } refreshBuildUI(); }
@@ -3115,14 +3154,21 @@ addEventListener('touchend',touchEnd); addEventListener('touchcancel',touchEnd);
 /* =====================================================================
    HUD
    ===================================================================== */
-let msgT=0, zoneT=0, curZone=null, zoneCheck=0;
+let msgT=0, zoneT=0, curZone=null, zoneCheck=0; const zoneSeen={};
 function showMsg(t,s='',dur=1.6){ $('msg').innerHTML=t+(s?`<small>${s}</small>`:''); $('msg').style.opacity=1; msgT=dur; }
 // v1.6.1 : seulement les images qui montrent ce qu'on voit dans le jeu. Retirées (texte seul) : Niamey (pont suspendu, celui du jeu est plat),
 // Tahoua (falaises, la ville du jeu est plate), Tillabéri (rizières), Diffa et lac Tchad (marais de roseaux, le lac du jeu est bordé de palmiers)
 const ZONE_PIC={agadez:'agadez-mosquee',tenere:'dunes-acacia',zinder:'zinder',maradi:'marche',koure:'savane-girafes',dosso:'village-arbre',arlit:'arlit-mine',ayorou:'port-pirogues',parcw:'baobabs-elephants'};
 let zonePicsLoaded=false; function preloadZonePics(){ if(zonePicsLoaded) return; zonePicsLoaded=true; for(const k in ZONE_PIC){ const im=new Image(); im.src='assets/images/lieux/'+ZONE_PIC[k]+'.jpg'; } }
-function showZone(z,force){ if(!force&&curZone&&curZone.id===z.id) return; curZone=z; const pic=ZONE_PIC[z.id];
-  const tx=`${ico('pin')}${z.name}<small>${z.sub}</small>`; $('zone').innerHTML=pic?`<div class="zimg" style="background-image:url(assets/images/lieux/${pic}.jpg)"><div class="ztx">${tx}</div></div>`:tx; $('zone').classList.toggle('pic',!!pic); $('zone').style.opacity=1; zoneT=pic?3.2:2.6; }
+/* v2.0.1 : le nom du lieu clignotait en longeant le bord d'une ville (vidéo de jeu : ZINDER / BROUSSE toutes les 2 s) :
+   on reste « dans » un lieu jusqu'à 1,05 × son rayon (entrée à 0,9 ×), on ne réaffiche pas le même lieu avant 25 s,
+   et « Brousse » ne s'affiche qu'à l'atterrissage */
+function zoneAtSticky(x,z){ const c=curZone&&CITY[curZone.id]; if(c&&Math.hypot(x-c.x,z-c.z)<c.r*1.05) return curZone;
+  if(curZone&&curZone.id==='fleuve'&&Math.abs(x-riverX(z))<RIVER_W+9) return curZone; if(curZone&&curZone.id==='air'&&airW(x,z)>0.22) return curZone; return zoneAt(x,z); }
+function showZone(z,force){ if(!force&&curZone&&curZone.id===z.id) return;
+  if(!force&&(z.id==='brousse'||(zoneSeen[z.id]!==undefined&&matchTime-zoneSeen[z.id]<25))){ curZone=z; return; } // changement de lieu retenu, sans affiche
+  zoneSeen[z.id]=matchTime; curZone=z; const pic=ZONE_PIC[z.id];
+  const tx=`${ico('pin')}${z.name}<small>${z.sub}</small>`; $('zone').innerHTML=pic?`<div class="zimg" style="background-image:url(assets/images/lieux/${pic}.jpg)"><div class="ztx">${tx}</div></div>`:tx; $('zone').classList.toggle('pic',!!pic); $('zone').style.opacity=1; zoneT=pic?2.6:2.2; }
 let hitT=0; function hitMarker(head){ const h=$('hitm'); h.classList.toggle('head',!!head); h.style.opacity=1; hitT=0.12; }
 let vignT=0, dirT=0; function hurtFx(att){ vignT=0.35; sfxHurt(); try{ if(SET.vibra&&navigator.vibrate) navigator.vibrate(30); }catch(e){}
   if(att){ const a=Math.atan2(att.pos.x-player.pos.x,att.pos.z-player.pos.z); const rel=-(a-Math.atan2(-Math.sin(camYaw),-Math.cos(camYaw))); $('dmgdir').style.transform=`rotate(${rel}rad)`; $('dmgdir').style.opacity=1; dirT=0.8; } }
@@ -3153,7 +3199,9 @@ function updateCompass(){ const hd=((-camYaw*180/Math.PI)%360+360)%360, r=Math.r
 // invite contextuelle : se hisser sur un rebord à portée
 let hintT=0;
 function updateClimbHint(dt){ hintT-=dt; if(hintT>0) return; hintT=0.15; const p=player; let h='';
-  if(p.alive&&p.phase==='ground'&&!buildMode&&!editing&&!p.mantle){ const W=wallAhead(p,-Math.sin(p.yaw),-Math.cos(p.yaw));
+  if(p.alive&&p.swim) h=ico('wave')+'Tu nages : ni tir ni construction · sprint pour nager plus vite'; // v2.0.1
+  else if(p.alive&&p.phase==='fall'&&p.pos.y-groundAt(p.pos.x,p.pos.z,p.pos.y)>FLY.openMin+2) h=(IS_TOUCH?ico('jump')+'SAUT :':'<span class="key">Espace</span>')+' ouvrir le parapente · pousse vers l’avant pour piquer'; // v2.0.1
+  if(p.alive&&p.phase==='ground'&&!p.swim&&!buildMode&&!editing&&!p.mantle){ const W=wallAhead(p,-Math.sin(p.yaw),-Math.cos(p.yaw));
     if(W){ const rise=W.top-p.pos.y; if(rise>STEP&&rise<=MANTLE_MAX+1.2&&canMantle(p,W)) h=(IS_TOUCH?ico('climb')+'SAUT :':'<span class="key">Espace</span>')+(rise<=MANTLE_MAX?' se hisser':' attraper le rebord'); } }
   setTxt('hint',h); $('hint').classList.toggle('hidden',!h); }
 // silhouettes des armes (emplacements, fil des éliminations), rendues une fois depuis les vrais modèles 3D : vue de côté, canon à droite
@@ -3209,7 +3257,7 @@ function updateHUD(dt){
   if(dirT>0){ dirT-=dt; if(dirT<=0) $('dmgdir').style.opacity=0; }
   $('stormFx').style.opacity=p.inStorm&&p.alive?1:0;
   bloom=Math.max(0,bloom-dt*2.2); const sp=Math.hypot(p.vel.x,p.vel.z); $('cross').style.setProperty('--g',(6+bloom*10+(sp>1.5?5:0)+(p.cur==='pompe'?10:0)+(ads?-3:0))+'px');
-  zoneCheck-=dt; if(zoneCheck<=0&&p.phase==='ground'&&p.alive){ zoneCheck=0.6; showZone(zoneAt(p.pos.x,p.pos.z)); }
+  zoneCheck-=dt; if(zoneCheck<=0&&p.phase==='ground'&&p.alive){ zoneCheck=0.6; showZone(zoneAtSticky(p.pos.x,p.pos.z)); }
   miniT-=dt; if(miniT<=0){ miniT=0.08; drawMini(); }
 }
 
@@ -3228,7 +3276,7 @@ function updatePlayer(dt){
   // à la visée et se déplace en pas chassés
   if(firing||ads||buildMode||editing) p.combatT=1.2; else p.combatT=Math.max(0,(p.combatT||0)-dt);
   const combat=p.combatT>0, faceCam=combat||SET.faceCam; // v1.5 (repris de l'autre version) : le buste suit la caméra, les jambes la marche
-  if(p.phase==='fall'||p.phase==='glide'){ p.yaw=camYaw; updateAir(p,dt,wx,wz); return; }
+  if(p.phase==='fall'||p.phase==='glide'){ if(p.phase==='fall'){ p.yaw=camYaw; if(jumpPressed){ jumpPressed=false; openGlider(p,true); } } else jumpPressed=false; updateAir(p,dt,wx,wz,Math.max(0,iz)); return; }
   { const want=faceCam||l<=0.1?camYaw:Math.atan2(-wx,-wz); let dy=want-p.yaw; dy=Math.atan2(Math.sin(dy),Math.cos(dy));
     if(combat&&firing&&Math.abs(dy)>1.0) p.yaw=want; // on tire tout de suite dans la bonne direction
     else p.yaw+=dy*(1-Math.exp(-(combat?24:faceCam?(l>0.1?20:12):l<=0.1?9:p.sprint?8:11)*dt)); p.turnRate=dy; }
@@ -3262,6 +3310,12 @@ function updatePlayer(dt){
   if(p.crouch!==cache.crouch){ cache.crouch=p.crouch; $('bCrouch').classList.toggle('on',p.crouch); }
   tryPickups(p);
 }
+/* v2.0.1 : caméra collée au perso (dans une maison, contre un mur) : il cachait un tiers de l'écran (vidéo de jeu) ; il devient
+   transparent sous 1,4 m. Ses matières sont copiées la première fois (elles sont partagées avec les bots qui ont le même perso). */
+function playerFade(dist,dt){ const m=player&&player.model; if(!m||!m.real) return; const want=clamp((dist-0.5)/0.9,0.22,1);
+  if(!m.fade){ if(want>=0.999) return; m.fade={mats:[],a:1}; m.g.traverse(o=>{ if(o.isSkinnedMesh&&o.material&&!Array.isArray(o.material)){ o.material=o.material.clone(); m.fade.mats.push(o.material); } }); }
+  const a=lerp(m.fade.a,want,1-Math.exp(-12*dt)); if(Math.abs(a-m.fade.a)<0.004&&!(want>=0.999&&a<1)) return; m.fade.a=a>0.995?1:a; const tr=m.fade.a<1;
+  for(const mt of m.fade.mats){ if(mt.transparent!==tr){ mt.transparent=tr; mt.depthWrite=!tr; mt.needsUpdate=true; } mt.opacity=m.fade.a; } }
 function updateCamera(dt){
   if(window.__camOv){ const o=window.__camOv; camera.position.set(o.p[0],o.p[1],o.p[2]); camera.lookAt(o.t[0],o.t[1],o.t[2]); return; }
   if(state==='menu'||state==='loading'){ const t=performance.now()*0.00005; camera.position.set(Math.cos(t)*150,72,Math.sin(t)*150); camera.lookAt(0,0,0); return; }
@@ -3280,8 +3334,8 @@ function updateCamera(dt){
   // v1.7 : collisions : 3 rayons (centre, un peu à gauche et à droite) ; la caméra se rapproche tout de suite d'un obstacle et revient en douceur
   let t=len; for(const off of [0,-0.22,0.22]){ _o.copy(_m).addScaledVector(camRight,off); _o.sub(piv); const l2=_o.length(); _o.divideScalar(l2); const h=rayCast(piv,_o,l2,null,true); if(h.type) t=Math.min(t,Math.max(0.3,h.t*len/l2-0.25)); }
   camColT=t<camColT||camColT<0?t:lerp(camColT,t,1-Math.exp(-5*dt));
-  camera.position.copy(piv).addScaledVector(_d,camColT);
-  const th=terrainH(camera.position.x,camera.position.z)+0.35; if(camera.position.y<th) camera.position.y=th;
+  camera.position.copy(piv).addScaledVector(_d,camColT); playerFade(camColT,dt);
+  const th=terrainH(camera.position.x,camera.position.z)+0.35; if(camera.position.y<th) camera.position.y=th; if(camera.position.y<WATER_Y+0.35&&nearWater(camera.position.x,camera.position.z,12)) camera.position.y=WATER_Y+0.35; // v2.0.1 : pas sous l'eau
   camera.rotation.set(camPitch,camYaw,0,'YXZ');
   if(shake>0.0005){ camera.position.x+=rnd(-1,1)*shake; camera.position.y+=rnd(-1,1)*shake; camera.rotation.x+=rnd(-1,1)*shake*0.12; camera.rotation.y+=rnd(-1,1)*shake*0.08; shake*=Math.exp(-11*dt); }
   const F=SET.fov, fov=air?F+8:(p.slideT>0?F+10:(ads&&p.cur!=='daba'&&!buildMode?(isScoped()?20:F*0.74):F+(p.sprint?6:0))); if(Math.abs(camera.fov-fov)>0.1){ camera.fov=lerp(camera.fov,fov,1-Math.exp(-12*dt)); camera.updateProjectionMatrix(); }
@@ -3531,7 +3585,7 @@ function startMatch(mode){
     else spawnItem(k,s[0],s[1],s[2],0,false,k==='ammo'?{atype:pick(AMMO_TYPES)}:null); } }
   for(const s of chestSpots){ if(s[3]==='roof'&&Math.random()<0.2) continue; spawnChest(s[0],s[1],s[2]); }
   resetStorm(); stormMesh.visible=stormInner.visible=true; setupBus(); for(const b of bots) if(b.inMatch) initBot(b);
-  camYaw=Math.atan2(-bus.dir.x,-bus.dir.z)+0.9; camPitch=-0.25; curZone=null;
+  camYaw=Math.atan2(-bus.dir.x,-bus.dir.z)+0.9; camPitch=-0.25; curZone=null; for(const k in zoneSeen) delete zoneSeen[k];
   state='bus'; $('busUI').classList.remove('hidden');
   $('bJumpBus').textContent='SAUTER'; $('busUI').querySelector('p').textContent = IS_TOUCH?'Le taxi-brousse survole le Niger… choisis où sauter !':'Le taxi-brousse survole le Niger… Espace ou clic pour sauter !';
   resize(); showMsg('FADA ROYALE',matchPlayers+' joueurs · que le meilleur gagne',2.2);
@@ -3624,7 +3678,7 @@ requestAnimationFrame(loop);
 loadAssets().then(()=>{ try{ makeWeaponIcons(); }catch(e){} initLobby(); goMenu(); try{ lobby.precompile(); lobby.warm(); lobby.render(); }catch(e){} requestAnimationFrame(()=>$('loading').remove()); setTimeout(()=>{ try{ loadSols(); loadAmbient(); loadPackTrees(); loadPackRocks(); }catch(e){ console.warn('décor',e); } },800); }); // une image rendue derrière l'écran : ombres comprises ; v1.6 : sols, animaux, arbres et rochers du pack chargés 0,8 s après l'affichage du lobby
 
 // accès de débogage
-window.FR={killChar, startEmote, playerEmote, EMOTES, CITIES, MAP, STORM, stormTotal, zoneAt, lootSpots, chestSpots, BSTAT, get matchTime(){return matchTime;}, spectate:()=>{ /* tests : le joueur ne prend pas part à la partie (les bots seuls) */ player.alive=false; player.hp=0; player.phase='spect'; player.model.g.visible=false; aliveCount--; endShown=true; }, fpsGate, goMenu, get screenHz(){return screenHz;}, FPS_CAPS, HUD_PRESETS, get quality(){return quality;}, get Q(){return Q;}, applyLayout, get lobby(){return lobby;}, PROFILE, Profile, get matchMode(){return matchMode;}, get camPitch(){return camPitch;}, get sprintOn(){return sprintOn;}, setSprint:v=>{sprintOn=v;}, placementProblem, computePlacement, dirFromYaw, get camYaw(){return camYaw;}, SET, openSettings, closeSettings, openHudEditor, renderTab, get paused(){return paused;}, THREE, ASSETS, selectSlot, swapTake, giveWeapon, beginSwitch, get nearItem(){return nearItem;}, setAds:v=>{ads=v;}, startEdit, confirmEdit, resetEdit, rayCast, crouchPress, get editing(){return editing;}, get state(){return state;}, get player(){return player;}, bots, chars, items, chests, pieces, housesInfo, doors:DOORS, setDoor, interact, hasLOS, findCover, storm, bus, startMatch, update, jumpFromBus:()=>jumpFromBus(player), tryBuild, setBuildType, toggleBuild, warmGPU, AMB, get TERRAIN(){return TERRAIN;}, get TERRAIN_MAT0(){return TERRAIN_MAT0;}, setQuality, qBox, boxGrounded, boxTouch, checkIntegrity, destroyPiece, pieceDown, pieceUp, damagePiece, editPreset, quickSwap, BUILD, setSet:(k,v)=>{ SET[k]=v; refreshBuildUI(); }, dropWeapon, spawnItem, items, WEAP, ammoOf, get buildRot(){return buildRot;}, spaceFreeAt:(x,z,y0,y1,r)=>spaceFree(x,z,y0,y1,r), get buildMode(){return buildMode;}, get pieceHeld(){return pieceHeld;}, pieceList, PINST, setFiring:v=>{firing=v;}, setCam:(y,p)=>{camYaw=y;camPitch=p;}, keys, renderer, scene, camera, get aliveCount(){return aliveCount;}, solids, terrainH};
+window.FR={riverX, FLY, openGlider, killChar, startEmote, playerEmote, EMOTES, CITIES, MAP, STORM, stormTotal, zoneAt, lootSpots, chestSpots, BSTAT, get matchTime(){return matchTime;}, spectate:()=>{ /* tests : le joueur ne prend pas part à la partie (les bots seuls) */ player.alive=false; player.hp=0; player.phase='spect'; player.model.g.visible=false; aliveCount--; endShown=true; }, fpsGate, goMenu, get screenHz(){return screenHz;}, FPS_CAPS, HUD_PRESETS, get quality(){return quality;}, get Q(){return Q;}, applyLayout, get lobby(){return lobby;}, PROFILE, Profile, get matchMode(){return matchMode;}, get camPitch(){return camPitch;}, get sprintOn(){return sprintOn;}, setSprint:v=>{sprintOn=v;}, placementProblem, computePlacement, dirFromYaw, get camYaw(){return camYaw;}, SET, openSettings, closeSettings, openHudEditor, renderTab, get paused(){return paused;}, THREE, ASSETS, selectSlot, swapTake, giveWeapon, beginSwitch, get nearItem(){return nearItem;}, setAds:v=>{ads=v;}, startEdit, confirmEdit, resetEdit, rayCast, crouchPress, get editing(){return editing;}, get state(){return state;}, get player(){return player;}, bots, chars, items, chests, pieces, housesInfo, doors:DOORS, setDoor, interact, hasLOS, findCover, storm, bus, startMatch, update, jumpFromBus:()=>jumpFromBus(player), tryBuild, setBuildType, toggleBuild, warmGPU, AMB, get TERRAIN(){return TERRAIN;}, get TERRAIN_MAT0(){return TERRAIN_MAT0;}, setQuality, qBox, boxGrounded, boxTouch, checkIntegrity, destroyPiece, pieceDown, pieceUp, damagePiece, editPreset, quickSwap, BUILD, setSet:(k,v)=>{ SET[k]=v; refreshBuildUI(); }, dropWeapon, spawnItem, items, WEAP, ammoOf, get buildRot(){return buildRot;}, spaceFreeAt:(x,z,y0,y1,r)=>spaceFree(x,z,y0,y1,r), get buildMode(){return buildMode;}, get pieceHeld(){return pieceHeld;}, pieceList, PINST, setFiring:v=>{firing=v;}, setCam:(y,p)=>{camYaw=y;camPitch=p;}, keys, renderer, scene, camera, get aliveCount(){return aliveCount;}, solids, terrainH};
 </script>
 </body>
 </html>

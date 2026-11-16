@@ -68,6 +68,20 @@ Mêmes règles que plus haut : vue de profil, fond gris clair uni, sans logo ni 
 | Emotes naturelles (danse, salut, applaudissements, victoire) | 4 gestes construits à la main sur le squelette ; la vidéo de référence annoncée n'a pas été reçue | **Mixamo** (site gratuit d'Adobe, compte Adobe nécessaire) : « Waving », « Clapping », « Victory », « Hip Hop Dancing »… Nos persos ont un squelette Mixamo : les clips téléchargés en FBX (sans peau) se convertissent au format des animations du jeu (`assets/anim_*.js`). Je n'ai pas accès à ton compte : il faut me fournir les FBX. |
 | Images d'arrivée des 8 nouveaux lieux | Pas d'image (seul le nom s'affiche) | Prompts dans le style de `PROMPTS_DECOR.md` : « panoramic photo of a Sahel military outpost / Bilma oasis with salt pans / cement plant / ruined ksar of Djado / Termit rocky massif / hilltop village of Filingué / dune village of Gouré / Gaya market », lumière d'harmattan, sans texte |
 
+## 1 quater. Panorama du lobby (v2.0.1)
+
+Le ciel du lobby est aujourd'hui un dégradé (orange à l'horizon, indigo en haut) derrière l'estrade et les murs en 3D. Une image panoramique à 360° peut le remplacer : elle est posée sur la sphère du ciel, le décor 3D (murs d'Agadez, estrade, étal) reste devant.
+
+Format : **panorama équirectangulaire 360° × 180°, rapport 2:1** (4096 × 2048 au minimum, 8192 × 4096 idéal), bords gauche et droit qui se raccordent, horizon exactement au milieu de la hauteur, caméra à hauteur d'homme, sans inclinaison. La moitié basse (le sol) sera en grande partie cachée par le sol 3D du lobby.
+
+Prompt :
+
+`Seamless equirectangular 360 degree panorama, 2:1 aspect ratio, horizon exactly at the vertical center, camera at human eye height, level horizon. Sahel desert of Niger at golden hour sunset, harmattan dust haze in the air. In the distance, the old city of Agadez: the tall tapered mud-brick minaret of the Grand Mosque with protruding wooden beams (torons), flat-roofed earthen houses with crenellated parapets, warm ochre and red-earth colors. Rolling orange sand dunes, scattered acacia and doum palm silhouettes, a far caravan of dromedaries as small silhouettes on a dune. Low sun near the horizon with a soft golden glow, sky gradient from warm apricot and coral at the horizon to dusky rose then deep indigo at the zenith, a few thin high cirrus clouds lit pink. Photorealistic but slightly stylized for a video game background, clean, cinematic, rich warm palette, high detail, soft atmospheric perspective.`
+
+À éviter (négatif) : `people in the foreground, text, letters, logo, watermark, signature, frame, border, modern buildings, cars, power lines, fish-eye distortion, tilted horizon, visible seam, Fortnite, cartoon, oversaturated neon`
+
+Si l'outil ne sait pas faire d'équirectangulaire : une image très large **3:1** (par ex. 6144 × 2048), horizon au milieu, que j'enroulerai en cylindre derrière l'estrade.
+
 ## 2. Accessoires des animations (kilishi, thé)
 
 Aujourd'hui ce sont des formes simples dessinées par le code. Format : GLB, moins de 600 triangles, texture 512×512.

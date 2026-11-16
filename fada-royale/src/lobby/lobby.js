@@ -255,7 +255,7 @@ export function createLobby(ctx) {
     <button data-p="profile">${ico('profile')}<span>Profil</span></button>
   </nav>
   <div class="lb-home" id="lbHome">
-    <div class="lb-logo"><div class="lb-flag"><i></i><i></i><i></i></div><h1>FADA<br>ROYALE</h1><p><b>v2.0</b>Le battle royale du Sahel</p></div>
+    <div class="lb-logo"><div class="lb-flag"><i></i><i></i><i></i></div><h1>FADA<br>ROYALE</h1><p><b>v2.0.1</b>Le battle royale du Sahel</p></div>
     <div class="lb-who"><small>Ton personnage</small><b id="lbCharName">—</b><span class="lb-hint">${ctx.IS_TOUCH ? 'Glisse pour le tourner · pince pour zoomer' : 'Glisse pour le tourner · molette pour zoomer'}</span></div>
     <div class="lb-playbox"><button class="lb-mode" id="lbModeBtn"><small>Mode</small><b id="lbModeName">Battle Royale · Solo</b>${ico('chev')}</button>
       <button class="lb-play" id="play">JOUER</button></div>
@@ -363,6 +363,11 @@ export function createLobby(ctx) {
   // --- événements
   function htmlEvents() {
     return `<div class="lb-ev"><b>Aucun événement en cours</b><p>Les événements (défis à durée limitée, récompenses spéciales) arriveront dans une prochaine version. Rien n’est simulé ici.</p></div>
+      <h3>Nouveautés de la v2.0.1</h3><ul class="lb-list">
+      <li><b>Chute libre</b> à plat ventre : pousse vers l’avant pour piquer, <b>SAUT</b> pour ouvrir le parapente plus tôt.</li>
+      <li><b>Parapente</b> : il avance tout seul, tourne en s’inclinant et freine avant de se poser.</li>
+      <li><b>Nage</b> : dans le fleuve et le lac, ton perso flotte et nage (pas de tir ni de construction dans l’eau).</li>
+      <li>Le nom du lieu ne clignote plus au bord des villes ; textes plus lisibles sur les petits écrans ; ton perso devient transparent quand la caméra est collée à lui.</li></ul>
       <h3>Nouveautés de la v2.0 : arsenal, grande carte, 60 joueurs</h3><ul class="lb-list">
       <li><b>Arsenal</b> : 5 raretés par arme (gris, vert, bleu, violet, orange), 4 types de munitions, 2 nouvelles armes (fusil tactique beige, pompe tactique), lâcher une arme (G / LÂCHER) et la reprendre.</li>
       <li><b>Carte de 680 m</b> : 8 nouveaux lieux (camp militaire, oasis de Bilma, cimenterie de Malbaza, forteresse de Djado, massif de Termit, Filingué, Gouré, marché de Gaya). Parties de 15 à 20 min.</li>

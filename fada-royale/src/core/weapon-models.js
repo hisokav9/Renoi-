@@ -13,7 +13,7 @@ import { GRIP_AT } from './weapons.js';
 const MATS = {};
 function mat(THREE, key) {
   if (MATS[key]) return MATS[key];
-  const P = { beige: [0xb89c6c, 0.75, 0.05], acier: [0x2b2d30, 0.45, 0.7], noir: [0x17181a, 0.8, 0.1], olive: [0x343a2c, 0.8, 0.1], laiton: [0xc9a23a, 0.35, 0.85] }[key];
+  const P = { beige: [0x9a7f55, 0.72, 0.05] /* v2.0.1 : beige plus soutenu (l'arme se confondait avec le sable au téléphone) */, acier: [0x2b2d30, 0.45, 0.7], noir: [0x17181a, 0.8, 0.1], olive: [0x343a2c, 0.8, 0.1], laiton: [0xc9a23a, 0.35, 0.85] }[key];
   return (MATS[key] = new THREE.MeshStandardMaterial({ color: P[0], roughness: P[1], metalness: P[2], envMapIntensity: 0.4 }));
 }
 
