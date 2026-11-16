@@ -188,13 +188,16 @@ body.touch #bottom{left:calc((100% - 256px) / 2)}
 #hudEdit{position:fixed;inset:0;z-index:15;touch-action:none;background-color:rgba(0,0,0,.22);background-image:linear-gradient(rgba(255,255,255,.07) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.07) 1px,transparent 1px);background-size:40px 40px}
 .he-bar{position:absolute;left:50%;top:8px;transform:translateX(-50%);display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:center;background:rgba(25,14,4,.93);padding:7px 10px;border-radius:12px;border:1px solid rgba(255,255,255,.22);font:700 12px Rubik;max-width:96vw;z-index:2}
 .he-bar.low{top:auto;bottom:8px}
-.he-bar label{display:flex;align-items:center;gap:6px}.he-bar input{width:110px;accent-color:#ffd166}
+.he-bar label{display:flex;align-items:center;gap:6px}.he-bar input{width:84px;accent-color:#ffd166}
 .he-bar button{padding:7px 10px;border-radius:9px;background:rgba(255,255,255,.1);font:900 12px Rubik}#heSave{background:#1fa34a!important}
 #heName{color:#ffd166;min-width:120px;text-align:center}
 body.editing-hud .he-item{outline:2px dashed rgba(255,255,255,.6);outline-offset:3px}
 body.editing-hud .he-sel{outline:3px solid #ffd166!important}
 body.editing-hud #pick.hidden,body.editing-hud #bEdit.hidden,body.editing-hud #bAim.hidden{display:flex!important}
 body.editing-hud #joy{opacity:.7!important}
+body.editing-hud.he-adv #bRot.hidden{display:flex!important}
+.uhide{visibility:hidden!important;pointer-events:none!important}body.editing-hud .uhide{visibility:visible!important;opacity:.3!important}
+.he-bar input[type=checkbox]{width:18px;height:18px}.he-pre{display:flex;gap:5px;align-items:center}.he-pre button{background:rgba(255,209,102,.16)!important}
 #joy{position:absolute;width:120px;height:120px;margin:-60px 0 0 -60px;border-radius:50%;border:2px solid rgba(255,255,255,.4);background:rgba(25,14,4,.25);opacity:0}
 #joy i{position:absolute;left:50%;top:50%;width:50px;height:50px;margin:-25px 0 0 -25px;border-radius:50%;background:rgba(255,255,255,.55)}
 
@@ -373,7 +376,7 @@ body.editing-hud #joy{opacity:.7!important}
   <div class="sbody" id="sBody"></div>
   <div class="sfoot"><button class="big" id="sResume">REPRENDRE</button><button class="ghost hidden" id="sClear">Effacer mes constructions</button><button class="ghost" id="sQuit">Quitter la partie</button></div>
 </div></div>
-<div id="hudEdit" class="hidden"><div class="he-bar" id="heBar"><span id="heName">Touche un élément</span><label>Taille <input type="range" id="heSize" min="50" max="180" value="100"></label><button id="heReset">Réinitialiser</button><button id="heCancel">Annuler</button><button id="heSave">Enregistrer</button></div></div>
+<div id="hudEdit" class="hidden"><div class="he-bar" id="heBar"><span id="heName">Touche un élément</span><label>Taille <input type="range" id="heSize" min="50" max="180" value="100"></label><label>Opacité <input type="range" id="heOp" min="20" max="100" step="5" value="100"></label><label>Masquer <input type="checkbox" id="heHide"></label><span class="he-pre">Modèle : <button data-pre="classique">Classique</button><button data-pre="compact">Compacte</button><button data-pre="construction">Construction</button></span><button id="heReset">Réinitialiser</button><button id="heCancel">Annuler</button><button id="heSave">Enregistrer</button></div></div>
 <div id="end" class="hidden">
   <div class="ebox">
     <div id="eTitle"></div>
@@ -422,9 +425,11 @@ const IS_TOUCH = (()=>{ try{ const f=/[?&]touch=([01])/.exec(location.search); i
 const ico=(n,c)=>'<svg class="ic'+(c?' '+c:'')+'"><use href="#i-'+n+'"/></svg>';
 const V=(x=0,y=0,z=0)=>new THREE.Vector3(x,y,z);
 const SET_DEF={sens:1,adsSens:0.6,scopeSens:0.3,invertY:false,aimAssist:true,vibra:true,joyFixed:false,autoSprint:true,fov:70,res:100,viewDist:340,showFps:false,showStats:false,vol:80,sfx:100,amb:70,btnOp:100,btnScale:100,minimap:true,killfeed:true,dmgNums:true,layout:{},
-  tapBuild:true,editRelease:true,buildSens:1,editSens:1,fpsCap:0,faceCam:true,buildStyle:IS_TOUCH?'simple':'avance'}; // v2.0 : buildStyle = mode de construction simple / avancé // v1.5 : faceCam = le perso regarde toujours où vise la caméra (jambes vers la marche) // v1.4 : construction rapide, limite d'images (0 = aucune)
+  tapBuild:true,editRelease:true,buildSens:1,editSens:1,fpsCap:0,faceCam:true,buildStyle:IS_TOUCH?'simple':'avance',
+  cBase:'medium',cShadow:'mid',cTex:'detail',cFx:'mid',cVeg:'high',aa:!IS_TOUCH,hudPreset:'classique',layoutPerso:null}; // v2.0 : profil personnalisé, anticrénelage (au prochain lancement) // v2.0 : buildStyle = mode de construction simple / avancé // v1.5 : faceCam = le perso regarde toujours où vise la caméra (jambes vers la marche) // v1.4 : construction rapide, limite d'images (0 = aucune)
 const SET=Object.assign({},SET_DEF,(()=>{ try{ return JSON.parse(localStorage.getItem('fr_set')||'{}')||{}; }catch(e){ return {}; } })());
 if(!SET.layout||typeof SET.layout!=='object') SET.layout={};
+if(!SET.layoutPerso&&Object.keys(SET.layout).length){ SET.layoutPerso=SET.layout; SET.hudPreset='perso'; } // v2.0 : une disposition faite avant la v2.0 devient « Personnalisée »
 try{ if(/[?&]stats=1/.test(location.search)) SET.showStats=true; }catch(e){}
 function saveSet(){ try{ localStorage.setItem('fr_set',JSON.stringify(SET)); }catch(e){} }
 
@@ -520,14 +525,18 @@ function zoneAt(x,z){
    pmax : particules max · beam : distance des faisceaux de butin · flash : lumière du coup de feu · decals : impacts */
 const QP={
   // rockNear (v1.6) : rochers de granite détaillés jusqu'à cette distance (0 = jamais)
-  low:   {name:'Basse',   rockNear:0, prMax:1,   shadow:false, smap:512,  view:230, animFar:40, vis:150, pmax:140, beam:45, flash:false, decals:12, itemMesh:28, gunLod:30, detail:40, bushes:false, canopy2:false, chestVis:65, itemVis:60, giraffe:90},
-  medium:{name:'Moyenne', rockNear:70, prMax:1.5, shadow:true,  smap:1024, view:300, animFar:55, vis:175, pmax:260, beam:60, flash:true,  decals:24, itemMesh:45, gunLod:55, detail:70, bushes:true, canopy2:true, chestVis:100, itemVis:90, giraffe:140},
-  high:  {name:'Haute',   rockNear:110, prMax:2,   shadow:true,  smap:2048, view:400, animFar:75, vis:200, pmax:400, beam:75, flash:true,  decals:40, itemMesh:80, gunLod:90, detail:1e9, bushes:true, canopy2:true, chestVis:150, itemVis:110, giraffe:220},
+  vlow:  {name:'Très faible', rockNear:0, prMax:0.75, shadow:false, smap:512, view:180, animFar:30, vis:120, pmax:60, beam:35, flash:false, decals:0, itemMesh:20, gunLod:20, detail:25, bushes:false, canopy2:false, chestVis:50, itemVis:50, giraffe:60, splat:false},
+  low:   {name:'Faible',   rockNear:0, prMax:1,   shadow:false, smap:512,  view:230, animFar:40, vis:150, pmax:140, beam:45, flash:false, decals:12, itemMesh:28, gunLod:30, detail:40, bushes:false, canopy2:false, chestVis:65, itemVis:60, giraffe:90, splat:false},
+  medium:{name:'Moyen', rockNear:70, prMax:1.5, shadow:true,  smap:1024, view:300, animFar:55, vis:175, pmax:260, beam:60, flash:true,  decals:24, itemMesh:45, gunLod:55, detail:70, bushes:true, canopy2:true, chestVis:100, itemVis:90, giraffe:140, splat:true},
+  high:  {name:'Élevé',   rockNear:110, prMax:2,   shadow:true,  smap:2048, view:400, animFar:75, vis:200, pmax:400, beam:75, flash:true,  decals:40, itemMesh:80, gunLod:90, detail:1e9, bushes:true, canopy2:true, chestVis:150, itemVis:110, giraffe:220, splat:true,soft:true},
 };
-let quality = IS_TOUCH ? 'low' : 'high';
+// v2.0 : premier lancement : profil selon l'appareil (mémoire, cœurs) ; ensuite celui choisi par le joueur
+let quality = IS_TOUCH ? ((navigator.deviceMemory&&navigator.deviceMemory<=2)||(navigator.hardwareConcurrency&&navigator.hardwareConcurrency<=4) ? 'vlow' : 'low') : 'high';
 try{ const q=localStorage.getItem('fr_q'); if(q&&QP[q]) quality=q; }catch(e){}
-let Q=QP[quality];
-const renderer = new THREE.WebGLRenderer({antialias:!IS_TOUCH, powerPreference:'high-performance'});
+QP.custom={...QP.medium,name:'Personnalisé'}; // recalculé par buildCustomQ() à partir des réglages séparés
+let Q=quality==='custom'?buildCustomQ():QP[quality];
+const LOWQ=()=>!Q.splat; // v2.0 : Très faible, Faible ou Personnalisé à sol simple (au lieu de quality==='low')
+const renderer = new THREE.WebGLRenderer({antialias:SET.aa??!IS_TOUCH, powerPreference:'high-performance'}); // v2.0 : anticrénelage réglable (au redémarrage)
 renderer.domElement.id='c';
 document.body.prepend(renderer.domElement);
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -544,19 +553,28 @@ sun.shadow.bias=-0.0006; sun.shadow.normalBias=0.05;
 let pixelRatio=1, dynScale=1;
 let lastQ=null;
 function applyRes(){ renderer.setPixelRatio(pixelRatio*dynScale*SET.res/100); }
+/* v2.0 : profil Personnalisé : part du profil choisi en dernier (cBase), puis ombres, textures du sol, effets, végétation réglés à part */
+function buildCustomQ(){ const b=QP[SET.cBase]||QP.medium, q=Object.assign({},b,{name:'Personnalisé'});
+  const SH={off:[false,512],low:[true,512],mid:[true,1024],high:[true,2048]}[SET.cShadow]||[b.shadow,b.smap]; q.shadow=SH[0]; q.smap=SH[1]; q.soft=SET.cShadow==='high';
+  if(SET.cTex) { q.splat=SET.cTex==='detail'; q.rockNear=q.splat?Math.max(70,b.rockNear):0; }
+  const FX={low:[80,false,8],mid:[260,true,24],high:[400,true,40]}[SET.cFx]; if(FX){ q.pmax=FX[0]; q.flash=FX[1]; q.decals=FX[2]; }
+  if(SET.cVeg){ const hi=SET.cVeg==='high'; q.bushes=hi; q.canopy2=hi; q.giraffe=hi?Math.max(140,b.giraffe):90; }
+  QP.custom=q; return q; }
 function applyQuality(){
-  Q=QP[quality]||QP.high;
+  if(quality==='custom') buildCustomQ(); Q=QP[quality]||QP.high;
   pixelRatio = Math.min(devicePixelRatio||1, Q.prMax);
   applyRes();
   scene.fog.far = SET.viewDist;
-  if(lastQ!==quality){ lastQ=quality;
-    renderer.shadowMap.enabled=Q.shadow; renderer.shadowMap.type=quality==='high'?THREE.PCFSoftShadowMap:THREE.PCFShadowMap; sun.castShadow=Q.shadow;
+  const qk=quality+(quality==='custom'?'|'+SET.cShadow+SET.cFx+SET.cVeg+SET.cTex:''); if(lastQ!==qk){ lastQ=qk;
+    renderer.shadowMap.enabled=Q.shadow; renderer.shadowMap.type=Q.soft?THREE.PCFSoftShadowMap:THREE.PCFShadowMap; sun.castShadow=Q.shadow;
     if(sun.shadow.mapSize.x!==Q.smap){ sun.shadow.mapSize.set(Q.smap,Q.smap); if(sun.shadow.map){ sun.shadow.map.dispose(); sun.shadow.map=null; } }
     if(typeof LOD_OBJ!=='undefined'){ if(LOD_OBJ.bushes) LOD_OBJ.bushes.visible=Q.bushes; if(LOD_OBJ.canopy2) LOD_OBJ.canopy2.visible=Q.canopy2; if(LOD_OBJ.mLight) LOD_OBJ.mLight.visible=Q.flash; }
     scene.traverse(o=>{ if(o.material){ (Array.isArray(o.material)?o.material:[o.material]).forEach(m=>m.needsUpdate=true); } }); }
   applyTerrainMat();
 }
-function setQuality(q){ if(!QP[q]) return; quality=q; SET.viewDist=QP[q].view; saveSet(); try{ localStorage.setItem('fr_q',q); }catch(e){} dynScale=1; applyQuality(); }
+function setQuality(q){ if(!QP[q]) return; if(q!=='custom') SET.cBase=q;
+  else if(quality!=='custom'){ const b=QP[quality]; SET.cBase=quality; SET.cShadow=!b.shadow?'off':b.smap<=512?'low':b.smap<=1024?'mid':'high'; SET.cTex=b.splat?'detail':'simple'; SET.cFx=b.pmax<=100?'low':b.pmax<=300?'mid':'high'; SET.cVeg=b.bushes?'high':'low'; }
+  quality=q; if(q!=='custom') SET.viewDist=QP[q].view; saveSet(); try{ localStorage.setItem('fr_q',q); }catch(e){} dynScale=1; applyQuality(); }
 function resize(){ renderer.setSize(innerWidth, innerHeight); camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix(); if(lobby) lobby.resize();
   $('rot').classList.toggle('hidden', !(IS_TOUCH && innerHeight>innerWidth && state!=='menu')); }
 addEventListener('resize', resize);
@@ -644,7 +662,7 @@ const MAT={
   ghostBad:new THREE.MeshBasicMaterial({color:0xff5544,transparent:true,opacity:0.32,depthWrite:false}),
 };
 swapTexImage(TEX.wax[0],'assets/textures/wax.jpg');
-if(quality!=='low') new THREE.TextureLoader().load('assets/textures/banco_normal.jpg',tx=>{ tx.wrapS=tx.wrapT=THREE.RepeatWrapping; tx.repeat.set(2,2); MAT.banco.normalMap=tx; MAT.banco.normalScale.set(0.7,0.7); MAT.banco.needsUpdate=true; }); swapTexImage(TEX.plaster,'assets/textures/enduit.jpg'); swapTexImage(TEX.banco,'assets/textures/banco.jpg',2);
+if(!LOWQ()) new THREE.TextureLoader().load('assets/textures/banco_normal.jpg',tx=>{ tx.wrapS=tx.wrapT=THREE.RepeatWrapping; tx.repeat.set(2,2); MAT.banco.normalMap=tx; MAT.banco.normalScale.set(0.7,0.7); MAT.banco.needsUpdate=true; }); swapTexImage(TEX.plaster,'assets/textures/enduit.jpg'); swapTexImage(TEX.banco,'assets/textures/banco.jpg',2);
 const matCache={};
 const lam = hex => matCache[hex] || (matCache[hex]=new THREE.MeshLambertMaterial({color:hex}));
 
@@ -708,13 +726,13 @@ function makeSplatMat(texs){ // niveau de mipmap calculé une fois puis textureL
     body+='diffuseColor.rgb*=sc;';
     sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\n'+dec).replace('#include <map_fragment>',body).replace('#include <color_fragment>',''); };
   m.customProgramCacheKey=()=>'splat6'; return m; }
-function applyTerrainMat(){ if(!TERRAIN) return; const want=quality!=='low'&&TERRAIN_SPLAT?TERRAIN_SPLAT:TERRAIN_MAT0; if(TERRAIN.material!==want) TERRAIN.material=want; }
+function applyTerrainMat(){ if(!TERRAIN) return; const want=Q.splat&&TERRAIN_SPLAT?TERRAIN_SPLAT:TERRAIN_MAT0; if(TERRAIN.material!==want) TERRAIN.material=want; }
 function loadSols(){ const L=new THREE.TextureLoader(); let n=0; const texs=SOLS.map(([f])=>L.load('assets/textures/sols/'+f+'.jpg',()=>{ if(++n===SOLS.length){ TERRAIN_SPLAT=makeSplatMat(texs); applyTerrainMat(); } }));
   for(const t of texs){ t.wrapS=t.wrapT=THREE.RepeatWrapping; t.colorSpace=THREE.SRGBColorSpace; } } // textures de 1024 px (taille utilisée pour le niveau de mipmap L0)
 /* ---------- génération : terrain ---------- */
 const lootSpots=[], chestSpots=[], housesInfo=[]; const LOD_OBJ={};
 {
-  const S=MAP*2+60, N=quality==='low'?150:190; /* terrain moins dense en qualité Basse */ const g=new THREE.PlaneGeometry(S,S,N,N); g.rotateX(-Math.PI/2);
+  const S=MAP*2+60, N=LOWQ()?150:190; /* terrain moins dense en qualité Basse */ const g=new THREE.PlaneGeometry(S,S,N,N); g.rotateX(-Math.PI/2);
   const p=g.attributes.position; const cols=new Float32Array(p.count*3); const c=new THREE.Color();
   const s0=new Float32Array(p.count*4), s1=new Float32Array(p.count*2);
   for(let i=0;i<p.count;i++){ const x=p.getX(i), z=p.getZ(i); const h=terrainH(x,z); p.setY(i,h); const gc=groundColor(x,z,h); c.setRGB(gc[0],gc[1],gc[2],THREE.SRGBColorSpace); cols[i*3]=c.r; cols[i*3+1]=c.g; cols[i*3+2]=c.b;
@@ -723,7 +741,7 @@ const lootSpots=[], chestSpots=[], housesInfo=[]; const LOD_OBJ={};
   const tm=new THREE.MeshLambertMaterial({vertexColors:true}); const t=new THREE.Mesh(g,tm); t.receiveShadow=true; t.name='terrain'; scene.add(t); TERRAIN=t; TERRAIN_MAT0=tm;
   // v1.2 : texture de détail du sol (sable, cailloux, herbe sèche), répétée tous les 6 m, multipliée par les couleurs des zones ;
   // moyenne 0,77 compensée par la couleur du matériau pour garder la même luminosité
-  new THREE.TextureLoader().load('assets/textures/sol_detail.jpg',tx=>{ tx.wrapS=tx.wrapT=THREE.RepeatWrapping; tx.repeat.set(S/6,S/6); tx.anisotropy=quality==='low'?1:4; tm.map=tx; tm.color.setScalar(1/0.77); tm.needsUpdate=true; });
+  new THREE.TextureLoader().load('assets/textures/sol_detail.jpg',tx=>{ tx.wrapS=tx.wrapT=THREE.RepeatWrapping; tx.repeat.set(S/6,S/6); tx.anisotropy=LOWQ()?1:4; tm.map=tx; tm.color.setScalar(1/0.77); tm.needsUpdate=true; });
   // fleuve
   const wp=[], wi=[]; let k=0;
   const ZW=MAP+40; for(let z=-ZW;z<=ZW;z+=4){ const x=riverX(z); wp.push(x-RIVER_W-9,WATER_Y,z, x+RIVER_W+9,WATER_Y,z); if(z>-ZW){ wi.push(k-2,k,k-1, k-1,k,k+1); } k+=2; }
@@ -3179,7 +3197,19 @@ function update(dt){
 function updateStormVisualMenu(){ stormMesh.visible=false; stormInner.visible=false; }
 let last=performance.now();
 let fpsC=0, fpsT2=0, cpuAcc=0, gpuAcc=0;
-function loop(now){ requestAnimationFrame(loop); if(SET.fpsCap>0&&now-last<1000/SET.fpsCap-2) return; /* v1.4 : limite d'images */ const dt=Math.min(0.05,(now-last)/1000); last=now;
+/* v2.0 : fréquence de l'écran mesurée sur les intervalles entre images (on garde l'intervalle le plus court qui revient souvent :
+   le 15e centile sur 90 images) ; seules les limites qu'elle permet sont proposées */
+let rafPrev=0, capAcc=0, screenHz=60; const rafIv=[];
+function measureHz(now){ if(rafPrev){ const d=now-rafPrev; if(d>4&&d<60) rafIv.push(d); } rafPrev=now;
+  if(rafIv.length>=90){ const a=rafIv.splice(0).sort((x,y)=>x-y), iv=a[Math.floor(a.length*0.15)], hz=1000/iv;
+    const std=[30,45,60,72,90,120,144,165].reduce((b,v)=>Math.abs(v-hz)<Math.abs(b-hz)?v:b,60); screenHz=Math.max(screenHz===60&&std<60?std:screenHz,std); } }
+const FPS_CAPS=()=>[30,45,60,90,120].filter(v=>v<=screenHz+3);
+let capPrev=0;
+/* limite d'images (v1.4 ; v2.0 : accumulateur, pour que 45 sur un écran 60 Hz donne bien 45 et pas 30) : vrai = dessiner cette image */
+function fpsGate(now,cap=SET.fpsCap,hz=screenHz){ const d=capPrev?Math.max(0,Math.min(now-capPrev,250)):0; capPrev=now;
+  if(!(cap>0&&cap<hz-3)){ capAcc=0; return true; } const iv=1000/cap; capAcc+=d; if(capAcc<iv-1.5) return false; capAcc=Math.min(capAcc-iv,iv); return true; }
+function loop(now){ requestAnimationFrame(loop); measureHz(now); if(!fpsGate(now)) return;
+  const dt=Math.min(0.05,(now-last)/1000); last=now;
   const t0=performance.now(); if((!paused||state==='menu')&&!window.__freeze) update(dt); /* __freeze : tests pas à pas */ const t1=performance.now(); if(state==='menu'&&lobby) lobby.render(); else renderer.render(scene,camera); const t2=performance.now();
   if((state==='play'||state==='bus')&&!paused) adaptRes(dt);
   cpuAcc+=t1-t0; gpuAcc+=t2-t1; fpsC++; fpsT2+=dt;
@@ -3218,33 +3248,45 @@ const TABS={
     ['toggle','editRelease',"Valider l'édition en relâchant le doigt (ou le clic)"],
     ['range','buildSens','Sensibilité de la caméra en construction',0.5,2,0.05,f2],['range','editSens','Sensibilité de la caméra en édition',0.5,2,0.05,f2],
     ['hint','Pour monter vite : avance et pose mur puis rampe, mur puis rampe. Le mur se place tout seul au bout de la rampe de devant. À l’Entraînement, le banco est illimité et le menu pause permet d’effacer tes constructions.']],
-  gfx:[['quality'],['range','res','Résolution',50,100,5,v=>v+' %'],['range','fov','Champ de vision',55,95,1,v=>v+'°'],['range','viewDist','Distance de vue',180,450,10,v=>v+' m'],['seg','fpsCap','Limite d’images par seconde (30 : moins de chauffe et de batterie)',[[30,'30'],[60,'60'],[0,'Aucune']]],['toggle','showFps','Afficher les FPS'],['toggle','showStats','Stats techniques (CPU, draw calls, triangles)'],
-    ['hint','Basse : pas d’ombres, résolution ×1, 230 m de vue, effets réduits (téléphones modestes). Moyenne : ombres simples, ×1,5, 300 m. Haute : ombres douces, ×2, 400 m. Si ça rame encore : résolution 70 %.']],
+  gfx:[['quality'],
+    ['seg','cShadow','Ombres',[['off','AUCUNE'],['low','BASSES'],['mid','MOYENNES'],['high','HAUTES']],()=>quality==='custom'],
+    ['seg','cTex','Textures du sol',[['simple','SIMPLES'],['detail','DÉTAILLÉES']],()=>quality==='custom'],
+    ['seg','cFx','Effets (particules, éclairs de tir, impacts)',[['low','RÉDUITS'],['mid','MOYENS'],['high','COMPLETS']],()=>quality==='custom'],
+    ['seg','cVeg','Végétation (buissons, 2e feuillage, animaux lointains)',[['low','RÉDUITE'],['high','COMPLÈTE']],()=>quality==='custom'],
+    ['range','res','Résolution',50,100,5,v=>v+' %'],['range','fov','Champ de vision',55,95,1,v=>v+'°'],['range','viewDist','Distance de vue',150,450,10,v=>v+' m'],
+    ['seg','fpsCap','Limite d’images par seconde (plus bas : moins de chauffe et de batterie)',()=>[...FPS_CAPS().map(v=>[v,String(v)]),[0,'AUCUNE']]],
+    ['hintf',()=>`Écran mesuré : ${screenHz} Hz. Seules les limites que ton écran peut afficher sont proposées.`],
+    ['toggle','aa','Anticrénelage (bords lisses, coûte cher au téléphone) — appliqué au prochain lancement'],
+    ['toggle','showFps','Afficher les FPS'],['toggle','showStats','Stats techniques (CPU, draw calls, triangles)'],
+    ['hint','Très faible : ni ombres ni effets, résolution réduite, 180 m de vue (petits téléphones). Faible : pas d’ombres, 230 m. Moyen : ombres simples, sol détaillé, 300 m. Élevé : ombres douces, ×2, 400 m. Personnalisé : part du profil choisi avant, puis chaque réglage à part. Il n’y a pas d’effets de post-traitement (flou, bloom) dans le jeu. Si ça rame encore : résolution 70 %.']],
   snd:[['range','vol','Volume général',0,100,1,v=>v+' %'],['range','sfx','Effets (tirs, construction)',0,100,1,v=>v+' %'],['range','amb',"Vent de l'harmattan",0,100,1,v=>v+' %']],
-  hud:[['button',ico('layout')+'Personnaliser la disposition du HUD',()=>openHudEditor()],['hint','Déplace chaque bouton avec le doigt, change sa taille, puis Enregistrer.'],
+  hud:[['seg','hudPreset','DISPOSITION DU HUD',()=>[['classique','CLASSIQUE'],['compact','COMPACTE'],['construction','CONSTRUCTION'],...(SET.layoutPerso?[['perso','PERSONNALISÉE']]:[])]],
+    ['button',ico('layout')+'Personnaliser la disposition du HUD',()=>openHudEditor()],['hint','Déplace chaque élément avec le doigt, change sa taille, son opacité ou masque-le, puis Enregistrer : ta disposition devient « Personnalisée » (gardée sur le téléphone). Compacte : boutons plus petits et plus discrets. Construction : pièces, ÉDITER et BÂTIR plus grands.'],
     ['range','btnOp','Opacité des boutons',20,100,5,v=>v+' %'],['range','btnScale','Taille des boutons',70,140,5,v=>v+' %'],
     ['toggle','minimap','Mini-carte'],['toggle','killfeed','Fil des éliminations'],['toggle','dmgNums','Chiffres de dégâts'],
     ['button','Réinitialiser tous les paramètres',()=>{ const q=quality; Object.assign(SET,JSON.parse(JSON.stringify(SET_DEF))); saveSet(); applySettings(); renderTab(curTab); quality=q; },'warn']],
 };
 function renderTab(t){ curTab=t; document.querySelectorAll('.stabs button').forEach(b=>b.classList.toggle('on',b.dataset.t===t)); const body=$('sBody'); body.innerHTML='';
-  for(const row of TABS[t]){ const [type,key,label]=row; const d=document.createElement('div');
+  for(const row of TABS[t]){ const [type,key,label]=row; const d=document.createElement('div'); if(type==='seg'&&row[4]&&!row[4]()) continue;
     if(type==='range'){ const [, , , mn,mx,st,fmt]=row; d.className='srow col'; d.innerHTML=`<div class="lab"><span>${label}</span><span class="sval"></span></div><input type="range" min="${mn}" max="${mx}" step="${st}">`;
       const inp=d.querySelector('input'), sv=d.querySelector('.sval'); inp.value=SET[key]; sv.textContent=fmt(SET[key]);
       inp.addEventListener('input',()=>{ SET[key]=parseFloat(inp.value); sv.textContent=fmt(SET[key]); applySettings(key); saveSet(); }); }
     else if(type==='toggle'){ d.className='srow'; d.innerHTML=`<span>${label}</span><label class="sw"><input type="checkbox"><i></i></label>`; const inp=d.querySelector('input'); inp.checked=!!SET[key];
       if(key==='tapBuild'&&SET.buildStyle==='simple'){ inp.checked=true; inp.disabled=true; d.style.opacity=0.5; } // v2.0 : toujours actif en mode simple
       inp.addEventListener('change',()=>{ SET[key]=inp.checked; applySettings(key); saveSet(); }); }
-    else if(type==='quality'){ d.className='srow col'; d.innerHTML='<div class="lab"><span>Profil graphique</span></div><div class="seg"><button data-q="low">Basse</button><button data-q="medium">Moyenne</button><button data-q="high">Haute</button></div>';
+    else if(type==='quality'){ d.className='srow col'; d.innerHTML='<div class="lab"><span>Profil graphique</span></div><div class="seg"><button data-q="vlow">Très faible</button><button data-q="low">Faible</button><button data-q="medium">Moyen</button><button data-q="high">Élevé</button><button data-q="custom">Personnalisé</button></div>';
       d.querySelectorAll('button').forEach(b=>{ b.classList.toggle('on',b.dataset.q===quality); b.addEventListener('click',()=>{ setQuality(b.dataset.q); renderTab(curTab); }); }); }
-    else if(type==='seg'){ d.className='srow col'; d.innerHTML=`<div class="lab"><span>${label}</span></div><div class="seg">`+row[3].map(([v,t])=>`<button data-v="${v}">${t}</button>`).join('')+'</div>';
+    else if(type==='seg'){ d.className='srow col'; d.innerHTML=`<div class="lab"><span>${label}</span></div><div class="seg">`+(typeof row[3]==='function'?row[3]():row[3]).map(([v,t])=>`<button data-v="${v}">${t}</button>`).join('')+'</div>';
       const num=typeof SET_DEF[key]==='number', val=v=>num?+v:v;
       d.querySelectorAll('button').forEach(b=>{ b.classList.toggle('on',val(b.dataset.v)===SET[key]); b.addEventListener('click',()=>{ SET[key]=val(b.dataset.v); saveSet(); applySettings(key); renderTab(curTab); }); }); }
     else if(type==='button'){ d.innerHTML=`<button class="sbtn ${row[3]||''}">${key}</button>`; d.firstElementChild.addEventListener('click',label); }
     else if(type==='hint'){ d.className='shint'; d.textContent=key; }
+    else if(type==='hintf'){ d.className='shint'; d.textContent=key(); }
     else if(type==='html'){ d.className='shint'; d.innerHTML=key; }
     body.appendChild(d); } }
 function applySettings(key){
-  if(!key||key==='res'||key==='viewDist') applyQuality();
+  if(!key||key==='res'||key==='viewDist'||(key&&key[0]==='c'&&/^c(Shadow|Tex|Fx|Veg)$/.test(key))) applyQuality();
+  if(key==='hudPreset'){ SET.layout=SET.hudPreset==='perso'&&SET.layoutPerso?JSON.parse(JSON.stringify(SET.layoutPerso)):JSON.parse(JSON.stringify(HUD_PRESETS[SET.hudPreset]||{})); saveSet(); }
   applyAudio();
   $('touch').style.setProperty('--bop',SET.btnOp/100);
   $('mini').style.display=SET.minimap?'':'none'; $('feed').style.display=SET.killfeed?'':'none'; $('fps').classList.toggle('hidden',!(SET.showFps||SET.showStats));
@@ -3262,34 +3304,45 @@ $('sClear').addEventListener('click',()=>{ let n=0; for(const q of [...pieceList
 { const g=$('gear'); const f=e=>{ e.preventDefault(); e.stopPropagation(); if(!hudEditing) openSettings(); }; g.addEventListener('touchstart',f,{passive:false}); g.addEventListener('click',f); }
 document.addEventListener('pointerlockchange',()=>{ if(!document.pointerLockElement&&(state==='play'||state==='bus')&&!settingsOpen&&!hudEditing&&!endShown&&!IS_TOUCH&&player&&player.alive) openSettings(); });
 // --- disposition du HUD ---
-const LAY=['bFire','bJump','bReload','bBuild','bCrouch','bSprint','bAim','bEdit','pick','joy','mats','tl','bottom','feed','gear'];
-const TOUCH_IDS=['bFire','bJump','bReload','bBuild','bCrouch','bSprint','bAim','bEdit','pick','joy'];
-const HE_NAMES={bFire:'Bouton TIRER',bJump:'Bouton SAUT',bReload:'Recharger',bBuild:'Construire',bCrouch:'Accroupi',bSprint:'Sprint',bAim:'Viser',bEdit:'Éditer',pick:'Pièces (mur, rampe…)',joy:'Joystick',mats:'Banco, kilishi, thé',tl:'Mini-carte & infos',bottom:'Vie & armes',feed:'Éliminations',gear:'Paramètres'};
+const LAY=['bFire','bJump','bReload','bBuild','bCrouch','bSprint','bAim','bEdit','bRot','pick','joy','mats','tl','bottom','feed','gear'];
+const TOUCH_IDS=['bFire','bJump','bReload','bBuild','bCrouch','bSprint','bAim','bEdit','bRot','pick','joy'];
+/* v2.0 : dispositions toutes faites (taille s, opacité o) ; sans x / y, l'élément garde sa place d'origine.
+   Les modifier dans l'éditeur puis Enregistrer en fait la disposition « Personnalisée » */
+const HUD_PRESETS={
+  classique:{},
+  compact:{bFire:{s:0.88},bJump:{s:0.82,o:0.85},bReload:{s:0.78,o:0.8},bBuild:{s:0.8,o:0.85},bCrouch:{s:0.78,o:0.75},bSprint:{s:0.78,o:0.75},bAim:{s:0.82,o:0.85},bEdit:{s:0.8,o:0.85},bRot:{s:0.8,o:0.85},pick:{s:0.86,o:0.9},mats:{s:0.85,o:0.85},tl:{s:0.85},bottom:{s:0.88},feed:{s:0.85,o:0.8}},
+  construction:{pick:{s:1.25},bEdit:{s:1.2},bBuild:{s:1.15},bRot:{s:1.15},bJump:{s:1.08},bCrouch:{s:0.85,o:0.75},bSprint:{s:0.85,o:0.75},bAim:{s:0.9},feed:{s:0.85,o:0.75}},
+};
+const HE_NOHIDE=new Set(['joy','gear']); // le joystick et les paramètres ne se masquent pas (sinon on ne peut plus jouer ni revenir aux réglages)
+const HE_NAMES={bFire:'Bouton TIRER',bJump:'Bouton SAUT',bReload:'Recharger',bBuild:'Construire',bCrouch:'Accroupi',bSprint:'Sprint',bAim:'Viser',bEdit:'Éditer',pick:'Pièces (mur, rampe…)',joy:'Joystick',mats:'Banco, kilishi, thé',tl:'Mini-carte & infos',bottom:'Vie & armes',feed:'Éliminations',gear:'Paramètres',bRot:'Tourner (mode avancé)'};
 function applyLayout(lay){
   for(const id of LAY){ const el=$(id); if(!el) continue; const L=lay[id];
     if(id==='joy'){ if(!SET.joyFixed){ el.style.left=el.style.top=el.style.margin=el.style.transform=''; if(joy.id===null) el.style.opacity=0; continue; }
       const J=L||{x:0.15,y:0.7,s:1}; el.style.left=(J.x*100)+'%'; el.style.top=(J.y*100)+'%'; el.style.margin='0'; el.style.transform=`translate(-50%,-50%) scale(${J.s})`; if(joy.id===null) el.style.opacity=0.6; continue; }
-    const bs=(TOUCH_IDS.includes(id)&&id!=='pick')?SET.btnScale/100:1, sc=(L?L.s:1)*bs;
-    if(L){ el.style.left=(L.x*100)+'%'; el.style.top=(L.y*100)+'%'; el.style.right='auto'; el.style.bottom='auto'; el.style.transform=`translate(-50%,-50%) scale(${sc})`; }
+    const bs=(TOUCH_IDS.includes(id)&&id!=='pick')?SET.btnScale/100:1, sc=(L&&L.s!=null?L.s:1)*bs;
+    el.style.opacity=L&&L.o!=null&&L.o<1?(L.o*(TOUCH_IDS.includes(id)?SET.btnOp/100:1)).toFixed(2):''; el.classList.toggle('uhide',!!(L&&L.h&&!HE_NOHIDE.has(id))); /* v2.0 : opacité et masquage par élément */
+    if(L&&L.x!=null){ el.style.left=(L.x*100)+'%'; el.style.top=(L.y*100)+'%'; el.style.right='auto'; el.style.bottom='auto'; el.style.transform=`translate(-50%,-50%) scale(${sc})`; }
     else { el.style.left=el.style.top=el.style.right=el.style.bottom=''; el.style.transform=sc!==1?`scale(${sc})`:''; } } }
 let heLay=null, heSel=null, heDrag=null, heFrom=null;
-const heIds=()=>LAY.filter(id=>(IS_TOUCH||!TOUCH_IDS.includes(id))&&(id!=='joy'||SET.joyFixed));
-function heFill(){ for(const id of heIds()){ if(heLay[id]) continue; const r=$(id).getBoundingClientRect(); const bs=(TOUCH_IDS.includes(id)&&id!=='pick'&&id!=='joy')?SET.btnScale/100:1; heLay[id]={x:(r.left+r.width/2)/innerWidth,y:(r.top+r.height/2)/innerHeight,s:1}; } }
+const heIds=()=>LAY.filter(id=>(IS_TOUCH||!TOUCH_IDS.includes(id))&&(id!=='joy'||SET.joyFixed)&&(id!=='bRot'||SET.buildStyle!=='simple'));
+function heFill(){ for(const id of heIds()){ if(heLay[id]&&heLay[id].x!=null) continue; const r=$(id).getBoundingClientRect(); heLay[id]=Object.assign({s:1},heLay[id],{x:(r.left+r.width/2)/innerWidth,y:(r.top+r.height/2)/innerHeight}); } }
+function heLoad(lay){ heLay=JSON.parse(JSON.stringify(lay||{})); applyLayout(heLay); requestAnimationFrame(()=>{ heFill(); applyLayout(heLay); selectHe(null); }); }
 function openHudEditor(){
   heFrom=state==='menu'?'menu':'game'; settingsOpen=false; $('settings').classList.add('hidden'); hudEditing=true;
   if(lobby) lobby.hide(); $('hud').classList.remove('hidden'); if(IS_TOUCH) $('touch').classList.remove('hidden');
   document.body.classList.add('editing-hud'); $('hudEdit').classList.remove('hidden');
   heIds().forEach(id=>$(id).classList.add('he-item'));
-  heLay=JSON.parse(JSON.stringify(SET.layout)); requestAnimationFrame(()=>{ heFill(); applyLayout(heLay); selectHe(null); });
+  document.body.classList.toggle('he-adv',SET.buildStyle!=='simple'); heLoad(SET.layout);
 }
 function closeHudEditor(save){
-  if(save){ SET.layout=heLay; saveSet(); } applyLayout(SET.layout); hudEditing=false; heDrag=null;
+  if(save){ SET.layout=heLay; SET.layoutPerso=JSON.parse(JSON.stringify(heLay)); SET.hudPreset='perso'; saveSet(); } applyLayout(SET.layout); hudEditing=false; heDrag=null;
   document.body.classList.remove('editing-hud'); $('hudEdit').classList.add('hidden'); document.querySelectorAll('.he-item,.he-sel').forEach(x=>x.classList.remove('he-item','he-sel'));
   if(heFrom==='menu'){ $('hud').classList.add('hidden'); $('touch').classList.add('hidden'); if(lobby) lobby.show(); }
   openSettings(); renderTab('hud'); }
 function selectHe(id){ heSel=id; document.querySelectorAll('.he-sel').forEach(x=>x.classList.remove('he-sel'));
-  if(id){ $(id).classList.add('he-sel'); $('heName').textContent=HE_NAMES[id]; $('heSize').value=Math.round(heLay[id].s*100); $('heSize').disabled=false; }
-  else { $('heName').textContent='Touche un élément pour le déplacer'; $('heSize').disabled=true; } }
+  if(id){ const L=heLay[id]; $(id).classList.add('he-sel'); $('heName').textContent=HE_NAMES[id]; $('heSize').value=Math.round((L.s??1)*100); $('heOp').value=Math.round((L.o??1)*100); $('heHide').checked=!!L.h;
+    $('heSize').disabled=$('heOp').disabled=false; $('heHide').disabled=HE_NOHIDE.has(id); }
+  else { $('heName').textContent='Touche un élément pour le déplacer'; $('heSize').disabled=$('heOp').disabled=$('heHide').disabled=true; } }
 function heHit(x,y){ let best=null,ba=1e9; for(const id of heIds()){ const r=$(id).getBoundingClientRect(); if(x>=r.left-10&&x<=r.right+10&&y>=r.top-10&&y<=r.bottom+10){ const a=r.width*r.height; if(a<ba){ ba=a; best=id; } } } return best; }
 { const he=$('hudEdit');
   he.addEventListener('pointerdown',e=>{ if(e.target.closest('.he-bar')) return; e.preventDefault(); const id=heHit(e.clientX,e.clientY); selectHe(id);
@@ -3298,8 +3351,11 @@ function heHit(x,y){ let best=null,ba=1e9; for(const id of heIds()){ const r=$(i
     L.x=clamp((e.clientX+heDrag.dx)/innerWidth,0.03,0.97); L.y=clamp((e.clientY+heDrag.dy)/innerHeight,0.03,0.97); applyLayout(heLay); $('heBar').classList.toggle('low',L.y<0.22); });
   const up=e=>{ if(heDrag&&e.pointerId===heDrag.pid) heDrag=null; }; he.addEventListener('pointerup',up); he.addEventListener('pointercancel',up);
   $('heSize').addEventListener('input',()=>{ if(!heSel) return; heLay[heSel].s=$('heSize').value/100; applyLayout(heLay); });
+  $('heOp').addEventListener('input',()=>{ if(!heSel) return; heLay[heSel].o=$('heOp').value/100; applyLayout(heLay); });
+  $('heHide').addEventListener('change',()=>{ if(!heSel||HE_NOHIDE.has(heSel)) return; heLay[heSel].h=$('heHide').checked; applyLayout(heLay); });
+  document.querySelectorAll('#heBar [data-pre]').forEach(b=>b.addEventListener('click',()=>heLoad(HUD_PRESETS[b.dataset.pre])));
   $('heSave').addEventListener('click',()=>closeHudEditor(true)); $('heCancel').addEventListener('click',()=>closeHudEditor(false));
-  $('heReset').addEventListener('click',()=>{ heLay={}; applyLayout(heLay); requestAnimationFrame(()=>{ heFill(); applyLayout(heLay); selectHe(null); }); });
+  $('heReset').addEventListener('click',()=>heLoad({}));
 }
 addEventListener('beforeunload',e=>{ if((state==='play'||state==='bus')&&player&&player.alive&&!endShown){ e.preventDefault(); e.returnValue=''; } });
 function goMenu(){ state='menu'; if(lobby) lobby.show(); $('end').classList.add('hidden'); $('hud').classList.add('hidden'); $('touch').classList.add('hidden'); try{ document.exitPointerLock&&document.exitPointerLock(); }catch(e){} for(const c of chars) c.model.g.visible=false; bus.g.visible=false; resize(); }
@@ -3414,7 +3470,7 @@ function initLobby(){
     WAX:TEX.wax.map((t,i)=>({name:WAX_NAMES[i],url:t.userData.url||(t.image.toDataURL?t.image.toDataURL('image/png'):'')})),
     WEAPONS:GUNS.map(g=>({id:g,name:WEAP[g].name,rarCss:RAR_CSS[WEAP[g].rar],rarName:RARITY[WEAP[g].rar].name})),
     skinAvailable:k=>!!SKINS[k]&&(!SKINS[k].real||!!ASSETS.c[SKINS[k].real]),
-    buildDisplay, weaponModel:t=>makeGunObj(t), quality:()=>quality, objects:OBJ3D,
+    buildDisplay, weaponModel:t=>makeGunObj(t), quality:()=>Q.shadow?quality:'low', objects:OBJ3D, /* v2.0 : le lobby n'a d'ombres que si le profil en a */
     startMatch, openSettings, beforeLaunch, precompile:warmGPU, creditsHTML:CREDITS_HTML, sfx:uiSfx,
     resetProfile:()=>{ try{ localStorage.removeItem('fr_profile'); }catch(e){} location.reload(); } });
 }
@@ -3424,7 +3480,7 @@ requestAnimationFrame(loop);
 loadAssets().then(()=>{ try{ makeWeaponIcons(); }catch(e){} initLobby(); goMenu(); try{ lobby.precompile(); lobby.warm(); lobby.render(); }catch(e){} requestAnimationFrame(()=>$('loading').remove()); setTimeout(()=>{ try{ loadSols(); loadAmbient(); loadPackTrees(); loadPackRocks(); }catch(e){ console.warn('décor',e); } },800); }); // une image rendue derrière l'écran : ombres comprises ; v1.6 : sols, animaux, arbres et rochers du pack chargés 0,8 s après l'affichage du lobby
 
 // accès de débogage
-window.FR={get lobby(){return lobby;}, PROFILE, Profile, get matchMode(){return matchMode;}, get camPitch(){return camPitch;}, get sprintOn(){return sprintOn;}, setSprint:v=>{sprintOn=v;}, placementProblem, computePlacement, dirFromYaw, get camYaw(){return camYaw;}, SET, openSettings, closeSettings, openHudEditor, renderTab, get paused(){return paused;}, THREE, ASSETS, selectSlot, swapTake, giveWeapon, beginSwitch, get nearItem(){return nearItem;}, setAds:v=>{ads=v;}, startEdit, confirmEdit, resetEdit, rayCast, crouchPress, get editing(){return editing;}, get state(){return state;}, get player(){return player;}, bots, chars, items, chests, pieces, housesInfo, doors:DOORS, setDoor, interact, hasLOS, findCover, storm, bus, startMatch, update, jumpFromBus:()=>jumpFromBus(player), tryBuild, setBuildType, toggleBuild, warmGPU, AMB, get TERRAIN(){return TERRAIN;}, get TERRAIN_MAT0(){return TERRAIN_MAT0;}, setQuality, qBox, boxGrounded, boxTouch, checkIntegrity, destroyPiece, pieceDown, pieceUp, damagePiece, editPreset, quickSwap, BUILD, setSet:(k,v)=>{ SET[k]=v; refreshBuildUI(); }, dropWeapon, spawnItem, items, WEAP, ammoOf, get buildRot(){return buildRot;}, spaceFreeAt:(x,z,y0,y1,r)=>spaceFree(x,z,y0,y1,r), get buildMode(){return buildMode;}, get pieceHeld(){return pieceHeld;}, pieceList, PINST, setFiring:v=>{firing=v;}, setCam:(y,p)=>{camYaw=y;camPitch=p;}, keys, renderer, scene, camera, get aliveCount(){return aliveCount;}, solids, terrainH};
+window.FR={fpsGate, goMenu, get screenHz(){return screenHz;}, FPS_CAPS, HUD_PRESETS, get quality(){return quality;}, get Q(){return Q;}, applyLayout, get lobby(){return lobby;}, PROFILE, Profile, get matchMode(){return matchMode;}, get camPitch(){return camPitch;}, get sprintOn(){return sprintOn;}, setSprint:v=>{sprintOn=v;}, placementProblem, computePlacement, dirFromYaw, get camYaw(){return camYaw;}, SET, openSettings, closeSettings, openHudEditor, renderTab, get paused(){return paused;}, THREE, ASSETS, selectSlot, swapTake, giveWeapon, beginSwitch, get nearItem(){return nearItem;}, setAds:v=>{ads=v;}, startEdit, confirmEdit, resetEdit, rayCast, crouchPress, get editing(){return editing;}, get state(){return state;}, get player(){return player;}, bots, chars, items, chests, pieces, housesInfo, doors:DOORS, setDoor, interact, hasLOS, findCover, storm, bus, startMatch, update, jumpFromBus:()=>jumpFromBus(player), tryBuild, setBuildType, toggleBuild, warmGPU, AMB, get TERRAIN(){return TERRAIN;}, get TERRAIN_MAT0(){return TERRAIN_MAT0;}, setQuality, qBox, boxGrounded, boxTouch, checkIntegrity, destroyPiece, pieceDown, pieceUp, damagePiece, editPreset, quickSwap, BUILD, setSet:(k,v)=>{ SET[k]=v; refreshBuildUI(); }, dropWeapon, spawnItem, items, WEAP, ammoOf, get buildRot(){return buildRot;}, spaceFreeAt:(x,z,y0,y1,r)=>spaceFree(x,z,y0,y1,r), get buildMode(){return buildMode;}, get pieceHeld(){return pieceHeld;}, pieceList, PINST, setFiring:v=>{firing=v;}, setCam:(y,p)=>{camYaw=y;camPitch=p;}, keys, renderer, scene, camera, get aliveCount(){return aliveCount;}, solids, terrainH};
 </script>
 </body>
 </html>
