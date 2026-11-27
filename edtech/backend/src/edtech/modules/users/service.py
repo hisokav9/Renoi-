@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import re
 import uuid
+from collections.abc import Iterable
 from datetime import UTC, datetime
 
 import structlog
-from sqlalchemy import delete, select, update
+from sqlalchemy import String, cast, delete, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -24,6 +26,53 @@ from edtech.settings import Settings
 log = structlog.stdlib.get_logger(__name__)
 
 PROFILE_FIELDS = ("country_code", "program_id", "grade_level_id", "series_id")
+
+
+_REFERENCE = re.compile(r"^[0-9a-f]{8}$")
+
+
+def user_reference(user_id: uuid.UUID) -> str:
+    """Short reference a student can read to the support team (shown in « Mon compte »)."""
+    return str(user_id)[-8:].upper()
+
+
+async def find_by_reference(session: AsyncSession, reference: str) -> User | None:
+    """Find an active user from its short reference. Ambiguous references match nobody."""
+    ref = reference.strip().lstrip("#").lower()
+    if not _REFERENCE.match(ref):
+        return None
+    stmt = (
+        select(User)
+        .where(cast(User.id, String).like(f"%{ref}"), User.status != UserStatus.DELETED)
+        .limit(2)
+    )
+    rows = (await session.execute(stmt)).scalars().all()
+    return rows[0] if len(rows) == 1 else None
+
+
+async def telegram_id_of(session: AsyncSession, user_id: uuid.UUID) -> int | None:
+    stmt = select(AuthIdentity.subject).where(
+        AuthIdentity.user_id == user_id, AuthIdentity.provider == AuthProvider.TELEGRAM
+    )
+    subject = (await session.execute(stmt)).scalar_one_or_none()
+    return int(subject) if subject is not None else None
+
+
+async def staff_telegram_contacts(
+    session: AsyncSession, roles: Iterable[str], *, limit: int = 20
+) -> list[tuple[int, str]]:
+    """``(telegram_id, locale)`` of active staff members having one of ``roles``."""
+    stmt = (
+        select(AuthIdentity.subject, User.locale)
+        .join(User, User.id == AuthIdentity.user_id)
+        .where(
+            AuthIdentity.provider == AuthProvider.TELEGRAM,
+            User.role.in_(list(roles)),
+            User.status == UserStatus.ACTIVE,
+        )
+        .limit(limit)
+    )
+    return [(int(subject), locale) for subject, locale in (await session.execute(stmt)).all()]
 
 
 async def get_by_identity(

@@ -16,8 +16,10 @@ des charges complet est découpé en phases ; voir [la feuille de route](docs/fe
 ## Ce qui fonctionne aujourd'hui
 
 - **Bot Telegram** : `/start`, inscription guidée (langue → pays → niveau → classe → série),
-  menu principal, compte et crédits, historique, préférences, aide, assistance (tickets transférés
-  à l'équipe), suppression de compte. Textes en français et en anglais.
+  menu principal, compte et crédits, historique, préférences, aide, assistance, suppression de
+  compte. Textes en français et en anglais.
+- **Administration dans le bot** (`/admin`, réservé à l'équipe) : statistiques, réponse aux
+  tickets d'assistance, ajout de crédits.
 - **API REST v1** : connexion Telegram (widget web et Mini App), jetons d'accès + rafraîchissement
   avec rotation, profil, crédits, traitements, catalogue pédagogique, administration.
 - **Moteur de traitements** : chaque traitement a un identifiant unique, un état, un journal
@@ -85,7 +87,7 @@ docs/                     architecture, décisions (ADR), déploiement, sécurit
 - [Architecture](docs/architecture.md)
 - [Décisions d'architecture (ADR)](docs/adr/)
 - [Configuration](docs/configuration.md)
-- [Déploiement et retour arrière](docs/deploiement.md)
+- [Déploiement et retour arrière](docs/deploiement.md) · [sur Render](docs/deploiement-render.md)
 - [Sécurité et confidentialité](docs/securite.md)
 - [Bot Telegram](docs/telegram.md)
 - [Feuille de route](docs/feuille-de-route.md)

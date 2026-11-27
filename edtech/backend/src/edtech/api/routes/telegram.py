@@ -40,11 +40,11 @@ async def telegram_webhook(
     container: ContainerDep,
     x_telegram_bot_api_secret_token: str | None = Header(default=None),
 ) -> dict[str, bool]:
-    secret = container.settings.telegram_webhook_secret
-    if container.bot is None or secret is None:
+    expected = container.settings.telegram_secret_token
+    if container.bot is None or expected is None:
         raise NotFoundError()
     if not x_telegram_bot_api_secret_token or not hmac.compare_digest(
-        x_telegram_bot_api_secret_token.encode(), secret.get_secret_value().encode()
+        x_telegram_bot_api_secret_token.encode(), expected.encode()
     ):
         raise UnauthorizedError()
 

@@ -13,10 +13,10 @@ from edtech.modules.support.models import SupportTicket
 from edtech.modules.telegram.polling import PollingConflictError, run_polling
 from edtech.modules.users import service as users
 from edtech.modules.users.models import User, UserStatus
-from tests.conftest import SUPPORT_CHAT_ID, WEBHOOK_SECRET, FakeTelegram
+from tests.conftest import SUPPORT_CHAT_ID, WEBHOOK_SECRET, WEBHOOK_TOKEN, FakeTelegram
 
 WEBHOOK = "/api/v1/telegram/webhook"
-HEADERS = {"X-Telegram-Bot-Api-Secret-Token": WEBHOOK_SECRET}
+HEADERS = {"X-Telegram-Bot-Api-Secret-Token": WEBHOOK_TOKEN}
 _update_ids = itertools.count(1)
 TG_USER = 31337
 
@@ -63,6 +63,10 @@ async def test_webhook_rejects_requests_without_the_secret(client: httpx.AsyncCl
         WEBHOOK, json=message("/start"), headers={"X-Telegram-Bot-Api-Secret-Token": "x"}
     )
     assert wrong.status_code == 401
+    raw = await client.post(  # le secret brut n'est pas le jeton attendu
+        WEBHOOK, json=message("/start"), headers={"X-Telegram-Bot-Api-Secret-Token": WEBHOOK_SECRET}
+    )
+    assert raw.status_code == 401
 
 
 async def test_invalid_and_duplicate_updates_are_acknowledged(

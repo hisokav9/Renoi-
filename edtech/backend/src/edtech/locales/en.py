@@ -68,7 +68,8 @@ MESSAGES: dict[str, str] = {
         "Available credits: <b>{balance}</b>\n"
         "Reserved credits: {reserved}\n"
         "Plan: {plan}\n"
-        "Member since: {since}\n\n"
+        "Member since: {since}\n"
+        "Reference: <code>{ref}</code> (give it to support)\n\n"
         "{profile}"
     ),
     "plan_free": "Free",
@@ -96,7 +97,63 @@ MESSAGES: dict[str, str] = {
         "include personal information (phone number, address…)."
     ),
     "support_received": "Thank you, your message was sent to the team (reference {ref}).",
-    "support_forward": "🆘 Ticket {ref}\nUser: {user_id}\n\n{message}",
+    "support_forward": "🆘 Ticket #{ref}\nStudent: {user_ref}\n\n{message}",
+    "support_reply": "💬 <b>Support reply</b> (ticket #{ref}):\n\n{message}",
+    "credits_gift": "🎁 The team gave you {amount} credit(s). New balance: {balance}.",
+    "admin_home": "🛠 <b>Administration</b>",
+    "btn_admin_stats": "📊 Statistics",
+    "btn_admin_tickets": "🆘 Open tickets ({count})",
+    "btn_admin_credits": "➕ Add credits",
+    "btn_admin_reply": "✍️ Reply",
+    "btn_admin_close": "✅ Close ticket",
+    "btn_admin_gift": "🎁 Give credits",
+    "btn_admin_home": "🛠 Administration",
+    "btn_confirm": "✅ Confirm",
+    "btn_main_menu": "🏠 Main menu",
+    "admin_stats": (
+        "📊 <b>Statistics</b>\n\n"
+        "Sign-ups: <b>{users}</b> (profile completed: {onboarded})\n"
+        "New: {new_24h} in 24 h · {new_7d} in 7 days\n"
+        "Active over 7 days: {active_7d}\n"
+        "Open tickets: {open_tickets}\n"
+        "Credits held by students: {credits}\n"
+        "Jobs over 7 days: {jobs}"
+    ),
+    "admin_none": "none",
+    "admin_tickets_title": "🆘 <b>Open tickets</b> ({total})",
+    "admin_tickets_empty": "No open ticket 🎉",
+    "admin_ticket_line": "• <b>#{ref}</b> — {date} — {excerpt}",
+    "admin_ticket": (
+        "🆘 <b>Ticket #{ref}</b> — {date}\n"
+        "Student: <code>{user_ref}</code> · {balance} credit(s)\n"
+        "{profile}\n\n{message}"
+    ),
+    "admin_ticket_done": "This ticket has already been handled.",
+    "admin_reply_prompt": (
+        "✍️ Write your reply to ticket #{ref} in a single message. It will be sent to the "
+        "student, then the ticket will be closed."
+    ),
+    "admin_reply_sent": "Reply sent ✅ Ticket #{ref} is closed.",
+    "admin_reply_failed": (
+        "⚠️ Reply not delivered: the student may have blocked the bot or deleted their account. "
+        "The ticket stays open."
+    ),
+    "admin_ticket_closed": "Ticket #{ref} closed ✅",
+    "admin_credit_prompt": (
+        "➕ Send the student's reference (8 characters, shown in their “My account” screen and on "
+        "their tickets)."
+    ),
+    "admin_user_not_found": "No student found with reference “{ref}”. Check it and send it again.",
+    "admin_user_card": (
+        "👤 Student <code>{user_ref}</code>\n"
+        "Joined on {since} · {balance} credit(s)\n"
+        "{profile}\n\n"
+        "How many credits to add?"
+    ),
+    "admin_grant_confirm": "Add <b>{amount}</b> credit(s) to student <code>{user_ref}</code>?",
+    "admin_grant_done": "✅ {amount} credit(s) added. Student's new balance: {balance}.",
+    "admin_grant_expired": "This operation has expired or was already done.",
+    "admin_new_ticket": "🆘 New ticket #{ref}: {excerpt}\n\nType /admin to reply.",
     "rate_limited": "Easy 🙂 You are sending a lot of messages. Try again in {seconds} s.",
     "unknown_input": "I did not understand. Send a photo of an exercise or use the menu.",
     "error_generic": "Oops, something went wrong. Please try again in a moment.",

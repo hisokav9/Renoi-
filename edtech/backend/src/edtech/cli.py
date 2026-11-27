@@ -9,6 +9,9 @@ import signal
 import sys
 import uuid
 
+from alembic import command
+from alembic.config import Config
+
 from edtech.container import Container
 from edtech.core.logging import configure_logging
 from edtech.infra.queue import InMemoryDispatcher
@@ -37,13 +40,14 @@ def _require_telegram(container: Container) -> None:
 async def _set_webhook(container: Container, drop_pending: bool) -> int:
     _require_telegram(container)
     settings = container.settings
-    if not settings.public_base_url or not settings.telegram_webhook_secret:
+    secret_token = settings.telegram_secret_token
+    if not settings.public_base_url or not secret_token:
         raise SystemExit("EDTECH_PUBLIC_BASE_URL et EDTECH_TELEGRAM_WEBHOOK_SECRET sont requis")
     url = f"{settings.public_base_url.rstrip('/')}/api/v1/telegram/webhook"
     assert container.telegram is not None  # noqa: S101
     await container.telegram.set_webhook(
         url,
-        secret_token=settings.telegram_webhook_secret.get_secret_value(),
+        secret_token=secret_token,
         allowed_updates=ALLOWED_UPDATES,
         drop_pending=drop_pending,
     )
@@ -110,6 +114,24 @@ async def _poll(container: Container, args: argparse.Namespace) -> int:
     return 0
 
 
+async def _release(container: Container, args: argparse.Namespace) -> int:
+    """Everything a new version needs before receiving traffic (idempotent).
+
+    Run by the hosting platform before each deploy (Render ``preDeployCommand``).
+    """
+    print("1/3 Migrations de la base de données…", flush=True)
+    await asyncio.to_thread(command.upgrade, Config(args.alembic_ini), "head")
+    print("2/3 Catalogue pédagogique…", flush=True)
+    await _seed(container)
+    settings = container.settings
+    if container.telegram and settings.public_base_url and settings.telegram_secret_token:
+        print("3/3 Webhook Telegram…", flush=True)
+        await _set_webhook(container, drop_pending=False)
+    else:
+        print("3/3 Webhook Telegram ignoré (jeton, URL publique ou secret non configuré)")
+    return 0
+
+
 async def _set_role(container: Container, args: argparse.Namespace) -> int:
     async with container.db.session() as session:
         user: User | None
@@ -143,6 +165,8 @@ async def _main(args: argparse.Namespace) -> int:  # noqa: PLR0911 - one return 
                 return await _delete_webhook(container)
             case "telegram-poll":
                 return await _poll(container, args)
+            case "release":
+                return await _release(container, args)
             case "set-role":
                 return await _set_role(container, args)
     finally:
@@ -154,6 +178,10 @@ def main() -> None:
     parser = argparse.ArgumentParser(prog="edtech")
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("seed", help="Charger/mettre à jour le catalogue pédagogique (idempotent)")
+    release = sub.add_parser(
+        "release", help="Avant chaque déploiement : migrations, catalogue, webhook Telegram"
+    )
+    release.add_argument("--alembic-ini", default="alembic.ini")
     hook = sub.add_parser("telegram-set-webhook", help="Déclarer le webhook et les commandes")
     hook.add_argument("--drop-pending", action="store_true")
     sub.add_parser("telegram-webhook-info", help="Afficher l'état du webhook")

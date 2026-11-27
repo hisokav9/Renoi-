@@ -26,6 +26,18 @@ async def test_health_endpoints(client: httpx.AsyncClient) -> None:
     assert ready.headers["x-content-type-options"] == "nosniff"
 
 
+async def test_readiness_with_storage_disabled(
+    client: httpx.AsyncClient, container: Container
+) -> None:
+    container.settings.storage_backend = "disabled"
+    try:
+        ready = await client.get("/health/ready")
+    finally:
+        container.settings.storage_backend = "local"
+    assert ready.status_code == 200
+    assert ready.json()["checks"]["storage"] == "disabled"
+
+
 async def test_metrics_require_token_when_configured(
     client: httpx.AsyncClient, container: Container
 ) -> None:

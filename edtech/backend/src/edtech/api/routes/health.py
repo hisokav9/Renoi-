@@ -38,12 +38,15 @@ async def ready(container: ContainerDep) -> JSONResponse:
         checks["redis"] = "ok"
     except Exception as exc:
         checks["redis"] = f"error: {type(exc).__name__}"
-    try:
-        await container.storage.ping()
-        checks["storage"] = "ok"
-    except Exception as exc:
-        checks["storage"] = f"error: {type(exc).__name__}"
-    healthy = all(v == "ok" for v in checks.values())
+    if container.settings.storage_backend == "disabled":
+        checks["storage"] = "disabled"
+    else:
+        try:
+            await container.storage.ping()
+            checks["storage"] = "ok"
+        except Exception as exc:
+            checks["storage"] = f"error: {type(exc).__name__}"
+    healthy = all(v in ("ok", "disabled") for v in checks.values())
     body = {
         "status": "ok" if healthy else "degraded",
         "version": container.settings.app_version,

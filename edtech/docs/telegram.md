@@ -15,7 +15,8 @@
    EDTECH_PUBLIC_BASE_URL=https://api.<domaine>
    ```
 4. Déclarer le webhook et les commandes : `edtech telegram-set-webhook`
-   (ajouter `--drop-pending` pour ignorer les messages reçus pendant une coupure).
+   (ajouter `--drop-pending` pour ignorer les messages reçus pendant une coupure). Sur Render,
+   c'est automatique à chaque déploiement (`edtech release`).
 5. Vérifier : `edtech telegram-webhook-info`.
 6. Écrire `/start` au bot, puis se donner le rôle administrateur :
    `edtech set-role --telegram-id <votre identifiant Telegram> --role admin`.
@@ -58,6 +59,29 @@ Commandes : `/start`, `/menu`, `/compte` (`/account`), `/historique` (`/history`
 Les boutons modifient le message existant au lieu d'empiler de nouveaux messages. Tous les textes
 sont dans `src/edtech/locales/` (français et anglais) ; un test vérifie que les deux langues sont
 complètes.
+
+## Administration depuis le bot : `/admin`
+
+Réservé à l'équipe. Pour un élève, `/admin` répond comme une commande inconnue.
+
+| Rôle | Statistiques | Tickets (lire, répondre, clore) | Ajouter des crédits |
+|---|---|---|---|
+| `support` | ✅ | ✅ | — |
+| `admin` | ✅ | ✅ | ✅ |
+
+- **Statistiques** : inscrits, profils complétés, nouveaux (24 h / 7 jours), actifs sur 7 jours,
+  tickets ouverts, crédits détenus par les élèves, traitements des 7 derniers jours.
+- **Tickets** :
+  - l'équipe est prévenue en privé à chaque nouveau ticket (si aucun groupe d'assistance n'est
+    configuré) ;
+  - « Répondre » : le message suivant de l'agent est envoyé à l'élève, puis le ticket est clos ;
+  - si l'élève a bloqué le bot, la réponse n'est pas délivrée et le ticket reste ouvert.
+- **Crédits** :
+  - l'élève donne sa **référence** de 8 caractères, visible dans « Mon compte » ;
+  - montants proposés : +1, +5, +10 ou +20, avec confirmation ;
+  - un double appui ne crédite jamais deux fois ;
+  - l'élève est prévenu ; l'opération est inscrite au journal d'audit.
+- Les retraits et corrections de solde restent réservés à l'API d'administration.
 
 ## Fonctionnement technique
 

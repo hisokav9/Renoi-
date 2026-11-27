@@ -1,4 +1,3 @@
-# syntax=docker/dockerfile:1.7
 # Image unique pour l'API, les workers et beat (la commande change selon le service).
 
 FROM python:3.13-slim AS builder
@@ -7,9 +6,9 @@ ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy UV_PYTHON_DOWNLOADS=never
 WORKDIR /app
 # Dépendances d'abord (couche mise en cache tant que le verrou ne change pas).
 COPY pyproject.toml uv.lock ./
-RUN --mount=type=cache,target=/root/.cache/uv uv sync --frozen --no-dev --no-install-project
+RUN uv sync --frozen --no-dev --no-install-project
 COPY src ./src
-RUN --mount=type=cache,target=/root/.cache/uv uv sync --frozen --no-dev --no-editable
+RUN uv sync --frozen --no-dev --no-editable
 
 FROM python:3.13-slim AS runtime
 ARG APP_VERSION=dev
@@ -24,7 +23,7 @@ COPY --chown=app:app alembic.ini ./
 COPY --chown=app:app migrations ./migrations
 USER app
 EXPOSE 8000
+# Le port est fourni par l'hébergeur via $PORT (8000 par défaut).
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-    CMD ["python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health/live', timeout=3).status == 200 else 1)"]
-CMD ["uvicorn", "edtech.main:create_app", "--factory", "--host", "0.0.0.0", "--port", "8000", \
-     "--proxy-headers", "--forwarded-allow-ips", "*", "--no-server-header"]
+    CMD ["python", "-c", "import os,sys,urllib.request; url='http://127.0.0.1:%s/health/live' % os.environ.get('PORT', '8000'); sys.exit(0 if urllib.request.urlopen(url, timeout=3).status == 200 else 1)"]
+CMD ["sh", "-c", "exec uvicorn edtech.main:create_app --factory --host 0.0.0.0 --port \"${PORT:-8000}\" --proxy-headers --forwarded-allow-ips '*' --no-server-header"]

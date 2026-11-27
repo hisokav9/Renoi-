@@ -32,6 +32,10 @@ ROLE_PERMISSIONS: dict[UserRole, frozenset[Permission]] = {
 }
 
 
+def roles_with(permission: Permission) -> list[UserRole]:
+    return [role for role, permissions in ROLE_PERMISSIONS.items() if permission in permissions]
+
+
 def has_permission(role: str, permission: Permission) -> bool:
     try:
         return permission in ROLE_PERMISSIONS[UserRole(role)]

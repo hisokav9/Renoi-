@@ -14,18 +14,18 @@ staging et production, elles viennent du gestionnaire de secrets de l'hébergeur
 | `APP_VERSION` | `0.1.0` | Version affichée par `/health/ready` (l'image la fixe au sha du commit). |
 | `LOG_LEVEL` | `INFO` | Niveau des journaux. |
 | `LOG_JSON` | `true` | Journaux JSON (mettre `false` en local pour un affichage lisible). |
-| `PUBLIC_BASE_URL` | — | URL HTTPS publique de l'API (webhook Telegram). |
+| `PUBLIC_BASE_URL` | — | URL HTTPS publique de l'API (webhook Telegram). Sur Render : `RENDER_EXTERNAL_URL`, fixée par `render.yaml`. |
 | `CORS_ALLOWED_ORIGINS` | `[]` | Origines autorisées pour le futur site web (liste JSON). |
 
 ## Données
 
 | Variable | Défaut | Rôle |
 |---|---|---|
-| `DATABASE_URL` 🔒⚠️ | base locale | `postgresql+asyncpg://utilisateur:mot_de_passe@hôte:5432/base` |
+| `DATABASE_URL` 🔒⚠️ | base locale | `postgresql+asyncpg://…` ; les formes `postgres://` et `postgresql://` des bases managées sont converties automatiquement. |
 | `DATABASE_POOL_SIZE` / `DATABASE_MAX_OVERFLOW` | `10` / `10` | Connexions par processus API. |
 | `REDIS_URL` 🔒⚠️ | `redis://localhost:6379/0` | Cache, limites, état du bot. |
 | `BROKER_URL` 🔒 | = `REDIS_URL` | Broker Celery si distinct. |
-| `STORAGE_BACKEND` ⚠️ | `local` | `local` (développement) ou `s3` (obligatoire hors développement). |
+| `STORAGE_BACKEND` ⚠️ | `local` | `local` (développement uniquement), `s3`, ou `disabled` (aucun fichier stocké : accepté hors développement tant que `FEATURE_CORRECTIONS_ENABLED=false`). |
 | `STORAGE_LOCAL_PATH` | `./var/storage` | Dossier du stockage local. |
 | `S3_BUCKET` ⚠️, `S3_ENDPOINT_URL`, `S3_REGION` | — | Bucket S3 ou compatible (R2, Scaleway, OVH, MinIO…). |
 | `S3_ACCESS_KEY_ID` 🔒, `S3_SECRET_ACCESS_KEY` 🔒 | — | Laisser vide pour utiliser le rôle de l'hébergeur. |
@@ -47,10 +47,11 @@ staging et production, elles viennent du gestionnaire de secrets de l'hébergeur
 | Variable | Défaut | Rôle |
 |---|---|---|
 | `TELEGRAM_BOT_TOKEN` 🔒 | — | Jeton BotFather. Vide = bot désactivé. |
-| `TELEGRAM_WEBHOOK_SECRET` 🔒⚠️ | — | Secret du webhook (obligatoire si un bot est configuré hors développement). |
+| `TELEGRAM_WEBHOOK_SECRET` 🔒⚠️ | — | Secret du webhook (obligatoire si un bot est configuré hors développement). N'importe quel format : la valeur transmise à Telegram en est dérivée (empreinte SHA-256). |
 | `TELEGRAM_BOT_USERNAME` | — | Identifiant du bot. |
 | `TELEGRAM_LOGIN_MAX_AGE_SECONDS` | `86400` | Fraîcheur maximale d'une connexion Telegram (web). |
-| `SUPPORT_CHAT_ID` | — | Groupe Telegram qui reçoit les tickets d'assistance. |
+| `SUPPORT_CHAT_ID` | — | Groupe Telegram qui reçoit les tickets d'assistance. Sans groupe, l'équipe (rôles `support` et `admin`) est prévenue en message privé. |
+| `ADMIN_TELEGRAM_IDS` | — | Identifiants Telegram promus administrateurs à leur prochain message (`123` ou `123,456`). Ne rétrograde jamais personne. |
 
 ## Règles métier et traitements
 
@@ -62,6 +63,12 @@ staging et production, elles viennent du gestionnaire de secrets de l'hébergeur
 | `JOB_LEASE_SECONDS` | `300` | Durée du bail d'un worker (prolongé automatiquement). |
 | `JOB_MAX_ATTEMPTS` | `3` | Essais maximum d'un traitement. |
 | `JOB_REQUEUE_AFTER_SECONDS` | `120` | Délai avant qu'un traitement en attente soit renvoyé en file. |
+
+## Hébergement
+
+| Variable | Défaut | Rôle |
+|---|---|---|
+| `PORT` (sans préfixe) | `8000` | Port d'écoute de l'API dans le conteneur (fourni par l'hébergeur). |
 
 ## Observabilité
 

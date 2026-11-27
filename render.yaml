@@ -1,0 +1,109 @@
+# Render Blueprint — plateforme EdTech (dossier edtech/). Le portfolio reste sur Netlify.
+# Guide pas à pas : edtech/docs/deploiement-render.md
+# Référence : https://render.com/docs/blueprint-spec
+
+services:
+  # API : webhook Telegram + API REST. Lance migrations, catalogue et webhook avant chaque version.
+  - type: web
+    name: edtech-api
+    runtime: docker
+    region: frankfurt
+    plan: 0.5c-512mb
+    rootDir: edtech/backend
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health/ready
+    preDeployCommand: edtech release
+    autoDeployTrigger: checksPass # déploie seulement si la CI GitHub est verte
+    buildFilter:
+      paths:
+        - edtech/backend/**
+    envVars:
+      - fromGroup: edtech-shared
+      - key: PORT
+        value: "8000"
+      - key: EDTECH_PUBLIC_BASE_URL
+        fromService:
+          name: edtech-api
+          type: web
+          envVarKey: RENDER_EXTERNAL_URL
+      - key: EDTECH_DATABASE_URL
+        fromDatabase:
+          name: edtech-db
+          property: connectionString
+      - key: EDTECH_REDIS_URL
+        fromService:
+          name: edtech-redis
+          type: keyvalue
+          property: connectionString
+      - key: EDTECH_TELEGRAM_BOT_TOKEN # demandé à la création (jeton BotFather)
+        sync: false
+      - key: EDTECH_ADMIN_TELEGRAM_IDS # demandé à la création (votre identifiant Telegram)
+        sync: false
+
+  # Workers des traitements asynchrones + tâches périodiques (--beat, une seule instance).
+  - type: worker
+    name: edtech-worker
+    runtime: docker
+    region: frankfurt
+    plan: 0.5c-512mb
+    rootDir: edtech/backend
+    dockerfilePath: ./Dockerfile
+    dockerCommand: celery -A edtech.worker.main worker --beat --schedule /tmp/celerybeat-schedule --queues default,ingest,ai,media --concurrency 2 --loglevel INFO
+    autoDeployTrigger: checksPass
+    buildFilter:
+      paths:
+        - edtech/backend/**
+    envVars:
+      - fromGroup: edtech-shared
+      - key: EDTECH_DATABASE_URL
+        fromDatabase:
+          name: edtech-db
+          property: connectionString
+      - key: EDTECH_REDIS_URL
+        fromService:
+          name: edtech-redis
+          type: keyvalue
+          property: connectionString
+      - key: EDTECH_TELEGRAM_BOT_TOKEN
+        fromService:
+          name: edtech-api
+          type: web
+          envVarKey: EDTECH_TELEGRAM_BOT_TOKEN
+
+  # Redis : files de tâches, limites anti-abus. « noeviction » : ne jamais effacer une tâche.
+  - type: keyvalue
+    name: edtech-redis
+    region: frankfurt
+    plan: 256mb
+    maxmemoryPolicy: noeviction
+    ipAllowList: [] # accessible uniquement depuis les services Render
+
+databases:
+  - name: edtech-db
+    region: frankfurt
+    plan: 0.1c-256mb
+    diskSizeGB: 5 # augmentable plus tard, jamais réductible
+    postgresMajorVersion: "16"
+    databaseName: edtech
+    ipAllowList: [] # accessible uniquement depuis les services Render
+
+envVarGroups:
+  - name: edtech-shared
+    envVars:
+      - key: EDTECH_ENVIRONMENT
+        value: production
+      - key: EDTECH_LOG_LEVEL
+        value: INFO
+      # Aucun fichier n'est stocké tant que la correction (phase 2) n'est pas ouverte.
+      - key: EDTECH_STORAGE_BACKEND
+        value: disabled
+      - key: EDTECH_FEATURE_CORRECTIONS_ENABLED
+        value: "false"
+      - key: EDTECH_SIGNUP_FREE_CREDITS
+        value: "5"
+      - key: EDTECH_JWT_SECRET
+        generateValue: true
+      - key: EDTECH_TELEGRAM_WEBHOOK_SECRET
+        generateValue: true
+      - key: EDTECH_METRICS_TOKEN
+        generateValue: true

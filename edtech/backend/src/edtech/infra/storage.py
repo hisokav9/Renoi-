@@ -142,7 +142,28 @@ class S3Storage:
         await asyncio.to_thread(self._client.head_bucket, Bucket=self._bucket)
 
 
+class DisabledStorage:
+    """No file storage: any read or write is a programming error until storage is configured."""
+
+    async def put(self, key: str, data: bytes, *, content_type: str) -> None:
+        raise StorageError("Stockage désactivé (EDTECH_STORAGE_BACKEND=disabled)")
+
+    async def get(self, key: str) -> bytes:
+        raise StorageError("Stockage désactivé (EDTECH_STORAGE_BACKEND=disabled)")
+
+    async def delete(self, key: str) -> None:
+        raise StorageError("Stockage désactivé (EDTECH_STORAGE_BACKEND=disabled)")
+
+    async def exists(self, key: str) -> bool:
+        return False
+
+    async def ping(self) -> None:
+        return None
+
+
 def build_storage(settings: Settings) -> ObjectStorage:
     if settings.storage_backend == "s3":
         return S3Storage.from_settings(settings)
+    if settings.storage_backend == "disabled":
+        return DisabledStorage()
     return LocalStorage(settings.storage_local_path)

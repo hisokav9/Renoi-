@@ -74,7 +74,8 @@ MESSAGES: dict[str, str] = {
         "Crédits disponibles : <b>{balance}</b>\n"
         "Crédits réservés : {reserved}\n"
         "Offre : {plan}\n"
-        "Membre depuis le : {since}\n\n"
+        "Membre depuis le : {since}\n"
+        "Référence : <code>{ref}</code> (à donner à l'assistance)\n\n"
         "{profile}"
     ),
     "plan_free": "Gratuite",
@@ -107,7 +108,66 @@ MESSAGES: dict[str, str] = {
         "répondra ici. N'indique pas d'informations personnelles (téléphone, adresse…)."
     ),
     "support_received": "Merci, ton message a été transmis à l'équipe (référence {ref}).",
-    "support_forward": "🆘 Ticket {ref}\nUtilisateur : {user_id}\n\n{message}",
+    "support_forward": "🆘 Ticket #{ref}\nÉlève : {user_ref}\n\n{message}",
+    "support_reply": "💬 <b>Réponse de l'assistance</b> (ticket #{ref}) :\n\n{message}",
+    "credits_gift": "🎁 L'équipe t'a offert {amount} crédit(s). Nouveau solde : {balance}.",
+    # Administration (/admin, réservé à l'équipe)
+    "admin_home": "🛠 <b>Administration</b>",
+    "btn_admin_stats": "📊 Statistiques",
+    "btn_admin_tickets": "🆘 Tickets ouverts ({count})",
+    "btn_admin_credits": "➕ Ajouter des crédits",
+    "btn_admin_reply": "✍️ Répondre",
+    "btn_admin_close": "✅ Clore le ticket",
+    "btn_admin_gift": "🎁 Offrir des crédits",
+    "btn_admin_home": "🛠 Administration",
+    "btn_confirm": "✅ Confirmer",
+    "btn_main_menu": "🏠 Menu principal",
+    "admin_stats": (
+        "📊 <b>Statistiques</b>\n\n"
+        "Inscrits : <b>{users}</b> (profil complété : {onboarded})\n"
+        "Nouveaux : {new_24h} en 24 h · {new_7d} en 7 jours\n"
+        "Actifs sur 7 jours : {active_7d}\n"
+        "Tickets ouverts : {open_tickets}\n"
+        "Crédits disponibles chez les élèves : {credits}\n"
+        "Traitements sur 7 jours : {jobs}"
+    ),
+    "admin_none": "aucun",
+    "admin_tickets_title": "🆘 <b>Tickets ouverts</b> ({total})",
+    "admin_tickets_empty": "Aucun ticket ouvert 🎉",
+    "admin_ticket_line": "• <b>#{ref}</b> — {date} — {excerpt}",
+    "admin_ticket": (
+        "🆘 <b>Ticket #{ref}</b> — {date}\n"
+        "Élève : <code>{user_ref}</code> · {balance} crédit(s)\n"
+        "{profile}\n\n{message}"
+    ),
+    "admin_ticket_done": "Ce ticket a déjà été traité.",
+    "admin_reply_prompt": (
+        "✍️ Écris ta réponse au ticket #{ref} en un seul message. Elle sera envoyée à l'élève, "
+        "puis le ticket sera clos."
+    ),
+    "admin_reply_sent": "Réponse envoyée ✅ Le ticket #{ref} est clos.",
+    "admin_reply_failed": (
+        "⚠️ Réponse non délivrée : l'élève a peut-être bloqué le bot ou supprimé son compte. "
+        "Le ticket reste ouvert."
+    ),
+    "admin_ticket_closed": "Ticket #{ref} clos ✅",
+    "admin_credit_prompt": (
+        "➕ Envoie la référence de l'élève (8 caractères, visible dans son écran « Mon compte » "
+        "et sur ses tickets)."
+    ),
+    "admin_user_not_found": (
+        "Aucun élève trouvé avec la référence « {ref} ». Vérifie et renvoie-la."
+    ),
+    "admin_user_card": (
+        "👤 Élève <code>{user_ref}</code>\n"
+        "Inscrit le {since} · {balance} crédit(s)\n"
+        "{profile}\n\n"
+        "Combien de crédits ajouter ?"
+    ),
+    "admin_grant_confirm": "Ajouter <b>{amount}</b> crédit(s) à l'élève <code>{user_ref}</code> ?",
+    "admin_grant_done": "✅ {amount} crédit(s) ajouté(s). Nouveau solde de l'élève : {balance}.",
+    "admin_grant_expired": "Cette opération a expiré ou a déjà été effectuée.",
+    "admin_new_ticket": "🆘 Nouveau ticket #{ref} : {excerpt}\n\nTape /admin pour répondre.",
     # Erreurs et limites
     "rate_limited": "Doucement 🙂 Tu envoies beaucoup de messages. Réessaie dans {seconds} s.",
     "unknown_input": "Je n'ai pas compris. Envoie la photo d'un exercice ou utilise le menu.",

@@ -7,6 +7,7 @@ services). URLs can be overridden with EDTECH_TEST_DATABASE_URL / EDTECH_TEST_RE
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import os
 from collections.abc import AsyncIterator
@@ -41,6 +42,8 @@ TEST_DATABASE_URL = os.environ.get(
 TEST_REDIS_URL = os.environ.get("EDTECH_TEST_REDIS_URL", "redis://localhost:6379/15")
 BOT_TOKEN = "123456:TEST-TOKEN"
 WEBHOOK_SECRET = "test-webhook-secret"
+# Valeur que Telegram renvoie dans l'en-tête (dérivée du secret, voir Settings).
+WEBHOOK_TOKEN = hashlib.sha256(WEBHOOK_SECRET.encode()).hexdigest()
 SUPPORT_CHAT_ID = -100999
 
 
@@ -104,6 +107,8 @@ class FakeTelegram:
     # getUpdates : file de réponses (liste = mises à jour, dict = erreur) ; vide → on_empty().
     updates: list[Any] = field(default_factory=list)
     on_empty: Any = None
+    # Conversations où l'envoi échoue (ex. l'élève a bloqué le bot).
+    fail_chats: set[int] = field(default_factory=set)
 
     def handler(self, request: httpx.Request) -> httpx.Response:
         method = request.url.path.rsplit("/", 1)[-1]
@@ -118,6 +123,11 @@ class FakeTelegram:
             if isinstance(batch, dict):
                 return httpx.Response(200, json={"ok": False, **batch})
             return httpx.Response(200, json={"ok": True, "result": batch})
+        if method == "sendMessage" and payload.get("chat_id") in self.fail_chats:
+            return httpx.Response(
+                200,
+                json={"ok": False, "error_code": 403, "description": "Forbidden: bot was blocked"},
+            )
         if method in self.fail_methods:
             return httpx.Response(200, json={"ok": False, **self.fail_methods[method]})
         result: Any = True

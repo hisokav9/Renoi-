@@ -20,6 +20,9 @@ webhook).
 
 ## Infrastructure cible
 
+**Hébergeur retenu : Render.** Procédure pas à pas : [deploiement-render.md](deploiement-render.md).
+Le reste de ce document décrit les principes, valables quel que soit l'hébergeur.
+
 Services managés, sans Kubernetes au lancement ([ADR 0001](adr/0001-monolithe-modulaire.md)).
 N'importe quel fournisseur offrant des conteneurs managés convient ; critères : région proche des
 serveurs Telegram et des utilisateurs (Europe de l'Ouest), PostgreSQL managé avec sauvegardes

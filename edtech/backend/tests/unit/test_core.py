@@ -141,3 +141,29 @@ def test_secrets_are_not_printed() -> None:
 )
 def test_role_permissions(role: str, permission: Permission, expected: bool) -> None:
     assert has_permission(role, permission) is expected
+
+
+def test_managed_database_urls_and_admin_ids_are_normalized(tmp_path) -> None:
+    settings = make_settings(
+        tmp_path,
+        database_url="postgres://u:p@db:5432/app",
+        admin_telegram_ids="123, 456",
+    )
+    assert settings.database_url == "postgresql+asyncpg://u:p@db:5432/app"
+    assert settings.admin_telegram_ids == [123, 456]
+    assert make_settings(tmp_path, admin_telegram_ids="").admin_telegram_ids == []
+
+
+def test_webhook_token_is_telegram_compatible(tmp_path) -> None:
+    base64_like = SecretStr("aB+/cd==" * 6)  # format généré par Render (generateValue)
+    token = make_settings(tmp_path, telegram_webhook_secret=base64_like).telegram_secret_token
+    assert token is not None
+    assert len(token) == 64
+    assert all(c in "0123456789abcdef" for c in token)
+    assert make_settings(tmp_path, telegram_webhook_secret=None).telegram_secret_token is None
+
+
+def test_disabled_storage_is_only_allowed_while_corrections_are_closed() -> None:
+    assert _prod(storage_backend="disabled").storage_backend == "disabled"
+    with pytest.raises(ValidationError, match="S3"):
+        _prod(storage_backend="disabled", feature_corrections_enabled=True)

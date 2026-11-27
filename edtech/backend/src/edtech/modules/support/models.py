@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import datetime
 from enum import StrEnum
 
 from sqlalchemy import ForeignKey, String, Text
@@ -21,3 +22,6 @@ class SupportTicket(UUIDPrimaryKey, Timestamps, Base):
     channel: Mapped[str] = mapped_column(String(16))
     message: Mapped[str] = mapped_column(Text)
     status: Mapped[str] = mapped_column(String(16), default=TicketStatus.OPEN, index=True)
+    reply: Mapped[str | None] = mapped_column(Text)
+    replied_by: Mapped[uuid.UUID | None]
+    replied_at: Mapped[datetime | None]
