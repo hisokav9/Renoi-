@@ -91,3 +91,4 @@ docs/                     architecture, décisions (ADR), déploiement, sécurit
 - [Sécurité et confidentialité](docs/securite.md)
 - [Bot Telegram](docs/telegram.md)
 - [Feuille de route](docs/feuille-de-route.md)
+- [Comparatif des fournisseurs d'IA](docs/comparatif-fournisseurs-ia.md)
