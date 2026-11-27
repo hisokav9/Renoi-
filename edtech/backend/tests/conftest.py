@@ -101,11 +101,23 @@ async def migrated(settings: Settings) -> None:
 class FakeTelegram:
     calls: list[tuple[str, dict[str, Any]]] = field(default_factory=list)
     fail_methods: dict[str, dict[str, Any]] = field(default_factory=dict)
+    # getUpdates : file de réponses (liste = mises à jour, dict = erreur) ; vide → on_empty().
+    updates: list[Any] = field(default_factory=list)
+    on_empty: Any = None
 
     def handler(self, request: httpx.Request) -> httpx.Response:
         method = request.url.path.rsplit("/", 1)[-1]
         payload = json.loads(request.content or b"{}")
         self.calls.append((method, payload))
+        if method == "getUpdates" and method not in self.fail_methods:
+            if not self.updates:
+                if self.on_empty is not None:
+                    self.on_empty()
+                return httpx.Response(200, json={"ok": True, "result": []})
+            batch = self.updates.pop(0)
+            if isinstance(batch, dict):
+                return httpx.Response(200, json={"ok": False, **batch})
+            return httpx.Response(200, json={"ok": True, "result": batch})
         if method in self.fail_methods:
             return httpx.Response(200, json={"ok": False, **self.fail_methods[method]})
         result: Any = True

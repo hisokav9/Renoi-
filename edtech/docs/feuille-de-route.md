@@ -7,7 +7,7 @@
 | Critère | État |
 |---|---|
 | Code documenté | ✅ docstrings, ADR, documentation d'architecture, d'exploitation et de sécurité |
-| Tests automatisés | ✅ 80 tests (unitaires + intégration sur PostgreSQL et Redis réels), couverture 86 % ; ruff et mypy strict sans erreur |
+| Tests automatisés | ✅ 82 tests (unitaires + intégration sur PostgreSQL et Redis réels), couverture 86 % ; ruff et mypy strict sans erreur |
 | Erreurs gérées | ✅ erreurs métier typées, format `problem+json`, bot qui répond toujours, traitements remboursés en cas d'échec |
 | Autorisations vérifiées | ✅ permissions par rôle testées (élève, relecteur, support, administrateur) |
 | Consommation de ressources mesurée | ⚠️ partiel : métriques Prometheus (latences, volumes, durées d'étapes) en place ; pas encore de test de charge |

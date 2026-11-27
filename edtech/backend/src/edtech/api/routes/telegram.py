@@ -19,12 +19,12 @@ from edtech.api.deps import ContainerDep
 from edtech.core.errors import AppError, NotFoundError, UnauthorizedError
 from edtech.core.metrics import TELEGRAM_UPDATES
 from edtech.modules.telegram.types import TgUpdate
+from edtech.modules.telegram.updates import first_delivery
 
 log = structlog.stdlib.get_logger(__name__)
 router = APIRouter(prefix="/telegram", tags=["telegram"])
 
 MAX_UPDATE_BYTES = 256 * 1024
-DEDUP_TTL_SECONDS = 24 * 3600
 HANDLER_TIMEOUT_SECONDS = 25
 
 
@@ -58,10 +58,7 @@ async def telegram_webhook(
         log.warning("telegram_invalid_update")
         return {"ok": True}
 
-    first_delivery = await container.redis.set(
-        f"tg:update:{update.update_id}", 1, ex=DEDUP_TTL_SECONDS, nx=True
-    )
-    if not first_delivery:
+    if not await first_delivery(container.redis, update.update_id):
         TELEGRAM_UPDATES.labels(update.kind, "duplicate").inc()
         return {"ok": True}
 

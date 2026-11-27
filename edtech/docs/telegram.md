@@ -20,8 +20,21 @@
 6. Écrire `/start` au bot, puis se donner le rôle administrateur :
    `edtech set-role --telegram-id <votre identifiant Telegram> --role admin`.
 
-Pour développer en local, Telegram doit pouvoir joindre votre machine en HTTPS : utiliser un
-tunnel (Cloudflare Tunnel, ngrok…) et le mettre dans `EDTECH_PUBLIC_BASE_URL`.
+## Tester sans adresse HTTPS : mode polling
+
+Sur un ordinateur ou un serveur de test sans adresse publique, le bot peut aller chercher lui-même
+ses messages chez Telegram (`getUpdates`) au lieu de les recevoir par webhook :
+
+```bash
+make services migrate seed          # base, Redis, catalogue
+make poll                           # = uv run edtech telegram-poll (Ctrl+C pour arrêter)
+```
+
+- Seul `EDTECH_TELEGRAM_BOT_TOKEN` est nécessaire (ni URL publique, ni secret de webhook).
+- Le mode polling est refusé en staging et en production (`--force` pour passer outre).
+- Telegram n'autorise pas webhook et polling en même temps : si un webhook est actif, la commande
+  s'arrête ; `--replace-webhook` le supprime (relancer `edtech telegram-set-webhook` ensuite).
+- Utiliser de préférence un **bot de test**, pas le bot public.
 
 Pour recevoir les tickets d'assistance dans un groupe de l'équipe : ajouter le bot au groupe et
 renseigner `EDTECH_SUPPORT_CHAT_ID` (identifiant négatif du groupe).

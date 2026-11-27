@@ -41,12 +41,14 @@ class TelegramClient:
         self._http = http
         self._max_retry_after = max_retry_after
 
-    async def call(self, method: str, payload: dict[str, Any] | None = None) -> Any:
+    async def call(
+        self, method: str, payload: dict[str, Any] | None = None, *, http_timeout: float = 15.0
+    ) -> Any:
         """Call a Bot API method. Retries once on flood control if the wait is short."""
         for attempt in range(2):
             try:
                 response = await self._http.post(
-                    f"{self._url}/{method}", json=payload or {}, timeout=15.0
+                    f"{self._url}/{method}", json=payload or {}, timeout=http_timeout
                 )
             except httpx.HTTPError as exc:
                 # The exception text may contain the URL (and therefore the token).
@@ -134,6 +136,19 @@ class TelegramClient:
                 "max_connections": 40,
             },
         )
+
+    async def get_me(self) -> Any:
+        return await self.call("getMe")
+
+    async def get_updates(
+        self, *, offset: int | None, poll_seconds: int, allowed_updates: list[str]
+    ) -> list[dict[str, Any]]:
+        """Long polling: Telegram holds the request up to ``poll_seconds`` seconds."""
+        payload: dict[str, Any] = {"timeout": poll_seconds, "allowed_updates": allowed_updates}
+        if offset is not None:
+            payload["offset"] = offset
+        result = await self.call("getUpdates", payload, http_timeout=poll_seconds + 15)
+        return list(result or [])
 
     async def delete_webhook(self) -> Any:
         return await self.call("deleteWebhook", {"drop_pending_updates": False})

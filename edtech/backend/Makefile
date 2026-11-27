@@ -1,4 +1,4 @@
-.PHONY: install services lint typecheck test cov check migrate seed run worker beat
+.PHONY: install services lint typecheck test cov check migrate seed run worker beat poll
 
 install:        ## Installer les dépendances (dev incluses)
 	uv sync
@@ -35,3 +35,6 @@ worker:
 
 beat:
 	uv run celery -A edtech.worker.main beat --loglevel INFO
+
+poll:           ## Bot Telegram sans webhook (développement)
+	uv run edtech telegram-poll

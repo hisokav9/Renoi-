@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import itertools
 from typing import Any
 
@@ -9,6 +10,7 @@ from sqlalchemy import select
 
 from edtech.container import Container
 from edtech.modules.support.models import SupportTicket
+from edtech.modules.telegram.polling import PollingConflictError, run_polling
 from edtech.modules.users import service as users
 from edtech.modules.users.models import User, UserStatus
 from tests.conftest import SUPPORT_CHAT_ID, WEBHOOK_SECRET, FakeTelegram
@@ -239,3 +241,47 @@ async def test_handler_errors_are_reported_to_the_user(
     await send(client, message("/start"))
     await send(client, callback("m:help"))  # la modification échoue : nouveau message envoyé
     assert "Aide" in fake_telegram.sent("sendMessage")[-1]["text"]
+
+
+async def _poll(container: Container, fake_telegram: FakeTelegram) -> int:
+    assert container.telegram is not None
+    assert container.bot is not None
+    stop = asyncio.Event()
+    fake_telegram.on_empty = stop.set
+    return await asyncio.wait_for(
+        run_polling(
+            container.telegram, container.bot, container.redis, stop=stop, error_backoff=0.01
+        ),
+        10,
+    )
+
+
+async def test_polling_handles_updates_and_skips_bad_ones(
+    container: Container, fake_telegram: FakeTelegram
+) -> None:
+    start = message("/start")
+    broken = {"update_id": start["update_id"] + 1000, "message": {"unexpected": True}}
+    fake_telegram.updates = [
+        [start, broken],
+        {"error_code": 502, "description": "Bad Gateway"},  # erreur passagère : on réessaie
+        [start],  # doublon déjà traité
+    ]
+    assert await _poll(container, fake_telegram) == 1
+    texts = [p["text"] for p in fake_telegram.sent("sendMessage")]
+    assert texts[0].startswith("Bonjour")
+    assert len(texts) == 2  # accueil + choix de la langue
+    polls = [p for m, p in fake_telegram.calls if m == "getUpdates"]
+    assert "offset" not in polls[0]
+    assert polls[1]["offset"] == broken["update_id"] + 1
+    assert polls[0]["allowed_updates"] == ["message", "callback_query"]
+
+
+async def test_polling_stops_on_conflict_with_a_webhook(
+    container: Container, fake_telegram: FakeTelegram
+) -> None:
+    fake_telegram.fail_methods["getUpdates"] = {
+        "error_code": 409,
+        "description": "Conflict: can't use getUpdates method while webhook is active",
+    }
+    with pytest.raises(PollingConflictError, match="webhook"):
+        await _poll(container, fake_telegram)
