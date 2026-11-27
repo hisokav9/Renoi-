@@ -1,0 +1,97 @@
+# Environnement de développement local complet.
+#   docker compose up -d postgres redis minio      # services seuls (dev avec uv)
+#   docker compose up --build                       # pile complète
+name: edtech
+
+x-app: &app
+  build:
+    context: ./backend
+  env_file:
+    - path: ./backend/.env
+      required: false
+  environment:
+    EDTECH_DATABASE_URL: postgresql+asyncpg://edtech:edtech@postgres:5432/edtech
+    EDTECH_REDIS_URL: redis://redis:6379/0
+    EDTECH_STORAGE_BACKEND: s3
+    EDTECH_S3_BUCKET: edtech-dev
+    EDTECH_S3_ENDPOINT_URL: http://minio:9000
+    EDTECH_S3_REGION: us-east-1
+    EDTECH_S3_ACCESS_KEY_ID: minioadmin
+    EDTECH_S3_SECRET_ACCESS_KEY: minioadmin
+  depends_on:
+    postgres: {condition: service_healthy}
+    redis: {condition: service_healthy}
+    minio-init: {condition: service_completed_successfully}
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: edtech
+      POSTGRES_PASSWORD: edtech
+      POSTGRES_DB: edtech
+    ports: ["5432:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U edtech"]
+      interval: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    ports: ["6379:6379"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 10
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    ports: ["9000:9000", "9001:9001"]
+    volumes: [miniodata:/data]
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      retries: 10
+
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      minio: {condition: service_healthy}
+    entrypoint: >
+      /bin/sh -c "mc alias set local http://minio:9000 minioadmin minioadmin &&
+                  mc mb --ignore-existing local/edtech-dev"
+
+  migrate:
+    <<: *app
+    command: ["alembic", "upgrade", "head"]
+    depends_on:
+      postgres: {condition: service_healthy}
+
+  api:
+    <<: *app
+    ports: ["8000:8000"]
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+      redis: {condition: service_healthy}
+      minio-init: {condition: service_completed_successfully}
+
+  worker:
+    <<: *app
+    command: ["celery", "-A", "edtech.worker.main", "worker", "-Q", "default,ingest,ai,media",
+              "--concurrency", "2", "--loglevel", "INFO"]
+    healthcheck:
+      disable: true
+
+  beat:
+    <<: *app
+    command: ["celery", "-A", "edtech.worker.main", "beat", "--loglevel", "INFO",
+              "-s", "/tmp/celerybeat-schedule"]
+    healthcheck:
+      disable: true
+
+volumes:
+  pgdata:
+  miniodata:

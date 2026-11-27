@@ -1,0 +1,171 @@
+"""Application configuration.
+
+All settings come from environment variables prefixed with ``EDTECH_`` (or a ``.env`` file in
+development). Secrets are typed as :class:`SecretStr` so they never appear in ``repr`` or logs.
+Staging and production refuse to start with insecure defaults.
+"""
+
+from __future__ import annotations
+
+import hashlib
+from enum import StrEnum
+from functools import lru_cache
+from pathlib import Path
+from typing import Annotated, Any, Literal
+
+from pydantic import Field, SecretStr, field_validator, model_validator
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
+
+_DEV_JWT_SECRET = "dev-only-insecure-jwt-secret-change-me-0000"  # noqa: S105 - dev default, refused in prod
+
+
+class Environment(StrEnum):
+    DEVELOPMENT = "development"
+    TEST = "test"
+    STAGING = "staging"
+    PRODUCTION = "production"
+
+
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_prefix="EDTECH_",
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
+
+    # --- Général -----------------------------------------------------------------------------
+    environment: Environment = Environment.DEVELOPMENT
+    app_name: str = "edtech"
+    app_version: str = "0.1.0"
+    log_level: str = "INFO"
+    log_json: bool = True
+    public_base_url: str | None = Field(
+        default=None, description="URL publique HTTPS de l'API, ex. https://api.example.com"
+    )
+    cors_allowed_origins: list[str] = Field(default_factory=list)
+
+    # --- Base de données / Redis -------------------------------------------------------------
+    database_url: str = "postgresql+asyncpg://edtech:edtech@localhost:5432/edtech"
+    database_pool_size: int = 10
+    database_max_overflow: int = 10
+    database_echo: bool = False
+    redis_url: str = "redis://localhost:6379/0"
+    broker_url: str | None = Field(
+        default=None, description="URL du broker Celery. Par défaut : redis_url."
+    )
+
+    # --- Sécurité / jetons -------------------------------------------------------------------
+    jwt_secret: SecretStr = SecretStr(_DEV_JWT_SECRET)
+    jwt_issuer: str = "edtech-api"
+    jwt_access_ttl_seconds: int = 900
+    refresh_token_ttl_days: int = 30
+    metrics_token: SecretStr | None = None
+
+    # --- Telegram ----------------------------------------------------------------------------
+    telegram_bot_token: SecretStr | None = None
+    telegram_webhook_secret: SecretStr | None = None
+    telegram_bot_username: str | None = None
+    telegram_api_base_url: str = "https://api.telegram.org"
+    telegram_login_max_age_seconds: int = 86_400
+    support_chat_id: int | None = Field(
+        default=None, description="Chat Telegram de l'équipe d'assistance (tickets transférés)."
+    )
+    # Comptes Telegram promus administrateurs automatiquement (premier accès sans terminal).
+    # Format : « 123456789 » ou « 123,456 ». Ne rétrograde jamais personne.
+    admin_telegram_ids: Annotated[list[int], NoDecode] = Field(default_factory=list)
+
+    # --- Stockage objet ----------------------------------------------------------------------
+    # « disabled » : aucun fichier stocké (autorisé tant que les corrections sont fermées).
+    storage_backend: Literal["local", "s3", "disabled"] = "local"
+    storage_local_path: Path = Path("./var/storage")
+    s3_bucket: str | None = None
+    s3_endpoint_url: str | None = None
+    s3_region: str | None = None
+    s3_access_key_id: SecretStr | None = None
+    s3_secret_access_key: SecretStr | None = None
+
+    # --- Règles commerciales / fonctionnelles ------------------------------------------------
+    default_locale: str = "fr"
+    signup_free_credits: int = Field(default=5, ge=0)
+    feature_corrections_enabled: bool = False
+
+    # --- Limites anti-abus -------------------------------------------------------------------
+    rate_limit_telegram_per_minute: int = 30
+    rate_limit_auth_per_minute: int = 20
+
+    # --- Traitements asynchrones -------------------------------------------------------------
+    job_lease_seconds: int = 300
+    job_max_attempts: int = 3
+    job_requeue_after_seconds: int = 120
+
+    # --- Observabilité -----------------------------------------------------------------------
+    sentry_dsn: SecretStr | None = None
+    sentry_traces_sample_rate: float = 0.0
+
+    @property
+    def is_deployed(self) -> bool:
+        """True for staging and production, where strict security rules apply."""
+        return self.environment in (Environment.STAGING, Environment.PRODUCTION)
+
+    @property
+    def effective_broker_url(self) -> str:
+        return self.broker_url or self.redis_url
+
+    @property
+    def telegram_secret_token(self) -> str | None:
+        """Value given to Telegram as ``secret_token`` and expected back in each webhook call.
+
+        Telegram only accepts ``[A-Za-z0-9_-]{1,256}``; secrets generated by hosting platforms
+        are often base64 (``+``, ``/``, ``=``). Deriving a hex digest accepts any secret.
+        """
+        if self.telegram_webhook_secret is None:
+            return None
+        return hashlib.sha256(self.telegram_webhook_secret.get_secret_value().encode()).hexdigest()
+
+    @field_validator("database_url")
+    @classmethod
+    def _async_driver(cls, value: str) -> str:
+        """Accept the ``postgres://`` / ``postgresql://`` URLs given by managed databases."""
+        for prefix in ("postgres://", "postgresql://"):
+            if value.startswith(prefix):
+                return "postgresql+asyncpg://" + value[len(prefix) :]
+        return value
+
+    @field_validator("admin_telegram_ids", mode="before")
+    @classmethod
+    def _parse_ids(cls, value: Any) -> Any:
+        if isinstance(value, str):
+            return [int(part) for part in value.replace(";", ",").split(",") if part.strip()]
+        if isinstance(value, int):
+            return [value]
+        return value
+
+    @model_validator(mode="after")
+    def _check_deployed_environment(self) -> Settings:
+        if not self.is_deployed:
+            return self
+        problems: list[str] = []
+        secret = self.jwt_secret.get_secret_value()
+        if secret == _DEV_JWT_SECRET or len(secret) < 32:
+            problems.append("EDTECH_JWT_SECRET doit être défini (32 caractères minimum)")
+        if self.telegram_bot_token and not self.telegram_webhook_secret:
+            problems.append("EDTECH_TELEGRAM_WEBHOOK_SECRET est obligatoire avec un bot Telegram")
+        if self.storage_backend == "local":
+            problems.append("EDTECH_STORAGE_BACKEND ne peut pas valoir 'local' hors développement")
+        if self.storage_backend == "disabled" and self.feature_corrections_enabled:
+            problems.append("Les corrections exigent un stockage S3 (EDTECH_STORAGE_BACKEND=s3)")
+        if self.storage_backend == "s3" and not self.s3_bucket:
+            problems.append("EDTECH_S3_BUCKET est obligatoire avec le stockage S3")
+        if self.public_base_url and not self.public_base_url.startswith("https://"):
+            problems.append("EDTECH_PUBLIC_BASE_URL doit être en HTTPS")
+        if self.metrics_token is None:
+            problems.append("EDTECH_METRICS_TOKEN est obligatoire pour protéger /metrics")
+        if problems:
+            raise ValueError("Configuration invalide : " + " ; ".join(problems))
+        return self
+
+
+@lru_cache
+def get_settings() -> Settings:
+    return Settings()

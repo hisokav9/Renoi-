@@ -1,0 +1,84 @@
+name: edtech-backend
+
+on:
+  push:
+    paths: ["edtech/**", ".github/workflows/edtech-backend.yml"]
+  pull_request:
+    paths: ["edtech/**", ".github/workflows/edtech-backend.yml"]
+
+concurrency:
+  group: edtech-backend-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: edtech/backend
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: edtech
+          POSTGRES_PASSWORD: edtech
+          POSTGRES_DB: edtech_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U edtech" --health-interval 5s --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping" --health-interval 5s --health-retries 10
+    env:
+      EDTECH_TEST_DATABASE_URL: postgresql+asyncpg://edtech:edtech@localhost:5432/edtech_test
+      EDTECH_TEST_REDIS_URL: redis://localhost:6379/15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: edtech/backend/uv.lock
+      - name: Install
+        run: uv sync --frozen
+      - name: Lint
+        run: |
+          uv run ruff check src tests migrations
+          uv run ruff format --check src tests migrations
+      - name: Type check
+        run: uv run mypy
+      - name: Tests (PostgreSQL + Redis réels)
+        run: uv run pytest --cov --cov-report=term-missing --cov-fail-under=80
+
+  image:
+    needs: quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build image
+        uses: docker/build-push-action@v6
+        with:
+          context: edtech/backend
+          push: false
+          load: true
+          tags: edtech-backend:${{ github.sha }}
+          build-args: APP_VERSION=${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Smoke test (le conteneur démarre et répond)
+        working-directory: .
+        run: |
+          docker run -d --name api -p 8000:8000 \
+            -e EDTECH_DATABASE_URL=postgresql+asyncpg://u:p@127.0.0.1:1/none \
+            -e EDTECH_STORAGE_LOCAL_PATH=/tmp/storage \
+            edtech-backend:${{ github.sha }}
+          for i in $(seq 1 30); do curl -fsS localhost:8000/health/live && exit 0; sleep 1; done
+          docker logs api; exit 1

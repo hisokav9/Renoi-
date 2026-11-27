@@ -1,0 +1,62 @@
+# Paramètres pédagogiques du Niger — BROUILLON.
+#
+# IMPORTANT : ce fichier n'est PAS une source officielle. Les niveaux suivent l'organisation
+# générale (primaire CI→CM2, collège 6e→3e, lycée 2nde→Tle, supérieur LMD), mais les séries,
+# les matières et les paramètres réglementaires doivent être validés par un pédagogue et un
+# juriste à partir des textes du Ministère de l'Éducation nationale avant le lancement.
+# Tant que `verified: false`, l'application ne présente pas ces données comme officielles.
+country:
+  code: NE
+  names: {fr: Niger, en: Niger}
+  default_locale: fr
+  locales: [fr]
+  currency: XOF
+  timezone: Africa/Niamey
+  active: true
+  settings:
+    signup_free_credits: 5
+    # Durée de conservation par défaut des documents envoyés (jours) — à valider (juriste).
+    document_retention_days: 90
+    regulatory_review: pending
+
+program:
+  code: ne-general
+  names: {fr: "Enseignement général", en: "General education"}
+  academic_year: null
+  source: "Brouillon interne — à valider auprès des textes officiels du Ministère de l'Éducation nationale du Niger"
+  verified: false
+
+grades:
+  - {cycle: primary, code: CI, names: {fr: "CI", en: "CI (1st grade)"}}
+  - {cycle: primary, code: CP, names: {fr: "CP", en: "CP (2nd grade)"}}
+  - {cycle: primary, code: CE1, names: {fr: "CE1", en: "CE1 (3rd grade)"}}
+  - {cycle: primary, code: CE2, names: {fr: "CE2", en: "CE2 (4th grade)"}}
+  - {cycle: primary, code: CM1, names: {fr: "CM1", en: "CM1 (5th grade)"}}
+  - {cycle: primary, code: CM2, names: {fr: "CM2", en: "CM2 (6th grade)"}}
+  - {cycle: lower_secondary, code: 6E, names: {fr: "6e", en: "6e (7th grade)"}}
+  - {cycle: lower_secondary, code: 5E, names: {fr: "5e", en: "5e (8th grade)"}}
+  - {cycle: lower_secondary, code: 4E, names: {fr: "4e", en: "4e (9th grade)"}}
+  - {cycle: lower_secondary, code: 3E, names: {fr: "3e", en: "3e (10th grade)"}}
+  - {cycle: upper_secondary, code: 2ND, names: {fr: "2nde", en: "2nde (11th grade)"}}
+  - {cycle: upper_secondary, code: 1RE, names: {fr: "1re", en: "1re (12th grade)"}}
+  - {cycle: upper_secondary, code: TLE, names: {fr: "Terminale", en: "Terminale (final year)"}}
+  - {cycle: higher, code: L1, names: {fr: "Licence 1", en: "Bachelor year 1"}}
+  - {cycle: higher, code: L2, names: {fr: "Licence 2", en: "Bachelor year 2"}}
+  - {cycle: higher, code: L3, names: {fr: "Licence 3", en: "Bachelor year 3"}}
+  - {cycle: higher, code: M1, names: {fr: "Master 1", en: "Master year 1"}}
+  - {cycle: higher, code: M2, names: {fr: "Master 2", en: "Master year 2"}}
+
+# Séries du lycée : liste minimale à compléter (séries techniques notamment) après validation.
+series:
+  - {code: A, names: {fr: "Série A (littéraire)", en: "Series A (literary)"}, grade_codes: [2ND, 1RE, TLE]}
+  - {code: C, names: {fr: "Série C (mathématiques et sciences physiques)", en: "Series C (maths and physics)"}, grade_codes: [2ND, 1RE, TLE]}
+  - {code: D, names: {fr: "Série D (mathématiques et sciences de la vie et de la Terre)", en: "Series D (maths and life sciences)"}, grade_codes: [2ND, 1RE, TLE]}
+
+subjects:
+  - {code: MATH, names: {fr: "Mathématiques", en: "Mathematics"}}
+  - {code: PC, names: {fr: "Physique-Chimie", en: "Physics and Chemistry"}}
+  - {code: SVT, names: {fr: "Sciences de la vie et de la Terre", en: "Life and Earth sciences"}}
+  - {code: FR, names: {fr: "Français", en: "French"}}
+  - {code: ANG, names: {fr: "Anglais", en: "English"}}
+  - {code: HG, names: {fr: "Histoire-Géographie", en: "History and Geography"}}
+  - {code: PHILO, names: {fr: "Philosophie", en: "Philosophy"}}
